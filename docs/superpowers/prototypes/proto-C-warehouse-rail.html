@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction C — Warehouse Rail</title>
+<style>
+  :root{
+    --ink:#211d17; --body:#4a4238; --mut:#8a8072; --faint:#b8afa1;
+    --bg:#faf8f4; --surface:#ffffff; --line:#eae4d9; --line2:#f3efe8;
+    --accent:#b45309; --accent2:#ea9b3f; --accent-soft:#fdf1de; --accent-ink:#92400e;
+    --pos:#3f6212; --pos-soft:#ecf6d9; --warn:#a16207; --warn-soft:#fbecc4;
+    --dang:#9f1239; --dang-soft:#fbe0e6;
+    --r:11px;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#e9e3d8;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  .chrome{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:16px;padding:10px 18px;background:#26211a;color:#f2ece1;border-bottom:1px solid #3a3228}
+  .chrome b{font-size:13px}
+  .chrome .tag{font-size:11px;color:#f0c896;border:1px solid #6b4a23;background:#3a2a16;padding:2px 8px;border-radius:20px}
+  .seg{margin-left:auto;display:inline-flex;background:#332b22;border:1px solid #4a4033;border-radius:9px;padding:3px}
+  .seg button{all:unset;cursor:pointer;font-size:12.5px;font-weight:600;color:#b8ab97;padding:6px 14px;border-radius:6px}
+  .seg button.on{background:#b45309;color:#fff}
+
+  .stage{display:flex;justify-content:center;padding:22px 14px 60px}
+  .device{background:var(--bg);border:1px solid #d3ccbe;box-shadow:0 18px 40px -22px rgba(33,29,23,.45);container-type:inline-size;overflow:hidden;transition:width .28s ease,max-width .28s ease}
+  .device.desktop{width:100%;max-width:1180px;border-radius:14px}
+  .device.mobile{width:390px;max-width:390px;border-radius:30px;border:8px solid #26211a}
+
+  .app{display:flex;min-height:660px;background:var(--bg)}
+
+  /* icon rail (narrow) */
+  .rail{display:none;flex-direction:column;align-items:center;width:66px;flex:0 0 66px;background:var(--surface);border-right:1px solid var(--line);padding:12px 0;gap:5px}
+  .rail .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(150deg,#ea9b3f,#b45309);display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px;margin-bottom:10px}
+  .rail a{width:46px;height:46px;border-radius:11px;display:grid;place-items:center;color:var(--mut);cursor:pointer;font-size:19px;position:relative}
+  .rail a small{position:absolute;bottom:5px;font-size:8.5px;font-weight:700;letter-spacing:.02em}
+  .rail a:hover{background:var(--line2);color:var(--body)}
+  .rail a.on{background:var(--accent-soft);color:var(--accent-ink)}
+  .rail a.on::before{content:"";position:absolute;left:-12px;top:11px;bottom:11px;width:3px;border-radius:3px;background:var(--accent)}
+  .rail .foot{margin-top:auto}
+  .rail .ava{width:38px;height:38px;border-radius:11px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .top{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line);background:var(--bg)}
+  .burger{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:15px}
+  .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-ink)}
+  .top h1{font-size:17px;margin:1px 0 0;font-weight:800;letter-spacing:-.01em}
+  .top .right{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .pill{font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;background:#fff;border:1px solid var(--line);color:var(--body)}
+  .ava-m{width:34px;height:34px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+
+  .content{padding:16px 18px;overflow:auto}
+  .screen{display:none}.screen.on{display:block}
+
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent2)}
+  .kpi.k2::after{background:var(--pos)}.kpi.k3::after{background:var(--dang)}.kpi.k4::after{background:var(--mut)}
+  .kpi .lbl{font-size:11px;color:var(--mut);font-weight:700;letter-spacing:.02em}
+  .kpi .val{font-size:23px;font-weight:800;margin-top:6px;letter-spacing:-.02em}
+  .kpi .delta{font-size:11px;font-weight:700;margin-top:3px}
+  .up{color:var(--pos)}.down{color:var(--dang)}.muted{color:var(--mut)}
+
+  .colwrap{display:block}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:14px}
+  .card h3{margin:0;padding:13px 15px;font-size:12px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;display:flex;align-items:center;gap:8px;color:var(--body);border-bottom:1px solid var(--line2)}
+  .card h3 .cnt{margin-left:auto;font-size:10.5px;color:var(--mut);letter-spacing:0;text-transform:none}
+
+  .task{display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--line2)}
+  .task:last-child{border-bottom:0}
+  .num-badge{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:800;flex:0 0 auto}
+  .task .tt{font-size:13px;font-weight:600}
+  .task .ts{font-size:11.5px;color:var(--mut);margin-top:1px}
+  .task .act{margin-left:auto}
+  .btn{all:unset;cursor:pointer;font-size:12px;font-weight:700;padding:8px 14px;border-radius:9px;background:var(--accent);color:#fff;text-align:center}
+  .btn.ghost{background:#fff;color:var(--body);border:1px solid var(--line)}
+  .btn.dark{background:var(--ink)}
+  .btn.sm{padding:6px 11px;font-size:11.5px}
+  .btn.block{display:block;width:100%;padding:13px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:700;padding:10px 15px;border-bottom:1px solid var(--line)}
+  tbody td{padding:11px 15px;border-bottom:1px solid var(--line2)}
+  tbody tr:last-child td{border-bottom:0}
+  td.r,th.r{text-align:right}
+  .chip{display:inline-block;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:.02em}
+  .c-open{background:var(--accent-soft);color:var(--accent-ink)}.c-part{background:var(--warn-soft);color:var(--warn)}
+  .c-done{background:var(--pos-soft);color:var(--pos)}.c-hold{background:var(--dang-soft);color:var(--dang)}
+
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:11px;font-weight:700;color:var(--body);margin-bottom:5px;letter-spacing:.02em}
+  .input,.selectish{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff;font-family:inherit;color:var(--ink)}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .opt{border:1px solid var(--line);border-radius:9px;padding:10px;font-size:12px;cursor:pointer;background:#fff;text-align:center;font-weight:600}
+  .opt.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+  .hint{margin-top:9px;font-size:11.5px;background:var(--accent-soft);border:1px solid #f6dcae;border-radius:9px;color:var(--accent-ink);padding:10px 12px}
+  .stagebox{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin-bottom:12px;overflow:hidden}
+  .stagebox .sh{display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(--accent-soft);border-bottom:1px solid #f6dcae}
+  .stagebox .sh .n{width:22px;height:22px;border-radius:6px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+  .stagebox .sh h4{margin:0;font-size:13px;font-weight:800}
+  .stagebox .sh .flow{font-size:10.5px;color:var(--accent-ink);margin-left:auto}
+  .stagebox .bd{padding:13px 14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .calc{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:12px;display:flex;justify-content:space-between;margin-top:8px}
+  .sticky-act{position:sticky;bottom:0;background:linear-gradient(#fff0,var(--bg) 30%);padding-top:14px;margin-top:12px}
+
+  @container (min-width:760px){
+    .rail{display:flex}
+    .burger{display:none}
+    .cards{grid-template-columns:repeat(4,1fr)}
+    .content{padding:20px 22px}
+    .colwrap{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+    .colwrap > .card{margin-top:0}
+    .opts{grid-template-columns:repeat(3,1fr)}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .sticky-act{position:static;background:none;padding-top:0}
+  }
+  @container (max-width:759px){ .hide-mob{display:none} }
+  @container (min-width:760px){ .hide-desk{display:none} }
+</style>
+</head>
+<body>
+<div class="chrome">
+  <b>Direction C · "Warehouse Rail"</b>
+  <span class="tag">icon rail + focused surface · amber</span>
+  <div class="seg">
+    <button id="d-desk" class="on" onclick="setDev('desktop')">Desktop</button>
+    <button id="d-mob" onclick="setDev('mobile')">Mobile</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="device desktop" id="device">
+    <div class="app">
+      <!-- icon rail -->
+      <aside class="rail">
+        <div class="logo">A</div>
+        <a class="on" onclick="go('dash',this)">▦<small>Home</small></a>
+        <a onclick="go('orders',this)">🗒<small>Orders</small></a>
+        <a onclick="go('eod',this)">⚙<small>EOD</small></a>
+        <a onclick="go('pay',this)">₹<small>Pay</small></a>
+        <a class="muted">📊<small>Reports</small></a>
+        <div class="foot"><div class="ava">RK</div></div>
+      </aside>
+
+      <div class="main">
+        <header class="top">
+          <div class="burger" onclick="alert('Nav drawer (mobile)')">☰</div>
+          <div>
+            <div class="eyebrow" id="eye">Overview</div>
+            <h1 id="ttl">Today at the plant</h1>
+          </div>
+          <div class="right">
+            <span class="pill hide-mob">Cash held · ₹42,300</span>
+            <div class="ava-m hide-desk">RK</div>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- DASHBOARD -->
+          <section class="screen on" id="dash">
+            <div class="cards">
+              <div class="kpi"><div class="lbl">SALES TODAY</div><div class="val num">₹1,24,850</div><div class="delta up">▲ 8.2% vs avg</div></div>
+              <div class="kpi k2"><div class="lbl">COLLECTED</div><div class="val num">₹98,400</div><div class="delta up">▲ ₹22k in cash</div></div>
+              <div class="kpi k3"><div class="lbl">OUTSTANDING</div><div class="val num">₹6.73L</div><div class="delta down">41 stores overdue</div></div>
+              <div class="kpi k4"><div class="lbl">PRODUCED</div><div class="val num">2,140 cs</div><div class="delta muted">cost ₹58.4/case</div></div>
+            </div>
+            <div class="colwrap">
+              <div class="card">
+                <h3>Do next <span class="cnt">4 waiting on you</span></h3>
+                <div class="task"><div class="num-badge">₹</div><div><div class="tt">Approve PO-2261 · 40,000 preforms</div><div class="ts">₹2,10,000 · above ₹1L limit</div></div><div class="act"><button class="btn sm">Review</button></div></div>
+                <div class="task"><div class="num-badge">⇄</div><div><div class="tt">Accept handover · Suresh</div><div class="ts">120 cases + ₹18,000 cash</div></div><div class="act"><button class="btn sm ghost">Accept</button></div></div>
+                <div class="task"><div class="num-badge" style="background:var(--dang-soft);color:var(--dang)">!</div><div><div class="tt">Sri Balaji over credit limit</div><div class="ts">₹1,12,000 / ₹1,00,000 · held</div></div><div class="act"><button class="btn sm ghost">Open</button></div></div>
+                <div class="task"><div class="num-badge">◷</div><div><div class="tt">FSSAI renewal · 46 days</div><div class="ts">Renew before it lapses</div></div><div class="act"><button class="btn sm ghost">View</button></div></div>
+              </div>
+              <div class="card">
+                <h3>Custody</h3>
+                <table>
+                  <tbody>
+                    <tr><td>Suresh <span class="muted">agent</span></td><td class="r num">₹31,200</td><td class="r num muted">210cs</td></tr>
+                    <tr><td>Karthik <span class="muted">agent</span></td><td class="r num">₹18,900</td><td class="r num muted">96cs</td></tr>
+                    <tr><td>Bank <span class="muted">HDFC</span></td><td class="r num">₹8.40L</td><td class="r muted">—</td></tr>
+                    <tr><td>Warehouse</td><td class="r muted">—</td><td class="r num muted">1,486cs</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ORDERS -->
+          <section class="screen" id="orders">
+            <div style="display:flex;gap:9px;align-items:center;margin-bottom:14px">
+              <input class="input" placeholder="Search store or order…" style="max-width:340px">
+              <button class="btn ghost sm hide-mob">Filters</button>
+              <button class="btn sm" style="margin-left:auto">＋ New order</button>
+            </div>
+            <div class="split">
+              <div class="card" style="margin-top:0">
+                <h3>Orders today <span class="cnt">18 · ₹3.1L</span></h3>
+                <div style="overflow:auto">
+                <table>
+                  <thead><tr><th>Order / store</th><th class="r hide-mob">Cases</th><th class="r">Value</th><th class="r">Status</th></tr></thead>
+                  <tbody>
+                    <tr><td class="num">SO-4821<div class="ts muted">Sri Balaji · R-2</div></td><td class="r num hide-mob">60</td><td class="r num">₹34,200</td><td class="r"><span class="chip c-open">Confirmed</span></td></tr>
+                    <tr><td class="num">SO-4820<div class="ts muted">Anand Super · R-2</div></td><td class="r num hide-mob">36</td><td class="r num">₹19,800</td><td class="r"><span class="chip c-part">Partial</span></td></tr>
+                    <tr><td class="num">SO-4819<div class="ts muted">Lakshmi · R-1</div></td><td class="r num hide-mob">120</td><td class="r num">₹66,400</td><td class="r"><span class="chip c-done">Invoiced</span></td></tr>
+                    <tr><td class="num">SO-4818<div class="ts muted">New Ganga · R-1</div></td><td class="r num hide-mob">24</td><td class="r num">₹13,100</td><td class="r"><span class="chip c-hold">Hold</span></td></tr>
+                    <tr><td class="num">SO-4817<div class="ts muted">Meenakshi · R-3</div></td><td class="r num hide-mob">48</td><td class="r num">₹26,600</td><td class="r"><span class="chip c-done">Delivered</span></td></tr>
+                  </tbody>
+                </table>
+                </div>
+              </div>
+              <div class="card" style="margin-top:0">
+                <h3>SO-4820 · progress</h3>
+                <div class="task"><div class="num-badge" style="background:var(--pos-soft);color:var(--pos)">1</div><div><div class="tt">Confirmed · 36 cases</div><div class="ts">Wholesale price · GST 18%</div></div></div>
+                <div class="task"><div class="num-badge" style="background:var(--pos-soft);color:var(--pos)">2</div><div><div class="tt">Challan DC-3390 · 24 out</div><div class="ts">12 short → follow-up made</div></div></div>
+                <div class="task"><div class="num-badge">3</div><div><div class="tt">Invoice pending</div><div class="ts">COGS posts at weighted-avg</div></div><div class="act"><button class="btn sm">Invoice</button></div></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- EOD -->
+          <section class="screen" id="eod">
+            <div class="split">
+              <div>
+                <div class="stagebox">
+                  <div class="sh"><div class="n">1</div><h4>Blowing</h4><span class="flow">preform → bottle</span></div>
+                  <div class="bd">
+                    <div class="grid2">
+                      <div class="field" style="margin:0"><label>Preforms used</label><input class="input num" value="45,000"></div>
+                      <div class="field" style="margin:0"><label>Bottles produced</label><input class="input num" value="44,100"></div>
+                    </div>
+                    <div class="calc"><span class="muted">Wastage (auto)</span><b class="num">900 · 2.0%</b></div>
+                  </div>
+                </div>
+                <div class="stagebox">
+                  <div class="sh"><div class="n">2</div><h4>Filling</h4><span class="flow">bottle → case</span></div>
+                  <div class="bd">
+                    <div class="grid2">
+                      <div class="field" style="margin:0"><label>Bottles drawn</label><input class="input num" value="43,200"></div>
+                      <div class="field" style="margin:0"><label>Cases filled ×12</label><input class="input num" value="3,580"></div>
+                    </div>
+                    <div class="calc"><span class="muted">Closing WIP</span><b class="num">240 bottles</b></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:0">
+                <h3>Posts in one shot ⚛</h3>
+                <div class="task"><div class="num-badge" style="background:var(--dang-soft);color:var(--dang)">−</div><div><div class="tt">Consume raw materials</div><div class="ts">Preforms, caps, labels, water @ WA</div></div></div>
+                <div class="task"><div class="num-badge" style="background:var(--pos-soft);color:var(--pos)">＋</div><div><div class="tt">+3,580 cases to stock</div><div class="ts">Recompute weighted-avg cost</div></div></div>
+                <div class="task"><div class="num-badge">≡</div><div><div class="tt">Journal · ledger · attendance</div><div class="ts">One atomic transaction</div></div></div>
+                <div style="padding:14px"><button class="btn block">Post EOD for 17 Jul</button></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- PAYMENT -->
+          <section class="screen" id="pay">
+            <div class="split">
+              <div class="card" style="margin-top:0">
+                <h3>Payment</h3>
+                <div style="padding:15px">
+                  <div class="field"><label>CUSTOMER STORE</label><select class="selectish"><option>Sri Balaji Stores · Madurai</option><option>Anand Super Market</option><option>Lakshmi Traders</option></select></div>
+                  <div class="field"><label>AMOUNT RECEIVED</label><input class="input num" value="25,000"></div>
+                  <div class="field" style="margin-bottom:4px"><label>METHOD</label>
+                    <div class="opts">
+                      <div class="opt on" onclick="pm(this,'cash')">Cash</div>
+                      <div class="opt" onclick="pm(this,'upia')">UPI · agent</div>
+                      <div class="opt" onclick="pm(this,'upic')">UPI · co.</div>
+                      <div class="opt" onclick="pm(this,'card')">Card</div>
+                      <div class="opt" onclick="pm(this,'bank')">Bank</div>
+                      <div class="opt" onclick="pm(this,'chq')">Cheque</div>
+                    </div>
+                  </div>
+                  <div class="hint" id="hint">Lands in <b>your cash holding</b> — you're carrying it. Squared at handover.</div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:0">
+                <h3>Apply to invoices</h3>
+                <table>
+                  <thead><tr><th>Invoice</th><th class="r">Due</th><th class="r">Apply</th></tr></thead>
+                  <tbody>
+                    <tr><td class="num">INV-9912<div class="ts muted">28d overdue</div></td><td class="r num">₹18,600</td><td class="r num">₹18,600</td></tr>
+                    <tr><td class="num">INV-9930<div class="ts muted">12d</div></td><td class="r num">₹14,200</td><td class="r num">₹6,400</td></tr>
+                    <tr><td class="num">INV-9955<div class="ts muted">current</div></td><td class="r num">₹9,050</td><td class="r muted">₹0</td></tr>
+                  </tbody>
+                </table>
+                <div style="padding:12px 15px;border-top:1px solid var(--line2);display:flex;justify-content:space-between"><span class="muted">Applied</span><b class="num">₹25,000</b></div>
+                <div style="padding:0 15px 15px"><button class="btn block">Record payment · WhatsApp receipt</button></div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setDev(m){
+    var d=document.getElementById('device');d.className='device '+m;
+    document.getElementById('d-desk').classList.toggle('on',m==='desktop');
+    document.getElementById('d-mob').classList.toggle('on',m==='mobile');
+  }
+  var meta={dash:['Overview','Today at the plant'],orders:['Sell & fulfil','Orders'],eod:['Production','End-of-day entry'],pay:['Collect','Take a payment']};
+  function go(id,el){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+    document.getElementById(id).classList.add('on');
+    document.querySelectorAll('.rail a').forEach(a=>a.classList.remove('on'));
+    if(el)el.classList.add('on');
+    document.getElementById('eye').textContent=meta[id][0];
+    document.getElementById('ttl').textContent=meta[id][1];
+    document.querySelector('.content').scrollTop=0;
+  }
+  var hints={
+    cash:'Lands in <b>your cash holding</b> — you\'re carrying it. Squared at handover.',
+    upia:'Lands in <b>your cash holding</b> — agent UPI counts as cash-in-custody.',
+    upic:'Goes straight to <b>Bank (HDFC)</b>. No custody. Auto-matched in recon.',
+    card:'Goes to <b>Bank (HDFC)</b> on settlement. Matched in bulk reconciliation.',
+    bank:'Goes to <b>Bank (HDFC)</b>. Reconciles against the statement line.',
+    chq:'Held as <b>Cheques-in-Hand</b>. Clears or bounces via the cheque register.'
+  };
+  function pm(el,k){el.parentElement.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));el.classList.add('on');document.getElementById('hint').innerHTML=hints[k];}
+</script>
+</body>
+</html>

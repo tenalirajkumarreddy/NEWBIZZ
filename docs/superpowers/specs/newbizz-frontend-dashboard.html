@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEWBIZZ — Operations Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   HIGH-AGENCY FRONTEND SKILL
+   DESIGN_VARIANCE: 8 | MOTION_INTENSITY: 6 | VISUAL_DENSITY: 4
+   Fonts: Satoshi (display/body) + JetBrains Mono (data)
+   Accent: Teal #0F766E
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 0. RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{min-height:100dvh;overflow-x:hidden}
+
+/* ── 1. VARIABLES ── */
+:root{
+  --canvas:#F9FAFB;
+  --surface:#FFFFFF;
+  --surface-hover:#F4F4F5;
+  --surface-alt:#F1F5F9;
+  --ink:#18181B;
+  --ink-secondary:#71717A;
+  --ink-muted:#A1A1AA;
+  --ink-dim:#D4D4D8;
+  --border:rgba(226,232,240,0.6);
+  --accent:#0F766E;
+  --accent-light:#14B8A6;
+  --accent-subtle:rgba(15,118,110,0.07);
+  --accent-glow:rgba(15,118,110,0.12);
+  --red:#DC2626;
+  --red-subtle:rgba(220,38,38,0.07);
+  --green:#16A34A;
+  --green-subtle:rgba(22,163,74,0.07);
+  --amber:#D97706;
+  --amber-subtle:rgba(217,119,6,0.07);
+
+  --font-display:'Satoshi',system-ui,-apple-system,sans-serif;
+  --font-body:'Satoshi',system-ui,-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',monospace;
+
+  --spring:cubic-bezier(0.34,1.56,0.64,1);
+  --fluid:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ── 2. BASE TYPOGRAPHY ── */
+body{
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.6;
+  color:var(--ink);
+  background:var(--canvas);
+}
+
+h1,h2,h3,h4,h5,h6{
+  font-family:var(--font-display);
+  font-weight:700;
+  line-height:1.05;
+  letter-spacing:-0.03em;
+  color:var(--ink);
+}
+
+p{max-width:65ch;color:var(--ink-secondary);line-height:1.7}
+a{color:var(--accent);text-decoration:none;transition:color 0.2s var(--fluid)}
+a:hover{color:var(--accent-light)}
+
+/* ── 3. LAYOUT SHELL ── */
+.app-shell{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  grid-template-rows:56px 1fr 36px;
+  min-height:100dvh;
+}
+
+/* ── 4. TOP BAR ── */
+.top-bar{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:220px 1fr auto;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  align-items:center;
+}
+.top-bar-brand{
+  padding:0 var(--space-lg,24px);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  border-right:1px solid var(--border);
+  height:100%;
+}
+.brand-mark{
+  width:28px;height:28px;
+  background:var(--accent);
+  display:grid;place-items:center;
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:700;
+  color:white;
+  letter-spacing:0.02em;
+  border-radius:4px;
+}
+.brand-text{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:-0.03em;
+  color:var(--ink);
+  line-height:1.2;
+}
+.brand-text span{color:var(--accent)}
+.brand-sub{
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--ink-muted);
+  font-weight:500;
+}
+.top-bar-nav{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:0 24px;
+}
+.top-bar-nav a{
+  padding:6px 14px;
+  border-radius:6px;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink-secondary);
+  transition:all 0.2s var(--fluid);
+  letter-spacing:-0.01em;
+}
+.top-bar-nav a:hover{background:var(--accent-subtle);color:var(--accent)}
+.top-bar-nav a.active{background:var(--accent-subtle);color:var(--accent);font-weight:600}
+.top-bar-user{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:0 24px;
+}
+.user-label{
+  font-size:12px;
+  font-weight:500;
+  color:var(--ink-secondary);
+}
+.user-avatar{
+  width:32px;height:32px;
+  border-radius:4px;
+  background:var(--accent);
+  display:grid;place-items:center;
+  color:white;
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.02em;
+}
+/* perpetual float on avatar */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.user-avatar{animation:float 3s var(--spring) infinite}
+
+/* ── 5. SIDEBAR ── */
+.sidebar{
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  padding:12px 0;
+}
+.sidebar-group{margin-bottom:2px}
+.sidebar-group-label{
+  padding:8px 20px;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+  color:var(--ink-muted);
+  font-weight:600;
+  margin-top:8px;
+}
+.sidebar-nav{list-style:none}
+.sidebar-nav a{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 20px;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink-secondary);
+  transition:all 0.2s var(--fluid);
+  border-left:2px solid transparent;
+}
+.sidebar-nav a:hover{background:var(--accent-subtle);color:var(--accent)}
+.sidebar-nav a.active{
+  background:var(--accent-subtle);
+  color:var(--accent);
+  border-left-color:var(--accent);
+  font-weight:600;
+}
+.sidebar-nav .nav-count{
+  margin-left:auto;
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--ink-muted);
+  background:var(--canvas);
+  padding:0 6px;
+  border-radius:4px;
+  line-height:1.6;
+}
+.sidebar-nav a.active .nav-count{background:var(--accent-subtle);color:var(--accent)}
+
+/* ── 6. MAIN ── */
+.main{
+  background:var(--canvas);
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ── 6a. PAGE HEADER (left-aligned, asymmetric) ── */
+.page-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  padding:40px 48px 24px;
+}
+.page-header h1{
+  font-size:clamp(1.5rem,3vw,2.25rem);
+  font-weight:700;
+  letter-spacing:-0.03em;
+  line-height:1.05;
+}
+.page-header .sub{
+  font-size:14px;
+  color:var(--ink-secondary);
+  margin-top:4px;
+  max-width:55ch;
+}
+.header-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 20px;
+  border-radius:6px;
+  font-family:var(--font-body);
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:-0.01em;
+  border:none;
+  cursor:pointer;
+  transition:all 0.2s var(--spring);
+  line-height:1;
+  height:36px;
+}
+.btn:active{transform:translateY(1px) scale(0.98)}
+.btn-primary{
+  background:var(--accent);
+  color:white;
+}
+.btn-primary:hover{background:#0D9488;box-shadow:0 2px 12px var(--accent-glow)}
+/* perpetual pulse on primary */
+@keyframes btn-pulse{0%,100%{box-shadow:0 0 0 0 var(--accent-glow)}50%{box-shadow:0 0 0 6px transparent}}
+.btn-primary.pulse{animation:btn-pulse 2.5s ease-in-out infinite}
+.btn-ghost{
+  background:var(--surface);
+  color:var(--ink-secondary);
+  border:1px solid var(--border);
+}
+.btn-ghost:hover{background:var(--surface-hover);color:var(--ink);border-color:var(--ink-dim)}
+
+/* ── 6b. METRICS BENTO (asymmetric grid) ── */
+.metrics-bento{
+  display:grid;
+  grid-template-columns:1.3fr 0.9fr 0.8fr;
+  gap:16px;
+  padding:0 48px 24px;
+}
+.metric-card{
+  background:var(--surface);
+  border-radius:40px;
+  padding:28px 32px;
+  border:1px solid var(--border);
+  transition:all 0.3s var(--spring);
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 20px 40px -15px rgba(0,0,0,0.04);
+}
+.metric-card:hover{box-shadow:0 24px 48px -16px rgba(0,0,0,0.08);transform:translateY(-2px)}
+.metric-card .label{
+  font-size:11px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--ink-muted);
+  margin-bottom:8px;
+}
+.metric-card .value{
+  font-family:var(--font-mono);
+  font-size:clamp(1.4rem,2.2vw,1.85rem);
+  font-weight:700;
+  color:var(--ink);
+  letter-spacing:-0.02em;
+  line-height:1;
+  margin-bottom:4px;
+  font-variant-numeric:tabular-nums;
+}
+.metric-card .delta{
+  font-family:var(--font-mono);
+  font-size:12px;
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.metric-card .delta.up{color:var(--green)}
+.metric-card .delta.down{color:var(--red)}
+.metric-card .delta.neutral{color:var(--ink-muted)}
+.metric-card .sub{font-size:13px;color:var(--ink-secondary);margin-top:2px}
+.metric-card.full{grid-column:1/-1}
+.metric-card.wide{grid-column:span 2}
+/* perpetual shimmer on alert card */
+@keyframes alert-breath{0%,100%{border-color:var(--border)}50%{border-color:rgba(220,38,38,0.2)}}
+.metric-card.alert{animation:alert-breath 3s ease-in-out infinite}
+
+/* ── 6c. CONTENT SPLIT (asymmetric 65/35) ── */
+.content-split{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  gap:16px;
+  padding:0 48px 40px;
+  flex:1;
+}
+
+/* ── 6d. PANELS ── */
+.panel{
+  background:var(--surface);
+  border-radius:40px;
+  border:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:0 20px 40px -15px rgba(0,0,0,0.04);
+}
+.panel-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 28px;
+  border-bottom:1px solid var(--border);
+}
+.panel-header h3{
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:-0.02em;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.panel-header h3 .hl{color:var(--accent)}
+.panel-header .badge{
+  font-family:var(--font-mono);
+  font-size:10px;
+  padding:2px 10px;
+  border-radius:20px;
+  background:var(--accent-subtle);
+  color:var(--accent);
+  font-weight:600;
+}
+.panel-header .badge.alert{background:var(--red-subtle);color:var(--red)}
+.panel-body{padding:4px 0;flex:1}
+
+/* ── 6e. PRODUCTION MONITOR ── */
+.prod-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+}
+.prod-stage{
+  padding:24px 28px;
+  border-right:1px solid var(--border);
+}
+.prod-stage:last-child{border-right:none}
+.prod-stage .s-label{
+  font-size:10px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--ink-muted);
+  margin-bottom:6px;
+}
+.prod-stage .s-value{
+  font-family:var(--font-mono);
+  font-size:clamp(1.2rem,1.8vw,1.6rem);
+  font-weight:700;
+  color:var(--ink);
+  letter-spacing:-0.02em;
+  margin-bottom:16px;
+  font-variant-numeric:tabular-nums;
+}
+.prod-bar{
+  height:3px;
+  background:var(--ink-dim);
+  border-radius:20px;
+  overflow:hidden;
+  margin-bottom:16px;
+}
+.prod-bar-fill{
+  height:100%;
+  background:var(--accent);
+  border-radius:20px;
+  transition:width 0.8s var(--spring);
+}
+.prod-stage .row{
+  display:flex;
+  justify-content:space-between;
+  font-size:13px;
+  padding:3px 0;
+  font-family:var(--font-mono);
+  font-variant-numeric:tabular-nums;
+}
+.prod-stage .row .rk{color:var(--ink-muted)}
+.prod-stage .row .rv{color:var(--ink-secondary);font-weight:500}
+.prod-stage .row .rv.highlight{color:var(--accent)}
+.prod-stage .row .rv.warn{color:var(--red)}
+
+/* ── 6f. DATA TABLE ── */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{
+  text-align:left;
+  padding:8px 28px;
+  font-size:10px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--ink-muted);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+.data-table td{
+  padding:8px 28px;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+  color:var(--ink-secondary);
+  font-variant-numeric:tabular-nums;
+}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface-hover)}
+.data-table td.num{font-family:var(--font-mono);text-align:right}
+.data-table td.id{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:600}
+.data-table td.store{font-weight:500;color:var(--ink)}
+/* stagger rows on mount */
+.data-table tbody tr{animation:row-in 0.4s var(--spring) both}
+.data-table tbody tr:nth-child(1){animation-delay:0.03s}
+.data-table tbody tr:nth-child(2){animation-delay:0.06s}
+.data-table tbody tr:nth-child(3){animation-delay:0.09s}
+.data-table tbody tr:nth-child(4){animation-delay:0.12s}
+.data-table tbody tr:nth-child(5){animation-delay:0.15s}
+.data-table tbody tr:nth-child(6){animation-delay:0.18s}
+@keyframes row-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.status-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:10px;
+  font-weight:600;
+  padding:2px 10px;
+  border-radius:20px;
+  letter-spacing:0.02em;
+}
+.status-tag::before{content:'';width:5px;height:5px;border-radius:50%}
+.status-tag.approved{background:var(--green-subtle);color:var(--green)}
+.status-tag.approved::before{background:var(--green)}
+.status-tag.pending{background:var(--red-subtle);color:var(--red)}
+.status-tag.pending::before{background:var(--red)}
+@keyframes pending-shimmer{0%,100%{opacity:0.6}50%{opacity:1}}
+.status-tag.pending{animation:pending-shimmer 1.8s ease-in-out infinite}
+.status-tag.partial{background:var(--amber-subtle);color:var(--amber)}
+.status-tag.partial::before{background:var(--amber)}
+.status-tag.draft{background:var(--accent-subtle);color:var(--ink-muted)}
+.status-tag.draft::before{background:var(--ink-dim)}
+
+/* ── 6g. SIDE PANEL ── */
+.side-panel{display:flex;flex-direction:column;gap:16px}
+
+.approval-list{list-style:none}
+.approval-list li{
+  padding:14px 24px;
+  border-bottom:1px solid var(--border);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:6px;
+  align-items:start;
+}
+.approval-list li:last-child{border-bottom:none}
+.approval-list li:hover{background:var(--surface-hover)}
+.approval-list .a-title{font-size:13px;font-weight:600;color:var(--ink)}
+.approval-list .a-meta{
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--ink-muted);
+  margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+.approval-list .a-amount{
+  font-family:var(--font-mono);
+  font-size:13px;
+  font-weight:600;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
+.approval-list .a-actions{
+  grid-column:1/-1;
+  display:flex;
+  gap:4px;
+  margin-top:4px;
+}
+.approval-list .a-actions button{
+  padding:4px 12px;
+  font-family:var(--font-body);
+  font-size:10px;
+  font-weight:600;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--ink-secondary);
+  cursor:pointer;
+  transition:all 0.2s var(--fluid);
+}
+.approval-list .a-actions button:hover{background:var(--accent-subtle);color:var(--accent);border-color:var(--accent)}
+.approval-list .a-actions button.approve{background:var(--accent);color:white;border-color:var(--accent)}
+.approval-list .a-actions button.approve:hover{background:#0D9488}
+.approval-list .a-actions button.reject:hover{background:var(--red-subtle);color:var(--red);border-color:var(--red)}
+
+/* activity feed */
+.activity-feed{list-style:none}
+.activity-feed li{
+  padding:10px 24px;
+  border-bottom:1px solid var(--border);
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:10px;
+  align-items:baseline;
+  animation:af-in 0.4s var(--spring) both;
+}
+.activity-feed li:last-child{border-bottom:none}
+.activity-feed li:hover{background:var(--surface-hover)}
+.activity-feed li:nth-child(1){animation-delay:0.02s}
+.activity-feed li:nth-child(2){animation-delay:0.04s}
+.activity-feed li:nth-child(3){animation-delay:0.06s}
+.activity-feed li:nth-child(4){animation-delay:0.08s}
+.activity-feed li:nth-child(5){animation-delay:0.1s}
+.activity-feed li:nth-child(6){animation-delay:0.12s}
+.activity-feed li:nth-child(7){animation-delay:0.14s}
+.activity-feed li:nth-child(8){animation-delay:0.16s}
+@keyframes af-in{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+.activity-feed .af-time{
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--ink-muted);
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.activity-feed .af-event{font-size:13px;color:var(--ink-secondary);line-height:1.5}
+.activity-feed .af-highlight{color:var(--accent);font-weight:600}
+.activity-feed .af-user{font-size:11px;color:var(--ink-muted)}
+
+/* ── 6h. STATUS BAR ── */
+.status-bar{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  padding:0 24px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  font-size:10px;
+  color:var(--ink-muted);
+  font-family:var(--font-mono);
+  font-variant-numeric:tabular-nums;
+}
+.status-bar .sb-center{text-align:center}
+.status-bar .sb-right{text-align:right}
+.status-bar .sb-dot{
+  display:inline-block;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--green);
+  margin-right:4px;
+  vertical-align:middle;
+}
+@keyframes dot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+.status-bar .sb-dot{animation:dot-pulse 2s ease-in-out infinite}
+
+/* ── 7. SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--ink-dim);border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-muted)}
+
+/* ── 8. RESPONSIVE ── */
+@media(max-width:1100px){
+  .metrics-bento{grid-template-columns:1fr 1fr}
+  .content-split{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  .app-shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .top-bar{grid-template-columns:1fr auto}
+  .top-bar-brand{border-right:none}
+  .top-bar-nav{display:none}
+  .page-header{padding:28px 24px 20px;flex-direction:column;gap:16px}
+  .metrics-bento{grid-template-columns:1fr;padding:0 24px 16px;gap:12px}
+  .metric-card{border-radius:32px;padding:20px 24px}
+  .content-split{padding:0 24px 28px;gap:12px}
+  .panel{border-radius:32px}
+  .prod-grid{grid-template-columns:1fr}
+  .prod-stage:first-child{border-right:none;border-bottom:1px solid var(--border)}
+  .status-bar{grid-template-columns:1fr;text-align:center;gap:2px;padding:4px 16px}
+  .status-bar .sb-right{text-align:center}
+}
+@media(max-width:480px){
+  .page-header h1{font-size:1.35rem}
+  .header-actions{flex-wrap:wrap}
+  .data-table th,.data-table td{padding:6px 16px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ═══════════════════════════ TOP BAR ═══════════════════════════ -->
+  <header class="top-bar">
+    <div class="top-bar-brand">
+      <div class="brand-mark">N</div>
+      <div>
+        <div class="brand-text">NEWBIZZ<span>.</span></div>
+        <div class="brand-sub">Operations Command</div>
+      </div>
+    </div>
+    <nav class="top-bar-nav">
+      <a href="#" class="active">Command Center</a>
+      <a href="#">Sales</a>
+      <a href="#">Production</a>
+      <a href="#">Inventory</a>
+      <a href="#">Accounting</a>
+      <a href="#">Field</a>
+    </nav>
+    <div class="top-bar-user">
+      <span class="user-label">Admin</span>
+      <div class="user-avatar">AK</div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Operations</div>
+      <ul class="sidebar-nav">
+        <li><a href="#" class="active">Command Center<span class="nav-count">8</span></a></li>
+        <li><a href="#">Sales Desk<span class="nav-count">23</span></a></li>
+        <li><a href="#">Order Book</a></li>
+        <li><a href="#">Delivery Challan</a></li>
+        <li><a href="#">Invoicing</a></li>
+        <li><a href="#">Payments</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Manufacturing</div>
+      <ul class="sidebar-nav">
+        <li><a href="#">BOM / Recipes</a></li>
+        <li><a href="#">Production Plan</a></li>
+        <li><a href="#">Job Cards</a></li>
+        <li><a href="#">EOD Recording</a></li>
+        <li><a href="#">Machine Maintenance</a></li>
+        <li><a href="#">Process Costing</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Inventory</div>
+      <ul class="sidebar-nav">
+        <li><a href="#">Item Master</a></li>
+        <li><a href="#">Warehouse Stock</a></li>
+        <li><a href="#">Holdings / Transfers</a></li>
+        <li><a href="#">Pricing / Rate Master</a></li>
+        <li><a href="#">Reorder Alerts</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Accounting</div>
+      <ul class="sidebar-nav">
+        <li><a href="#">Journal</a></li>
+        <li><a href="#">Trial Balance</a></li>
+        <li><a href="#">P&amp;L / Balance Sheet</a></li>
+        <li><a href="#">Purchase Orders</a></li>
+        <li><a href="#">GRN / Bill Match</a></li>
+        <li><a href="#">Fixed Assets</a></li>
+        <li><a href="#">GST / 2B Recon</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Field &amp; CRM</div>
+      <ul class="sidebar-nav">
+        <li><a href="#">Routes / Visits</a></li>
+        <li><a href="#">Vehicles / Fleet</a></li>
+        <li><a href="#">CRM / Complaints</a></li>
+        <li><a href="#">Schemes / Rebates</a></li>
+        <li><a href="#">Bank Reconciliation</a></li>
+        <li><a href="#">Payroll</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Admin</div>
+      <ul class="sidebar-nav">
+        <li><a href="#">Company Settings</a></li>
+        <li><a href="#">User Management</a></li>
+        <li><a href="#">Audit Log</a></li>
+        <li><a href="#">License Register</a></li>
+        <li><a href="#">Data Migration</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+  <main class="main">
+
+    <!-- PAGE HEADER (left-aligned — variance > 4) -->
+    <div class="page-header">
+      <div>
+        <h1>Command Center</h1>
+        <p class="sub">FY 2026-27 — Real-time operational overview across all business modules. Data refreshes every 30 seconds.</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost">Export Report</button>
+        <button class="btn btn-primary pulse">Refresh</button>
+      </div>
+    </div>
+
+    <!-- METRICS BENTO (asymmetric columns — 1.3fr / 0.9fr / 0.8fr) -->
+    <div class="metrics-bento">
+      <div class="metric-card alert" style="grid-row:span 2">
+        <div class="label">Sales Today</div>
+        <div class="value">&#8377;1,84,200</div>
+        <div class="delta up">+12.4% vs yesterday</div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="label" style="margin-bottom:12px">Top Performing Stores</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="font-weight:500;color:var(--ink)">Krishna Traders</span>
+              <span class="delta up">+&#8377;62,500</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="font-weight:500;color:var(--ink)">Muthu Agencies</span>
+              <span class="delta up">+&#8377;48,200</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="font-weight:500;color:var(--ink)">Sri Amman Stores</span>
+              <span class="delta up">+&#8377;31,800</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Pending Orders</div>
+        <div class="value">23</div>
+        <div class="delta down">5 unfulfilled</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Total Outstanding</div>
+        <div class="value">&#8377;12,45,800</div>
+        <div class="delta down">38 overdue &gt;30 days</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Production Today</div>
+        <div class="value">847</div>
+        <div class="sub">filled cases</div>
+        <div class="delta neutral">92% of plan</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Collections</div>
+        <div class="value">&#8377;92,450</div>
+        <div class="delta up">+8.1% vs target</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Stock Alerts</div>
+        <div class="value" style="color:var(--red)">3</div>
+        <div class="sub">2 items below reorder level</div>
+      </div>
+    </div>
+
+    <!-- CONTENT SPLIT (asymmetric 65/35) -->
+    <div class="content-split">
+
+      <!-- LEFT -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Production Monitor -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Production Monitor <span class="hl">//</span> Stage 1 to Stage 2</h3>
+            <span class="badge">Live</span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <div class="prod-grid">
+              <div class="prod-stage">
+                <div class="s-label">Stage 1 // Blowing</div>
+                <div class="s-value">8,400</div>
+                <div class="prod-bar"><div class="prod-bar-fill" style="width:78%"></div></div>
+                <div class="row"><span class="rk">Output</span><span class="rv">8,200 empty bottles</span></div>
+                <div class="row"><span class="rk">Wastage</span><span class="rv warn">200 units (2.4%)</span></div>
+                <div class="row"><span class="rk">Machine</span><span class="rv">BL-01 / 95% uptime</span></div>
+                <div class="row"><span class="rk">Preform Stock</span><span class="rv highlight">24,500 units</span></div>
+              </div>
+              <div class="prod-stage">
+                <div class="s-label">Stage 2 // Filling</div>
+                <div class="s-value">847</div>
+                <div class="prod-bar"><div class="prod-bar-fill" style="width:92%"></div></div>
+                <div class="row"><span class="rk">WIP Drawn</span><span class="rv">7,950 bottles</span></div>
+                <div class="row"><span class="rk">Yield</span><span class="rv highlight">99.2%</span></div>
+                <div class="row"><span class="rk">Loose Remainder</span><span class="rv">38 bottles (WIP)</span></div>
+                <div class="row"><span class="rk">Cap / Shrink Used</span><span class="rv">7,910 / 7,890</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="panel" style="flex:1">
+          <div class="panel-header">
+            <h3>Open Sales Orders</h3>
+            <span class="badge">23</span>
+          </div>
+          <div class="panel-body" style="flex:1">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Store</th>
+                  <th>Items</th>
+                  <th class="num">Amount</th>
+                  <th>Status</th>
+                  <th>Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="id">ORD-1048</td>
+                  <td class="store">Krishna Traders <span style="color:var(--ink-muted);font-size:10px">// MDU</span></td>
+                  <td>250 cases (20L)</td>
+                  <td class="num">&#8377;62,500</td>
+                  <td><span class="status-tag approved">Approved</span></td>
+                  <td>Rajesh K</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1047</td>
+                  <td class="store">Sri Amman Stores <span style="color:var(--ink-muted);font-size:10px">// KARUR</span></td>
+                  <td>100 cases (1L)</td>
+                  <td class="num">&#8377;18,000</td>
+                  <td><span class="status-tag pending">Pending</span></td>
+                  <td>Murugan S</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1046</td>
+                  <td class="store">Muthu Agencies <span style="color:var(--ink-muted);font-size:10px">// MDU</span></td>
+                  <td>500 cases (20L)</td>
+                  <td class="num">&#8377;1,25,000</td>
+                  <td><span class="status-tag partial">Partial</span></td>
+                  <td>Pandian K</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1045</td>
+                  <td class="store">Kaveri Suppliers <span style="color:var(--ink-muted);font-size:10px">// SALEM</span></td>
+                  <td>75 cases (500ml)</td>
+                  <td class="num">&#8377;9,750</td>
+                  <td><span class="status-tag draft">Draft</span></td>
+                  <td>Selvi R</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1044</td>
+                  <td class="store">RVR Distributors <span style="color:var(--ink-muted);font-size:10px">// TRY</span></td>
+                  <td>300 cases (20L)</td>
+                  <td class="num">&#8377;75,000</td>
+                  <td><span class="status-tag approved">Approved</span></td>
+                  <td>Vignesh M</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1043</td>
+                  <td class="store">RK Enterprises <span style="color:var(--ink-muted);font-size:10px">// COIM</span></td>
+                  <td>150 cases (1L)</td>
+                  <td class="num">&#8377;27,000</td>
+                  <td><span class="status-tag pending">Pending</span></td>
+                  <td>Dinesh T</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Side Panel -->
+      <div class="side-panel">
+
+        <!-- Pending Approvals -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Pending Approvals</h3>
+            <span class="badge alert">7</span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <ul class="approval-list">
+              <li>
+                <div>
+                  <div class="a-title">Purchase Order PO-89</div>
+                  <div class="a-meta">Polypack India // 25,000 preforms</div>
+                </div>
+                <div class="a-amount">&#8377;2,40,000</div>
+                <div class="a-actions">
+                  <button class="approve">Approve</button>
+                  <button>Review</button>
+                  <button class="reject">Reject</button>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <div class="a-title">Expense Claim — Udhyam S</div>
+                  <div class="a-meta">Fuel // Vehicle TN-01</div>
+                </div>
+                <div class="a-amount">&#8377;4,500</div>
+                <div class="a-actions">
+                  <button class="approve">Approve</button>
+                  <button>Review</button>
+                  <button class="reject">Reject</button>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <div class="a-title">Scheme Rebate — F12</div>
+                  <div class="a-meta">Muthu Agencies // Volume tier 3</div>
+                </div>
+                <div class="a-amount">&#8377;12,500</div>
+                <div class="a-actions">
+                  <button class="approve">Approve</button>
+                  <button>Review</button>
+                  <button class="reject">Reject</button>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <div class="a-title">Debit Note DN-12</div>
+                  <div class="a-meta">PremaTech // Return 500 preforms</div>
+                </div>
+                <div class="a-amount">&#8377;6,250</div>
+                <div class="a-actions">
+                  <button class="approve">Approve</button>
+                  <button>Review</button>
+                  <button class="reject">Reject</button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="panel" style="flex:1">
+          <div class="panel-header">
+            <h3>Recent Activity</h3>
+            <span class="badge">12</span>
+          </div>
+          <div class="panel-body" style="flex:1;overflow-y:auto">
+            <ul class="activity-feed">
+              <li>
+                <span class="af-time">14:28</span>
+                <div>
+                  <span class="af-event">Sale recorded — <span class="af-highlight">INV-2026-2118</span></span>
+                  <br><span class="af-user">by admin@newbizz.in</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">14:15</span>
+                <div>
+                  <span class="af-event">EOD submitted — Stage 1 // 8,200 bottles</span>
+                  <br><span class="af-user">by OP-Seshan</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">13:52</span>
+                <div>
+                  <span class="af-event">Payment collected — <span class="af-highlight">&#8377;18,500</span></span>
+                  <br><span class="af-user">Rajesh K @ Krishna Traders</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">13:30</span>
+                <div>
+                  <span class="af-event">Stock transfer — WH-01 to Agent Murugan</span>
+                  <br><span class="af-user">250 cases (20L) // In transit</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">12:45</span>
+                <div>
+                  <span class="af-event">License expiry warning — <span class="af-highlight">FSSAI</span></span>
+                  <br><span class="af-user">Expires in 28 days</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">12:10</span>
+                <div>
+                  <span class="af-event">Bank recon match — 23 transactions</span>
+                  <br><span class="af-user">HDFC Current Account // &#8377;3,42,000</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">11:38</span>
+                <div>
+                  <span class="af-event">GRN posted — <span class="af-highlight">GRN-2026-342</span></span>
+                  <br><span class="af-user">Preforms 25,000 units @ WH-01</span>
+                </div>
+              </li>
+              <li>
+                <span class="af-time">10:15</span>
+                <div>
+                  <span class="af-event">Customer created — <span class="af-highlight">Kaveri Suppliers</span></span>
+                  <br><span class="af-user">Salem // 3 stores</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════ STATUS BAR ═══════════════════════════ -->
+  <footer class="status-bar">
+    <span><span class="sb-dot"></span>All systems nominal</span>
+    <span class="sb-center">Build rev 2.6 // Last recon 14:30 IST</span>
+    <span class="sb-right">&#8377;1,84,200 MTD // 0 unreconciled differences</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
