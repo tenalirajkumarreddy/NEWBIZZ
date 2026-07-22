@@ -1,0 +1,71 @@
+import Link from "next/link";
+import { listGrns } from "@/lib/data/purchases";
+import { Panel } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Money } from "@/components/ui/Money";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { dateIST, count as fmtCount } from "@/lib/format";
+
+export default async function GrnsPage() {
+  const grns = await listGrns({ limit: 200 });
+
+  return (
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <Link href="/purchasing" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Purchasing</Link>
+          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Goods Receipts</h1>
+          <p className="mt-0.5 text-[13px] text-ink-3">{fmtCount(grns.length)} GRNs · stock in at cost</p>
+        </div>
+        <Link href="/purchasing/grn/new"><Button variant="primary" size="sm">Receive goods</Button></Link>
+      </div>
+
+      <Panel flush>
+        {grns.length === 0 ? (
+          <EmptyState
+            title="No goods receipts yet"
+            description="A GRN books received goods into stock at cost (Dr inventory / Cr GRN clearing). Bill it later to book GST and the payable."
+            action={<Link href="/purchasing/grn/new"><Button variant="secondary" size="sm">Receive goods</Button></Link>}
+          />
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>GRN No</TH>
+                <TH>Date</TH>
+                <TH>Supplier</TH>
+                <TH>From PO</TH>
+                <TH numeric>Goods value</TH>
+                <TH>Status</TH>
+                <TH>Bill</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {grns.map((g) => (
+                <TR key={g.id} interactive>
+                  <TD className="p-0">
+                    <Link href={`/purchasing/grn/${g.id}`} className="block px-3 py-2.5 font-mono text-[12px] font-semibold text-brand">{g.grnNo}</Link>
+                  </TD>
+                  <TD>{dateIST(g.grnDate)}</TD>
+                  <TD className="font-medium text-ink">{g.supplierName ?? "—"}</TD>
+                  <TD className="font-mono text-[12px] text-ink-3">{g.poNo ?? "—"}</TD>
+                  <TD numeric><Money value={g.goodsValue} /></TD>
+                  <TD><StatusBadge status={g.status} /></TD>
+                  <TD>
+                    {g.billedBillId ? (
+                      <Link href={`/purchasing/bills/${g.billedBillId}`} className="text-[12px] font-medium text-brand hover:underline">View bill →</Link>
+                    ) : (
+                      <span className="text-[12px] text-amb">Unbilled</span>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </Panel>
+    </div>
+  );
+}

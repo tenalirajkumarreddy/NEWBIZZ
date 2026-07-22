@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEWBIZZ — Operations Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{min-height:100dvh;overflow-x:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.5;color:#1e293b;background:#f1f5f9;-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:60px 1fr 36px;min-height:100dvh}
+
+/* ── TOP BAR ── */
+.topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#fff;border-bottom:1px solid #e2e8f0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{width:32px;height:32px;background:#0891b2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;font-family:'JetBrains Mono',monospace}
+.topbar-brand{font-weight:700;font-size:16px;color:#0f172a}
+.topbar-brand span{color:#0891b2}
+.topbar-nav{display:flex;gap:2px;margin-left:32px}
+.topbar-nav a{padding:8px 14px;border-radius:6px;font-size:13px;font-weight:500;color:#64748b;text-decoration:none;transition:all .15s}
+.topbar-nav a:hover{background:#f1f5f9;color:#0891b2}
+.topbar-nav a.active{background:#ecfeff;color:#0891b2}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-date{font-size:12px;color:#94a3b8}
+.topbar-user{width:34px;height:34px;border-radius:8px;background:#0891b2;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;font-family:'JetBrains Mono',monospace}
+
+/* ── SIDEBAR ── */
+.sidebar{background:#fff;border-right:1px solid #e2e8f0;overflow-y:auto;padding:12px 0}
+.sidebar-grp{margin-bottom:4px}
+.sidebar-label{padding:8px 20px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
+.sidebar-nav{list-style:none}
+.sidebar-nav a{display:flex;align-items:center;gap:10px;padding:7px 20px;font-size:13px;font-weight:500;color:#475569;text-decoration:none;transition:all .12s;border-left:2px solid transparent}
+.sidebar-nav a .ico{width:16px;text-align:center;font-size:14px;color:#94a3b8}
+.sidebar-nav a:hover{background:#f8fafc;color:#0891b2}
+.sidebar-nav a:hover .ico{color:#0891b2}
+.sidebar-nav a.active{background:#ecfeff;color:#0891b2;border-left-color:#0891b2}
+.sidebar-nav a.active .ico{color:#0891b2}
+.sidebar-nav .badge{margin-left:auto;font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;background:#f1f5f9;color:#64748b}
+.sidebar-nav a.active .badge{background:#ecfeff;color:#0891b2}
+
+/* ── MAIN ── */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+
+/* page header */
+.pg-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:28px 32px 16px}
+.pg-hdr h1{font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-.02em}
+.pg-hdr .sub{font-size:13px;color:#64748b;margin-top:2px}
+.pg-actions{display:flex;gap:8px}
+.btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;height:34px}
+.btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0}
+.btn-outline:hover{background:#f8fafc;border-color:#cbd5e1}
+.btn-primary{background:#0891b2;color:#fff}
+.btn-primary:hover{background:#0e7490}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;padding:0 32px 16px}
+.m-card{background:#fff;border-radius:12px;padding:20px 22px;border:1px solid #e2e8f0;display:flex;flex-direction:column;gap:2px;transition:all .2s}
+.m-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.05);border-color:#cbd5e1}
+.m-card .ml{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8}
+.m-card .mv{font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-.02em;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+.m-card .md{font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;margin-top:4px}
+.m-card .md.up{color:#059669}
+.m-card .md.down{color:#dc2626}
+.m-card .md.down span{color:#94a3b8;font-weight:400}
+.m-card .bar{height:3px;border-radius:4px;background:#e2e8f0;margin-top:10px;overflow:hidden}
+.m-card .bar-fill{height:100%;border-radius:4px;background:#0891b2;transition:width .6s}
+
+/* ── CONTENT ── */
+.cnt{display:grid;grid-template-columns:1fr 340px;gap:16px;padding:0 32px 28px;flex:1}
+
+/* ── PANEL ── */
+.panel{background:#fff;border-radius:12px;border:1px solid #e2e8f0;display:flex;flex-direction:column;overflow:hidden}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #e2e8f0}
+.panel-hdr h3{font-size:14px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:6px}
+.panel-hdr .chip{font-size:10px;font-weight:600;padding:2px 10px;border-radius:10px;background:#ecfeff;color:#0891b2}
+.panel-hdr .chip.warn{background:#fef2f2;color:#dc2626}
+.panel-body{padding:4px 0;flex:1}
+
+/* ── PRODUCTION VISUAL ── */
+.prod{display:grid;grid-template-columns:1fr 1fr}
+.prod-st{padding:18px 20px;border-right:1px solid #e2e8f0}
+.prod-st:last-child{border-right:none}
+.prod-st .st-lbl{font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:2px}
+.prod-st .st-val{font-size:20px;font-weight:700;color:#0f172a;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.prod-st .st-sub{font-size:12px;color:#64748b;margin-bottom:10px}
+.prod-st .st-bar{height:4px;border-radius:4px;background:#e2e8f0;margin-bottom:12px;overflow:hidden}
+.prod-st .st-bar-fill{height:100%;border-radius:4px;background:#0891b2;transition:width .6s}
+.prod-st .st-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.prod-st .st-row .rk{color:#94a3b8}
+.prod-st .st-row .rv{color:#475569;font-weight:500}
+.prod-st .st-row .rv.cy{color:#0891b2}
+.prod-st .st-row .rv.rd{color:#dc2626}
+
+/* VISUAL CHART - simple bar chart */
+.chart-mini{display:flex;align-items:flex-end;gap:4px;height:32px;margin:8px 0}
+.chart-mini .bar{width:100%;border-radius:3px 3px 0 0;background:#0891b2;min-height:4px;transition:height .5s;opacity:.7}
+.chart-mini .bar:nth-child(1){height:28px}
+.chart-mini .bar:nth-child(2){height:20px}
+.chart-mini .bar:nth-child(3){height:32px}
+.chart-mini .bar:nth-child(4){height:14px}
+.chart-mini .bar:nth-child(5){height:24px}
+.chart-mini .bar:nth-child(6){height:18px}
+.chart-mini .bar:nth-child(7){height:30px}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:8px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+.tbl td{padding:8px 16px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#475569}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#f8fafc}
+.tbl td.num{font-family:'JetBrains Mono',monospace;text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.tbl td.id{font-family:'JetBrains Mono',monospace;font-size:12px;color:#0891b2;font-weight:600}
+.tbl td.str{font-weight:600;color:#0f172a}
+
+.st{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:2px 10px;border-radius:10px}
+.st::before{content:'';width:5px;height:5px;border-radius:50%}
+.st.grn{background:#f0fdf4;color:#059669}
+.st.grn::before{background:#059669}
+.st.red{background:#fef2f2;color:#dc2626}
+.st.red::before{background:#dc2626}
+.st.amb{background:#fffbeb;color:#d97706}
+.st.amb::before{background:#d97706}
+.st.slt{background:#f1f5f9;color:#64748b}
+.st.slt::before{background:#94a3b8}
+
+/* ── SIDE PANEL ── */
+.sp{display:flex;flex-direction:column;gap:12px}
+
+/* approval items */
+.apr{list-style:none}
+.apr li{padding:12px 16px;border-bottom:1px solid #f1f5f9;display:grid;grid-template-columns:1fr auto;gap:4px}
+.apr li:last-child{border-bottom:none}
+.apr li:hover{background:#f8fafc}
+.apr .ap-t{font-size:13px;font-weight:600;color:#0f172a}
+.apr .ap-m{font-size:11px;color:#94a3b8}
+.apr .ap-a{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#0f172a;text-align:right;font-variant-numeric:tabular-nums}
+.apr .ap-btns{grid-column:1/-1;display:flex;gap:4px;margin-top:2px}
+.apr .ap-btns button{padding:3px 10px;font-size:10px;font-weight:600;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;transition:all .12s}
+.apr .ap-btns button:hover{border-color:#0891b2;color:#0891b2;background:#ecfeff}
+.apr .ap-btns button.grn{background:#0891b2;color:#fff;border-color:#0891b2}
+.apr .ap-btns button.grn:hover{background:#0e7490}
+.apr .ap-btns button.red:hover{border-color:#dc2626;color:#dc2626;background:#fef2f2}
+
+/* activity */
+.act{list-style:none}
+.act li{padding:8px 16px;border-bottom:1px solid #f1f5f9;display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline}
+.act li:last-child{border-bottom:none}
+.act li:hover{background:#f8fafc}
+.act .ac-t{font-family:'JetBrains Mono',monospace;font-size:10px;color:#94a3b8;white-space:nowrap;font-variant-numeric:tabular-nums}
+.act .ac-e{font-size:12px;color:#475569;line-height:1.5}
+.act .ac-h{color:#0891b2;font-weight:600}
+.act .ac-u{font-size:11px;color:#94a3b8}
+
+/* ── STATUS BAR ── */
+.sbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#fff;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;font-family:'JetBrains Mono',monospace}
+.sbar .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#059669;margin-right:6px;vertical-align:middle}
+.sbar .cntr{text-align:center}
+
+/* ── MISC ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){.metrics{grid-template-columns:1fr 1fr}.cnt{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .topbar-nav{display:none}
+  .topbar-left{margin-left:0}
+  .metrics{grid-template-columns:1fr;padding:0 16px 12px;gap:10px}
+  .pg-hdr{padding:20px 16px 12px;flex-direction:column;gap:12px}
+  .cnt{padding:0 16px 20px;gap:10px}
+  .prod{grid-template-columns:1fr}
+  .prod-st:first-child{border-right:none;border-bottom:1px solid #e2e8f0}
+  .sbar{flex-direction:column;gap:2px;padding:4px 12px;text-align:center}
+}
+@media(max-width:480px){
+  .m-card .mv{font-size:20px}
+  .tbl th,.tbl td{padding:6px 10px;font-size:12px}
+  .pg-hdr h1{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">N</div>
+      <div class="topbar-brand">NEWBIZZ<span>.</span></div>
+      <nav class="topbar-nav">
+        <a href="#" class="active">Dashboard</a>
+        <a href="#">Sales</a>
+        <a href="#">Production</a>
+        <a href="#">Inventory</a>
+        <a href="#">Accounting</a>
+        <a href="#">Field</a>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-date">FY 2026-27</span>
+      <div class="topbar-user">AK</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-grp">
+      <div class="sidebar-label">Operations</div>
+      <ul class="sidebar-nav">
+        <li><a href="#" class="active"><span class="ico">■</span>Dashboard<span class="badge">8</span></a></li>
+        <li><a href="#"><span class="ico">■</span>Sales Desk<span class="badge">23</span></a></li>
+        <li><a href="#"><span class="ico">■</span>Order Book</a></li>
+        <li><a href="#"><span class="ico">■</span>Delivery Challan</a></li>
+        <li><a href="#"><span class="ico">■</span>Invoicing</a></li>
+        <li><a href="#"><span class="ico">■</span>Payments</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-grp">
+      <div class="sidebar-label">Manufacturing</div>
+      <ul class="sidebar-nav">
+        <li><a href="#"><span class="ico">■</span>BOM / Recipes</a></li>
+        <li><a href="#"><span class="ico">■</span>Production Plan</a></li>
+        <li><a href="#"><span class="ico">■</span>Job Cards</a></li>
+        <li><a href="#"><span class="ico">■</span>EOD Recording</a></li>
+        <li><a href="#"><span class="ico">■</span>Machine Maintenance</a></li>
+        <li><a href="#"><span class="ico">■</span>Process Costing</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-grp">
+      <div class="sidebar-label">Inventory</div>
+      <ul class="sidebar-nav">
+        <li><a href="#"><span class="ico">■</span>Item Master</a></li>
+        <li><a href="#"><span class="ico">■</span>Warehouse Stock</a></li>
+        <li><a href="#"><span class="ico">■</span>Holdings / Transfers</a></li>
+        <li><a href="#"><span class="ico">■</span>Pricing / Rate Master</a></li>
+        <li><a href="#"><span class="ico">■</span>Reorder Alerts</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-grp">
+      <div class="sidebar-label">Accounting</div>
+      <ul class="sidebar-nav">
+        <li><a href="#"><span class="ico">■</span>Journal</a></li>
+        <li><a href="#"><span class="ico">■</span>Trial Balance</a></li>
+        <li><a href="#"><span class="ico">■</span>P&L / Balance Sheet</a></li>
+        <li><a href="#"><span class="ico">■</span>Purchase Orders</a></li>
+        <li><a href="#"><span class="ico">■</span>GRN / Bill Match</a></li>
+        <li><a href="#"><span class="ico">■</span>Fixed Assets</a></li>
+        <li><a href="#"><span class="ico">■</span>GST / 2B Recon</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-grp">
+      <div class="sidebar-label">Field & CRM</div>
+      <ul class="sidebar-nav">
+        <li><a href="#"><span class="ico">■</span>Routes / Visits</a></li>
+        <li><a href="#"><span class="ico">■</span>Vehicles / Fleet</a></li>
+        <li><a href="#"><span class="ico">■</span>CRM / Complaints</a></li>
+        <li><a href="#"><span class="ico">■</span>Schemes / Rebates</a></li>
+        <li><a href="#"><span class="ico">■</span>Bank Reconciliation</a></li>
+        <li><a href="#"><span class="ico">■</span>Payroll</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-grp">
+      <div class="sidebar-label">Admin</div>
+      <ul class="sidebar-nav">
+        <li><a href="#"><span class="ico">■</span>Company Settings</a></li>
+        <li><a href="#"><span class="ico">■</span>User Management</a></li>
+        <li><a href="#"><span class="ico">■</span>Audit Log</a></li>
+        <li><a href="#"><span class="ico">■</span>License Register</a></li>
+        <li><a href="#"><span class="ico">■</span>Data Migration</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- PAGE HEADER -->
+    <div class="pg-hdr">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">FY 2026-27 — Real-time operational overview. Data refreshes every 30 seconds.</div>
+      </div>
+      <div class="pg-actions">
+        <button class="btn btn-outline">Export</button>
+        <button class="btn btn-primary">Refresh</button>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metrics">
+      <div class="m-card">
+        <div class="ml">Sales Today</div>
+        <div class="mv">₹1,84,200</div>
+        <div class="md up">↑ +12.4% vs yesterday</div>
+        <div class="bar"><div class="bar-fill" style="width:82%"></div></div>
+      </div>
+      <div class="m-card">
+        <div class="ml">Pending Orders</div>
+        <div class="mv">23</div>
+        <div class="md down">↓ 5 unfulfilled</div>
+        <div class="bar"><div class="bar-fill" style="width:35%"></div></div>
+      </div>
+      <div class="m-card">
+        <div class="ml">Production Today</div>
+        <div class="mv">847</div>
+        <div class="md" style="color:#64748b">92% of plan</div>
+        <div class="bar"><div class="bar-fill" style="width:92%"></div></div>
+      </div>
+      <div class="m-card">
+        <div class="ml">Total Outstanding</div>
+        <div class="mv">₹12,45,800</div>
+        <div class="md down">↓ 38 overdue >30 days</div>
+        <div class="bar"><div class="bar-fill" style="width:58%;background:#dc2626"></div></div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="cnt">
+
+      <!-- LEFT -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <!-- Production Monitor -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <h3>Production <span style="color:#94a3b8;font-weight:400">//</span> Stage 1 to Stage 2</h3>
+            <span class="chip">Live</span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <div class="prod">
+              <div class="prod-st">
+                <div class="st-lbl">Stage 1 — Blowing</div>
+                <div class="st-val">8,400</div>
+                <div class="st-sub">preforms processed</div>
+                <div class="st-bar"><div class="st-bar-fill" style="width:78%"></div></div>
+                <div class="chart-mini">
+                  <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                  <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                  <div class="bar"></div>
+                </div>
+                <div class="st-row"><span class="rk">Output</span><span class="rv">8,200 empty bottles</span></div>
+                <div class="st-row"><span class="rk">Wastage</span><span class="rv rd">200 units (2.4%)</span></div>
+                <div class="st-row"><span class="rk">Machine</span><span class="rv">BL-01 / 95% uptime</span></div>
+                <div class="st-row"><span class="rk">Preform Stock</span><span class="rv cy">24,500 units</span></div>
+              </div>
+              <div class="prod-st">
+                <div class="st-lbl">Stage 2 — Filling</div>
+                <div class="st-val">847</div>
+                <div class="st-sub">filled cases</div>
+                <div class="st-bar"><div class="st-bar-fill" style="width:92%"></div></div>
+                <div class="chart-mini">
+                  <div class="bar" style="height:24px"></div><div class="bar" style="height:30px"></div>
+                  <div class="bar" style="height:18px"></div><div class="bar" style="height:32px"></div>
+                  <div class="bar" style="height:26px"></div><div class="bar" style="height:22px"></div>
+                  <div class="bar" style="height:28px"></div>
+                </div>
+                <div class="st-row"><span class="rk">WIP Drawn</span><span class="rv">7,950 bottles</span></div>
+                <div class="st-row"><span class="rk">Yield</span><span class="rv cy">99.2%</span></div>
+                <div class="st-row"><span class="rk">Loose Remainder</span><span class="rv">38 bottles (WIP)</span></div>
+                <div class="st-row"><span class="rk">Cap / Shrink Used</span><span class="rv">7,910 / 7,890</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="panel" style="flex:1">
+          <div class="panel-hdr">
+            <h3>Open Sales Orders</h3>
+            <span class="chip">23</span>
+          </div>
+          <div class="panel-body" style="flex:1">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Store</th>
+                  <th>Items</th>
+                  <th class="num">Amount</th>
+                  <th>Status</th>
+                  <th>Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="id">ORD-1048</td>
+                  <td class="str">Krishna Traders <span style="color:#94a3b8;font-weight:400;font-size:11px">// MDU</span></td>
+                  <td>250 cases (20L)</td>
+                  <td class="num">₹62,500</td>
+                  <td><span class="st grn">Approved</span></td>
+                  <td>Rajesh K</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1047</td>
+                  <td class="str">Sri Amman Stores <span style="color:#94a3b8;font-weight:400;font-size:11px">// KARUR</span></td>
+                  <td>100 cases (1L)</td>
+                  <td class="num">₹18,000</td>
+                  <td><span class="st red">Pending</span></td>
+                  <td>Murugan S</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1046</td>
+                  <td class="str">Muthu Agencies <span style="color:#94a3b8;font-weight:400;font-size:11px">// MDU</span></td>
+                  <td>500 cases (20L)</td>
+                  <td class="num">₹1,25,000</td>
+                  <td><span class="st amb">Partial</span></td>
+                  <td>Pandian K</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1045</td>
+                  <td class="str">Kaveri Suppliers <span style="color:#94a3b8;font-weight:400;font-size:11px">// SALEM</span></td>
+                  <td>75 cases (500ml)</td>
+                  <td class="num">₹9,750</td>
+                  <td><span class="st slt">Draft</span></td>
+                  <td>Selvi R</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1044</td>
+                  <td class="str">RVR Distributors <span style="color:#94a3b8;font-weight:400;font-size:11px">// TRY</span></td>
+                  <td>300 cases (20L)</td>
+                  <td class="num">₹75,000</td>
+                  <td><span class="st grn">Approved</span></td>
+                  <td>Vignesh M</td>
+                </tr>
+                <tr>
+                  <td class="id">ORD-1043</td>
+                  <td class="str">RK Enterprises <span style="color:#94a3b8;font-weight:400;font-size:11px">// COIM</span></td>
+                  <td>150 cases (1L)</td>
+                  <td class="num">₹27,000</td>
+                  <td><span class="st red">Pending</span></td>
+                  <td>Dinesh T</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="sp">
+
+        <!-- Pending Approvals -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <h3>Pending Approvals</h3>
+            <span class="chip warn">7</span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <ul class="apr">
+              <li>
+                <div>
+                  <div class="ap-t">Purchase Order PO-89</div>
+                  <div class="ap-m">Polypack India // 25,000 preforms</div>
+                </div>
+                <div class="ap-a">₹2,40,000</div>
+                <div class="ap-btns">
+                  <button class="grn">Approve</button>
+                  <button>Review</button>
+                  <button class="red">Reject</button>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <div class="ap-t">Expense Claim — Udhyam S</div>
+                  <div class="ap-m">Fuel // Vehicle TN-01</div>
+                </div>
+                <div class="ap-a">₹4,500</div>
+                <div class="ap-btns">
+                  <button class="grn">Approve</button>
+                  <button>Review</button>
+                  <button class="red">Reject</button>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <div class="ap-t">Scheme Rebate — F12</div>
+                  <div class="ap-m">Muthu Agencies // Volume tier 3</div>
+                </div>
+                <div class="ap-a">₹12,500</div>
+                <div class="ap-btns">
+                  <button class="grn">Approve</button>
+                  <button>Review</button>
+                  <button class="red">Reject</button>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <div class="ap-t">Debit Note DN-12</div>
+                  <div class="ap-m">PremaTech // Return 500 preforms</div>
+                </div>
+                <div class="ap-a">₹6,250</div>
+                <div class="ap-btns">
+                  <button class="grn">Approve</button>
+                  <button>Review</button>
+                  <button class="red">Reject</button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Activity -->
+        <div class="panel" style="flex:1">
+          <div class="panel-hdr">
+            <h3>Recent Activity</h3>
+            <span class="chip">12</span>
+          </div>
+          <div class="panel-body" style="flex:1;overflow-y:auto">
+            <ul class="act">
+              <li>
+                <span class="ac-t">14:28</span>
+                <div><span class="ac-e">Sale recorded — <span class="ac-h">INV-2026-2118</span></span><br><span class="ac-u">by admin@newbizz.in</span></div>
+              </li>
+              <li>
+                <span class="ac-t">14:15</span>
+                <div><span class="ac-e">EOD submitted — Stage 1 // 8,200 bottles</span><br><span class="ac-u">by OP-Seshan</span></div>
+              </li>
+              <li>
+                <span class="ac-t">13:52</span>
+                <div><span class="ac-e">Payment collected — <span class="ac-h">₹18,500</span></span><br><span class="ac-u">Rajesh K @ Krishna Traders</span></div>
+              </li>
+              <li>
+                <span class="ac-t">13:30</span>
+                <div><span class="ac-e">Stock transfer — WH-01 to Agent Murugan</span><br><span class="ac-u">250 cases (20L) // In transit</span></div>
+              </li>
+              <li>
+                <span class="ac-t">12:45</span>
+                <div><span class="ac-e">License expiry warning — <span class="ac-h">FSSAI</span></span><br><span class="ac-u">Expires in 28 days</span></div>
+              </li>
+              <li>
+                <span class="ac-t">12:10</span>
+                <div><span class="ac-e">Bank recon match — 23 transactions</span><br><span class="ac-u">HDFC Current Account // ₹3,42,000</span></div>
+              </li>
+              <li>
+                <span class="ac-t">11:38</span>
+                <div><span class="ac-e">GRN posted — <span class="ac-h">GRN-2026-342</span></span><br><span class="ac-u">Preforms 25,000 units @ WH-01</span></div>
+              </li>
+              <li>
+                <span class="ac-t">10:15</span>
+                <div><span class="ac-e">Customer created — <span class="ac-h">Kaveri Suppliers</span></span><br><span class="ac-u">Salem // 3 stores</span></div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- STATUS BAR -->
+  <footer class="sbar">
+    <span><span class="dot"></span>All systems nominal</span>
+    <span class="cntr">Build rev 2.6 · Last recon 14:30 IST</span>
+    <span>₹1,84,200 MTD · 0 unreconciled differences</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
+

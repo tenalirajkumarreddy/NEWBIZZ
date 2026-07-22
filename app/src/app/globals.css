@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+  body {
+    background: #f1f5f9; /* --bg */
+    color: #1e293b; /* slate-800 body ink (prototype uses this, not --ink) */
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Tabular numerals everywhere we render money/stock figures. */
+  .tnum {
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Uppercase micro-label recipe used across the prototype. */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Entrance animations for overlays (Dialog, Toast). */
+  .animate-in-fade {
+    animation: nb-fade 0.14s ease-out;
+  }
+  .animate-in-pop {
+    animation: nb-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes nb-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes nb-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Scrollbar treatment from refer_UI.html (thin 4px rails). */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 20px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

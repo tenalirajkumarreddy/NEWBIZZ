@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEWBIZZ — Application Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#f1f5f9; --surface:#fff; --line:#e2e8f0; --line-soft:#f1f5f9;
+  --ink:#0f172a; --ink-2:#475569; --ink-3:#64748b; --ink-4:#94a3b8;
+  --brand:#0891b2; --brand-d:#0e7490; --brand-wash:#ecfeff;
+  --grn:#059669; --grn-wash:#f0fdf4; --red:#dc2626; --red-wash:#fef2f2;
+  --amb:#d97706; --amb-wash:#fffbeb;
+  --mono:'JetBrains Mono',monospace; --sans:'Inter',system-ui,-apple-system,sans-serif;
+  --r:8px; --r-lg:12px; --sh:0 2px 12px rgba(0,0,0,.05); --sh-pop:0 8px 28px rgba(15,23,42,.14);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{min-height:100dvh;overflow-x:hidden;font-family:var(--sans);font-size:14px;line-height:1.5;color:#1e293b;background:var(--bg);-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ============ APP SHELL ============ */
+.app{display:grid;grid-template-columns:236px 1fr;grid-template-rows:58px 1fr 34px;min-height:100dvh}
+.app.auth-mode{display:block}
+
+/* ---- TOP BAR ---- */
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--line);position:relative;z-index:30}
+.brand{display:flex;align-items:center;gap:10px;width:196px;flex-shrink:0}
+.brand-logo{width:32px;height:32px;background:var(--brand);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;font-family:var(--mono)}
+.brand-name{font-weight:700;font-size:16px;color:var(--ink)}
+.brand-name span{color:var(--brand)}
+
+/* search */
+.search{position:relative;flex:1;max-width:440px}
+.search input{width:100%;height:36px;border:1px solid var(--line);background:#f8fafc;border-radius:8px;padding:0 12px 0 34px;font-size:13px;color:var(--ink-2);transition:.15s}
+.search input:focus{background:#fff;border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-wash)}
+.search .s-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-4);font-size:14px;pointer-events:none}
+.search .s-kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:10px;color:var(--ink-4);background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+
+.tb-spacer{flex:1}
+.tb-tools{display:flex;align-items:center;gap:8px}
+
+/* selector pills */
+.selector{position:relative}
+.sel-btn{display:flex;align-items:center;gap:7px;height:36px;padding:0 11px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:500;transition:.15s}
+.sel-btn:hover{border-color:#cbd5e1;background:#fff}
+.sel-btn .sel-ico{color:var(--brand);font-size:13px}
+.sel-btn .sel-cap{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-4);font-weight:600;line-height:1}
+.sel-btn .sel-val{font-weight:600;color:var(--ink);line-height:1.1}
+.sel-txt{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.sel-btn .caret{color:var(--ink-4);font-size:9px;margin-left:2px}
+
+.dropdown{position:absolute;top:calc(100% + 6px);right:0;min-width:220px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh-pop);padding:6px;z-index:50;display:none}
+.dropdown.open{display:block;animation:pop .13s ease}
+@keyframes pop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.dd-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-4);padding:6px 10px 4px}
+.dd-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.dd-item:hover{background:#f8fafc}
+.dd-item.sel{background:var(--brand-wash);color:var(--brand);font-weight:600}
+.dd-item .dd-check{margin-left:auto;color:var(--brand);opacity:0}
+.dd-item.sel .dd-check{opacity:1}
+.dd-sep{height:1px;background:var(--line-soft);margin:5px 4px}
+
+/* icon buttons */
+.icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:#f8fafc;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:16px;transition:.15s}
+.icon-btn:hover{border-color:#cbd5e1;background:#fff;color:var(--brand)}
+.icon-btn .dot{position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
+.avatar{width:36px;height:36px;border-radius:8px;background:var(--brand);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;font-family:var(--mono);cursor:pointer;flex-shrink:0}
+
+/* ---- SIDEBAR ---- */
+.sidebar{background:var(--surface);border-right:1px solid var(--line);overflow-y:auto;padding:10px 0 20px}
+.side-grp{margin-bottom:2px}
+.side-label{padding:10px 20px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4)}
+.side-nav{list-style:none}
+.side-nav a{display:flex;align-items:center;gap:10px;padding:7px 20px;font-size:13px;font-weight:500;color:var(--ink-2);border-left:2px solid transparent;cursor:pointer;transition:.12s}
+.side-nav a .ico{width:15px;height:15px;flex-shrink:0;color:var(--ink-4)}
+.side-nav a:hover{background:#f8fafc;color:var(--brand)}
+.side-nav a:hover .ico{color:var(--brand)}
+.side-nav a.active{background:var(--brand-wash);color:var(--brand);border-left-color:var(--brand);font-weight:600}
+.side-nav a.active .ico{color:var(--brand)}
+.side-nav .badge{margin-left:auto;font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;background:#f1f5f9;color:var(--ink-3);font-family:var(--mono)}
+.side-nav a.active .badge{background:#fff;color:var(--brand)}
+
+/* ---- MAIN ---- */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+.view{display:none}
+.view.active{display:flex;flex-direction:column;flex:1}
+
+.pg-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:26px 32px 14px;gap:16px;flex-wrap:wrap}
+.pg-hdr h1{font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.pg-hdr .crumb{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-4);margin-bottom:4px;display:flex;gap:6px;align-items:center}
+.pg-hdr .sub{font-size:13px;color:var(--ink-3);margin-top:3px}
+.pg-actions{display:flex;gap:8px}
+.btn{padding:0 15px;height:36px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn .bi{width:15px;height:15px}
+.btn-outline{background:#fff;color:var(--ink-2);border:1px solid var(--line)}
+.btn-outline:hover{background:#f8fafc;border-color:#cbd5e1}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:hover{background:var(--brand-d)}
+.btn-ghost{background:transparent;color:var(--ink-3)}
+.btn-ghost:hover{background:#f1f5f9;color:var(--ink-2)}
+
+/* ---- STATUS BAR ---- */
+.sbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:var(--surface);border-top:1px solid var(--line);font-size:11px;color:var(--ink-4);font-family:var(--mono)}
+.sbar .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grn);margin-right:6px;vertical-align:middle}
+.sbar .cntr{text-align:center}
+
+/* ---- scrollbar ---- */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+/* ============ SHARED COMPONENTS ============ */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:0 32px 16px}
+.m-card{background:var(--surface);border-radius:var(--r-lg);padding:18px 20px;border:1px solid var(--line);display:flex;flex-direction:column;gap:2px;transition:.2s}
+.m-card:hover{box-shadow:var(--sh);border-color:#cbd5e1}
+.m-card .ml{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-4)}
+.m-card .mv{font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.m-card .md{font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px;margin-top:4px}
+.m-card .md.up{color:var(--grn)}
+.m-card .md.down{color:var(--red)}
+.m-card .md.flat{color:var(--ink-3)}
+.m-card .bar{height:3px;border-radius:4px;background:var(--line);margin-top:10px;overflow:hidden}
+.m-card .bar-fill{height:100%;border-radius:4px;background:var(--brand)}
+
+.panel{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid var(--line)}
+.panel-hdr h3{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
+.panel-hdr .muted{color:var(--ink-4);font-weight:400}
+.chip{font-size:10px;font-weight:600;padding:2px 10px;border-radius:10px;background:var(--brand-wash);color:var(--brand);font-family:var(--mono)}
+.chip.warn{background:var(--red-wash);color:var(--red)}
+.chip.live{display:inline-flex;align-items:center;gap:5px}
+.chip.live::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--brand);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.panel-body{flex:1}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:9px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-4);border-bottom:1px solid var(--line);white-space:nowrap;background:#fcfdfe}
+.tbl td{padding:9px 16px;border-bottom:1px solid var(--line-soft);font-size:13px;color:var(--ink-2)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{cursor:pointer;transition:.1s}
+.tbl tbody tr:hover td{background:#f8fafc}
+.tbl td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.tbl td.id{font-family:var(--mono);font-size:12px;color:var(--brand);font-weight:600}
+.tbl td.str{font-weight:600;color:var(--ink)}
+.tbl .sub-txt{color:var(--ink-4);font-weight:400;font-size:11px}
+
+.st{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:2px 10px;border-radius:10px;white-space:nowrap}
+.st::before{content:'';width:5px;height:5px;border-radius:50%}
+.st.grn{background:var(--grn-wash);color:var(--grn)}.st.grn::before{background:var(--grn)}
+.st.red{background:var(--red-wash);color:var(--red)}.st.red::before{background:var(--red)}
+.st.amb{background:var(--amb-wash);color:var(--amb)}.st.amb::before{background:var(--amb)}
+.st.slt{background:#f1f5f9;color:var(--ink-3)}.st.slt::before{background:var(--ink-4)}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:60px 20px;text-align:center}
+.empty .e-ico{width:52px;height:52px;border-radius:14px;background:var(--brand-wash);display:flex;align-items:center;justify-content:center;color:var(--brand)}
+.empty h3{font-size:16px;color:var(--ink)}
+.empty p{font-size:13px;color:var(--ink-3);max-width:340px}
+
+/* ============ AUTH SCREEN ============ */
+.auth-wrap{min-height:100dvh;display:grid;grid-template-columns:1fr 1fr}
+/* dashboard bits */
+.tb-line{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tb-line span{color:var(--ink-4)}
+.tb-line b{color:var(--ink-2);font-weight:600}
+.apr{list-style:none}
+.apr li{padding:12px 16px;border-bottom:1px solid var(--line-soft);display:grid;grid-template-columns:1fr auto;gap:4px}
+.apr li:last-child{border-bottom:none}
+.apr li:hover{background:#f8fafc}
+.apr .ap-t{font-size:13px;font-weight:600;color:var(--ink)}
+.apr .ap-m{font-size:11px;color:var(--ink-4)}
+.apr .ap-a{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);text-align:right}
+.apr .ap-btns{grid-column:1/-1;display:flex;gap:4px;margin-top:2px}
+.apr .ap-btns button{padding:3px 10px;font-size:10px;font-weight:600;border-radius:6px;border:1px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer;transition:.12s}
+.apr .ap-btns button:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-wash)}
+.apr .ap-btns button.grn{background:var(--brand);color:#fff;border-color:var(--brand)}
+.apr .ap-btns button.grn:hover{background:var(--brand-d)}
+.apr .ap-btns button.red:hover{border-color:var(--red);color:var(--red);background:var(--red-wash)}
+.act{list-style:none}
+.act li{padding:8px 16px;border-bottom:1px solid var(--line-soft);display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline}
+.act li:last-child{border-bottom:none}
+.act li:hover{background:#f8fafc}
+.act .ac-t{font-family:var(--mono);font-size:10px;color:var(--ink-4);white-space:nowrap}
+.act .ac-e{font-size:12px;color:var(--ink-2);line-height:1.5}
+.act .ac-h{color:var(--brand);font-weight:600}
+.act .ac-u{font-size:11px;color:var(--ink-4)}
+/* toolbar + filters */
+.toolbar{display:flex;align-items:center;gap:8px;padding:0 32px 16px;flex-wrap:wrap}
+.seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:none;background:transparent;padding:5px 12px;border-radius:6px;font-size:12.5px;font-weight:500;color:var(--ink-3);cursor:pointer;transition:.12s}
+.seg button.on{background:var(--brand-wash);color:var(--brand);font-weight:600}
+.seg button:hover:not(.on){background:#f8fafc;color:var(--ink-2)}
+.tsearch{position:relative;flex:1;max-width:280px}
+.tsearch input{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;padding:0 12px 0 32px;font-size:13px;background:#fff}
+.tsearch input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-wash)}
+.tsearch .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-4)}
+.filter-pill{height:34px;padding:0 12px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:12.5px;color:var(--ink-2);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.filter-pill:hover{border-color:#cbd5e1}
+.pad{padding:0 32px 28px;flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+/* users console */
+.u-grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.u-row-name{display:flex;align-items:center;gap:10px}
+.u-av{width:30px;height:30px;border-radius:7px;background:var(--brand-wash);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.rolechip{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:#f1f5f9;color:var(--ink-2);margin-right:3px}
+.rolechip.admin{background:#eef2ff;color:#4f46e5}
+.perm-grid{display:flex;flex-direction:column;gap:2px}
+.perm-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;font-size:13px;color:var(--ink-2)}
+.perm-item:hover{background:#f8fafc}
+.perm-item .p-src{font-size:10px;color:var(--ink-4);font-weight:500}
+.toggle{width:38px;height:22px;border-radius:12px;background:#cbd5e1;position:relative;cursor:pointer;transition:.15s;flex-shrink:0}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.toggle.on{background:var(--brand)}
+.toggle.on::after{left:18px}
+.toggle.deny{background:var(--red)}
+.kill-card{background:linear-gradient(180deg,#fff, #fef2f2);border:1px solid #fecaca}
+.callout{display:flex;gap:10px;padding:12px 14px;background:var(--brand-wash);border:1px solid #a5e8f2;border-radius:10px;font-size:12.5px;color:#0e5561;line-height:1.5}
+.callout b{color:var(--brand-d)}
+.auth-brand{background:linear-gradient(155deg,#0f172a 0%,#0e4b5a 55%,#0891b2 130%);color:#fff;padding:56px 60px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.auth-brand::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.06) 1px,transparent 0);background-size:22px 22px;pointer-events:none}
+.auth-brand .ab-top{display:flex;align-items:center;gap:11px;position:relative}
+.auth-brand .brand-logo{width:38px;height:38px;font-size:17px}
+.auth-brand .ab-name{font-weight:700;font-size:19px}
+.auth-brand .ab-mid{position:relative}
+.auth-brand .ab-mid h2{font-size:30px;font-weight:700;line-height:1.2;letter-spacing:-.02em;max-width:15ch}
+.auth-brand .ab-mid p{margin-top:14px;font-size:14px;color:#cbe7ee;max-width:38ch;line-height:1.6}
+.auth-stats{display:flex;gap:28px;margin-top:30px}
+.auth-stats .as{display:flex;flex-direction:column;gap:2px}
+.auth-stats .as-v{font-family:var(--mono);font-size:22px;font-weight:700}
+.auth-stats .as-l{font-size:11px;color:#9fd3de;text-transform:uppercase;letter-spacing:.05em}
+.auth-brand .ab-foot{font-size:11px;color:#7fbecb;font-family:var(--mono);position:relative}
+
+.auth-form-side{display:flex;align-items:center;justify-content:center;padding:40px}
+.auth-card{width:100%;max-width:380px}
+.auth-card .ac-eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--brand);margin-bottom:8px}
+.auth-card h1{font-size:24px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.auth-card .ac-sub{font-size:13.5px;color:var(--ink-3);margin-top:6px;margin-bottom:26px;line-height:1.6}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field .input-row{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;overflow:hidden;transition:.15s;background:#fff}
+.field .input-row:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-wash)}
+.field .prefix{display:flex;align-items:center;padding:0 12px;background:#f8fafc;border-right:1px solid var(--line);font-size:13px;color:var(--ink-2);font-weight:600;font-family:var(--mono)}
+.field input{flex:1;border:none;outline:none;padding:12px 14px;font-size:14px;color:var(--ink);font-family:var(--mono);letter-spacing:.02em}
+.field .hint{font-size:11.5px;color:var(--ink-4);margin-top:6px}
+.btn-block{width:100%;justify-content:center;height:44px;font-size:14px}
+.auth-alt{margin:20px 0;display:flex;align-items:center;gap:12px;color:var(--ink-4);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.auth-alt::before,.auth-alt::after{content:'';flex:1;height:1px;background:var(--line)}
+.btn-google{width:100%;justify-content:center;height:44px;font-size:13.5px;background:#fff;border:1px solid var(--line);color:var(--ink-2);font-weight:600;display:flex;align-items:center;gap:9px;border-radius:8px;cursor:pointer;transition:.15s}
+.btn-google:hover{background:#f8fafc;border-color:#cbd5e1}
+.btn-google .g-glyph{width:17px;height:17px;font-family:var(--mono);font-weight:700;color:#4285F4}
+.auth-note{margin-top:22px;font-size:11.5px;color:var(--ink-4);line-height:1.6;text-align:center}
+.auth-back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-3);font-weight:500;cursor:pointer;margin-bottom:18px}
+.auth-back:hover{color:var(--brand)}
+
+/* OTP boxes */
+.otp-row{display:flex;gap:9px;margin-bottom:6px}
+.otp-row input{width:100%;height:52px;text-align:center;font-size:20px;font-weight:700;font-family:var(--mono);border:1px solid var(--line);border-radius:9px;color:var(--ink);outline:none;transition:.15s}
+.otp-row input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-wash)}
+.otp-row input.filled{border-color:var(--brand);background:var(--brand-wash)}
+.otp-meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--ink-3);margin:14px 0 24px}
+.otp-resend{color:var(--brand);font-weight:600;cursor:pointer}
+.otp-target{font-family:var(--mono);font-weight:600;color:var(--ink)}
+@media(max-width:820px){.auth-wrap{grid-template-columns:1fr}.auth-brand{display:none}}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:1100px){.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:860px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .search{max-width:none}
+  .sel-txt .sel-cap{display:none}
+  .brand-name{display:none}.brand{width:auto}
+}
+@media(max-width:560px){
+  .metrics{grid-template-columns:1fr;padding:0 16px 12px}
+  .pg-hdr{padding:18px 16px 12px}
+  .selector.hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<!-- ============================================================= -->
+<!-- AUTH: phone entry -->
+<!-- ============================================================= -->
+<div id="scr-phone" class="auth-wrap">
+  <div class="auth-brand">
+    <div class="ab-top">
+      <div class="brand-logo">N</div>
+      <div class="ab-name">NEWBIZZ<span style="color:#5fd0e6">.</span></div>
+    </div>
+    <div class="ab-mid">
+      <h2>Run the plant, the routes, and the books from one place.</h2>
+      <p>Manufacturing, distribution, and accounting for your water business — every rupee and every bottle accounted for, in real time.</p>
+      <div class="auth-stats">
+        <div class="as"><span class="as-v">₹1.84L</span><span class="as-l">Sales today</span></div>
+        <div class="as"><span class="as-v">847</span><span class="as-l">Cases filled</span></div>
+        <div class="as"><span class="as-v">0</span><span class="as-l">Unreconciled</span></div>
+      </div>
+    </div>
+    <div class="ab-foot">FY 2026-27 · Asia/Kolkata · Secured by phone OTP</div>
+  </div>
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <div class="ac-eyebrow">Sign in</div>
+      <h1>Welcome back</h1>
+      <p class="ac-sub">Enter your registered mobile number. We'll text you a one-time code to verify it's you.</p>
+      <div class="field">
+        <label for="phone">Mobile number</label>
+        <div class="input-row">
+          <span class="prefix">+91</span>
+          <input id="phone" inputmode="numeric" maxlength="10" placeholder="90000 00001" value="90000 00001">
+        </div>
+        <div class="hint">Only registered numbers can sign in. Ask an admin to invite you.</div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="go('otp')">Send code →</button>
+      <div class="auth-alt">or</div>
+      <button class="btn-google" onclick="signIn()"><span class="g-glyph">G</span> Continue with Google</button>
+      <p class="auth-note">Google works only after you've linked it to your account from Settings.</p>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH: OTP -->
+<div id="scr-otp" class="auth-wrap" style="display:none">
+  <div class="auth-brand">
+    <div class="ab-top">
+      <div class="brand-logo">N</div>
+      <div class="ab-name">NEWBIZZ<span style="color:#5fd0e6">.</span></div>
+    </div>
+    <div class="ab-mid">
+      <h2>One code, and you're in.</h2>
+      <p>Codes are delivered over SMS through our own gateway and expire in five minutes. Never share your code with anyone.</p>
+    </div>
+    <div class="ab-foot">Delivered via httpSMS gateway · Expires in 5:00</div>
+  </div>
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-back" onclick="go('phone')">← Change number</div>
+      <div class="ac-eyebrow">Verify</div>
+      <h1>Enter your code</h1>
+      <p class="ac-sub">We sent a 6-digit code to <span class="otp-target">+91 90000 00001</span>.</p>
+      <div class="otp-row" id="otpRow">
+        <input maxlength="1" inputmode="numeric" data-i="0">
+        <input maxlength="1" inputmode="numeric" data-i="1">
+        <input maxlength="1" inputmode="numeric" data-i="2">
+        <input maxlength="1" inputmode="numeric" data-i="3">
+        <input maxlength="1" inputmode="numeric" data-i="4">
+        <input maxlength="1" inputmode="numeric" data-i="5">
+      </div>
+      <div class="otp-meta">
+        <span>Didn't get it? <span class="otp-resend" id="resend">Resend in 0:28</span></span>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="signIn()">Verify &amp; sign in</button>
+      <p class="auth-note">Trouble receiving the code? The gateway phone may be offline — contact your admin.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- APP SHELL -->
+<!-- ============================================================= -->
+<div id="app" class="app" style="display:none">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">N</div>
+      <div class="brand-name">NEWBIZZ<span>.</span></div>
+    </div>
+    <div class="search">
+      <span class="s-ico">⌕</span>
+      <input placeholder="Search invoices, customers, items, screens…" onfocus="this.placeholder='Try: INV-2118, Krishna Traders, 20L bottle'" onblur="this.placeholder='Search invoices, customers, items, screens…'">
+      <span class="s-kbd">⌘K</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="tb-tools">
+      <!-- Warehouse selector -->
+      <div class="selector hide-sm" id="whSel">
+        <button class="sel-btn" onclick="toggleDD('whDD',event)">
+          <span class="sel-ico">▣</span>
+          <span class="sel-txt"><span class="sel-cap">Warehouse</span><span class="sel-val" id="whVal">Madurai Plant</span></span>
+          <span class="caret">▼</span>
+        </button>
+        <div class="dropdown" id="whDD">
+          <div class="dd-label">Switch warehouse</div>
+          <div class="dd-item sel" onclick="pickWH('Madurai Plant',this)">Madurai Plant <span class="dd-check">✓</span></div>
+          <div class="dd-item" onclick="pickWH('Karur Depot',this)">Karur Depot <span class="dd-check">✓</span></div>
+          <div class="dd-item" onclick="pickWH('Salem Depot',this)">Salem Depot <span class="dd-check">✓</span></div>
+          <div class="dd-sep"></div>
+          <div class="dd-item" onclick="pickWH('All warehouses',this)">All warehouses <span class="dd-check">✓</span></div>
+        </div>
+      </div>
+      <!-- FY selector -->
+      <div class="selector hide-sm" id="fySel">
+        <button class="sel-btn" onclick="toggleDD('fyDD',event)">
+          <span class="sel-ico">◷</span>
+          <span class="sel-txt"><span class="sel-cap">Financial yr</span><span class="sel-val" id="fyVal">FY 2026-27</span></span>
+          <span class="caret">▼</span>
+        </button>
+        <div class="dropdown" id="fyDD">
+          <div class="dd-label">Financial year</div>
+          <div class="dd-item sel" onclick="pickFY('FY 2026-27',this)">FY 2026-27 <span class="st grn" style="margin-left:auto">Open</span></div>
+          <div class="dd-item" onclick="pickFY('FY 2025-26',this)">FY 2025-26 <span class="st slt" style="margin-left:auto">Closed</span></div>
+        </div>
+      </div>
+      <!-- Notifications -->
+      <div class="selector">
+        <button class="icon-btn" onclick="toggleDD('notifDD',event)" aria-label="Notifications">🔔<span class="dot"></span></button>
+        <div class="dropdown" id="notifDD" style="min-width:300px">
+          <div class="dd-label" style="display:flex;justify-content:space-between"><span>Notifications</span><span class="otp-resend" style="font-size:10px">Mark all read</span></div>
+          <div class="dd-item" style="align-items:flex-start;gap:10px"><span style="color:var(--red)">●</span><div><div style="font-weight:600;color:var(--ink);font-size:12.5px">Cheque bounced — CHQ-4471</div><div style="font-size:11px;color:var(--ink-4)">Muthu Agencies · ₹1,25,000 · 4m ago</div></div></div>
+          <div class="dd-item" style="align-items:flex-start;gap:10px"><span style="color:var(--amb)">●</span><div><div style="font-weight:600;color:var(--ink);font-size:12.5px">FSSAI licence expires in 28 days</div><div style="font-size:11px;color:var(--ink-4)">Renew before 15 Aug · 1h ago</div></div></div>
+          <div class="dd-item" style="align-items:flex-start;gap:10px"><span style="color:var(--brand)">●</span><div><div style="font-weight:600;color:var(--ink);font-size:12.5px">Payroll ready to post</div><div style="font-size:11px;color:var(--ink-4)">July run · 14 staff · 2h ago</div></div></div>
+          <div class="dd-sep"></div>
+          <div class="dd-item" style="justify-content:center;color:var(--brand);font-weight:600;font-size:12.5px" onclick="nav('notifications',event)">View all notifications</div>
+        </div>
+      </div>
+      <!-- User -->
+      <div class="selector">
+        <div class="avatar" onclick="toggleDD('userDD',event)">AK</div>
+        <div class="dropdown" id="userDD">
+          <div style="padding:8px 10px 10px">
+            <div style="font-weight:700;color:var(--ink)">Arun Kumar</div>
+            <div style="font-size:12px;color:var(--ink-4)">+91 90000 00001</div>
+            <div style="margin-top:7px"><span class="st grn">Administrator</span></div>
+          </div>
+          <div class="dd-sep"></div>
+          <div class="dd-item" onclick="nav('settings',event)">Profile &amp; settings</div>
+          <div class="dd-item" onclick="nav('users',event)">Users &amp; access</div>
+          <div class="dd-sep"></div>
+          <div class="dd-item" style="color:var(--red)" onclick="signOut()">Sign out</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainViews"></main>
+
+  <!-- STATUS BAR -->
+  <footer class="sbar">
+    <span><span class="dot"></span>All systems nominal</span>
+    <span class="cntr">DB source-of-truth · 30 migrations applied · Last recon 14:30 IST</span>
+    <span>₹1,84,200 today · 0 unreconciled differences</span>
+  </footer>
+</div>
+
+<script>
+/* ---------- auth + nav plumbing ---------- */
+function go(scr){
+  document.getElementById('scr-phone').style.display = scr==='phone'?'grid':'none';
+  document.getElementById('scr-otp').style.display   = scr==='otp'?'grid':'none';
+  if(scr==='otp'){setTimeout(()=>document.querySelector('#otpRow input')?.focus(),50);}
+}
+function signIn(){
+  document.getElementById('scr-phone').style.display='none';
+  document.getElementById('scr-otp').style.display='none';
+  document.getElementById('app').style.display='grid';
+  nav('dashboard');
+}
+function signOut(){
+  document.getElementById('app').style.display='none';
+  closeAllDD();
+  go('phone');
+}
+/* OTP box behaviour */
+document.querySelectorAll('#otpRow input').forEach((el,i,arr)=>{
+  el.addEventListener('input',()=>{
+    el.classList.toggle('filled',!!el.value);
+    if(el.value && i<arr.length-1) arr[i+1].focus();
+  });
+  el.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!el.value&&i>0) arr[i-1].focus(); });
+});
+
+/* ---------- dropdowns ---------- */
+function toggleDD(id,e){
+  e.stopPropagation();
+  const dd=document.getElementById(id);
+  const wasOpen=dd.classList.contains('open');
+  closeAllDD();
+  if(!wasOpen) dd.classList.add('open');
+}
+function closeAllDD(){document.querySelectorAll('.dropdown.open').forEach(d=>d.classList.remove('open'));}
+document.addEventListener('click',closeAllDD);
+function pickWH(v,el){document.getElementById('whVal').textContent=v;markSel(el);}
+function pickFY(v,el){document.getElementById('fyVal').textContent=v;markSel(el);}
+function markSel(el){el.parentElement.querySelectorAll('.dd-item').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');}
+
+/* ---------- sidebar (real, built modules only) ---------- */
+const NAV = [
+  {grp:'Overview', items:[
+    {id:'dashboard', label:'Dashboard'},
+    {id:'notifications', label:'Notifications', badge:'3'},
+  ]},
+  {grp:'Sell & Collect', items:[
+    {id:'sales', label:'Sales Desk', badge:'23'},
+    {id:'orders', label:'Order Book'},
+    {id:'invoices', label:'Invoicing'},
+    {id:'receipts', label:'Collections'},
+    {id:'creditnotes', label:'Credit Notes & Schemes'},
+  ]},
+  {grp:'Buy & Stock', items:[
+    {id:'suppliers', label:'Suppliers'},
+    {id:'purchasing', label:'Purchase / GRN / Bills'},
+    {id:'items', label:'Item Master'},
+    {id:'stock', label:'Warehouse Stock'},
+    {id:'pricing', label:'Rate Master'},
+  ]},
+  {grp:'Manufacturing', items:[
+    {id:'bom', label:'BOM / Recipes'},
+    {id:'production', label:'Production Runs'},
+    {id:'costing', label:'Process Costing'},
+  ]},
+  {grp:'Accounting', items:[
+    {id:'journal', label:'Journal'},
+    {id:'trialbalance', label:'Trial Balance'},
+    {id:'reports', label:'P&L / Balance Sheet'},
+    {id:'bank', label:'Bank Reconciliation'},
+  ]},
+  {grp:'Field & People', items:[
+    {id:'routes', label:'Routes & Visits'},
+    {id:'fleet', label:'Vehicles & Fuel'},
+    {id:'crm', label:'CRM & Complaints'},
+    {id:'commissions', label:'Targets & Commissions'},
+    {id:'payroll', label:'Attendance & Payroll'},
+  ]},
+  {grp:'Admin', items:[
+    {id:'users', label:'Users & Access'},
+    {id:'audit', label:'Audit Log'},
+    {id:'licenses', label:'Licence Register', badge:'1'},
+    {id:'settings', label:'Company Settings'},
+  ]},
+];
+const ICON = '<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/></svg>';
+
+function buildSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.innerHTML = NAV.map(g=>`
+    <div class="side-grp">
+      <div class="side-label">${g.grp}</div>
+      <ul class="side-nav">
+        ${g.items.map(it=>`<li><a data-view="${it.id}" onclick="nav('${it.id}',event)">${ICON}${it.label}${it.badge?`<span class="badge">${it.badge}</span>`:''}</a></li>`).join('')}
+      </ul>
+    </div>`).join('');
+}
+buildSidebar();
+
+/* ---------- view router ---------- */
+function nav(id,e){
+  if(e) e.stopPropagation();
+  closeAllDD();
+  document.querySelectorAll('.side-nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===id));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  let v=document.getElementById('view-'+id);
+  if(!v){ v=renderView(id); }
+  v.classList.add('active');
+  document.getElementById('mainViews').scrollTop=0;
+}
+</script>
+
+<script>
+/* ---------- view registry ---------- */
+const META = {
+  dashboard:{crumb:'Overview', title:'Dashboard', sub:'FY 2026-27 · Madurai Plant · Live operational overview.'},
+  sales:{crumb:'Sell & Collect', title:'Sales Desk', sub:'Open orders across all routes and agents.'},
+  invoices:{crumb:'Sell & Collect', title:'Invoicing', sub:'Tax invoices — issued, paid, and overdue.'},
+  stock:{crumb:'Buy & Stock', title:'Warehouse Stock', sub:'On-hand quantity and weighted-average value.'},
+  trialbalance:{crumb:'Accounting', title:'Trial Balance', sub:'Every account, as of today. Must net to zero.'},
+  users:{crumb:'Admin', title:'Users & Access', sub:'Provision people, assign roles, override permissions, suspend instantly.'},
+};
+function head(id, actions=''){
+  const m=META[id]||{crumb:'', title:cap(id), sub:''};
+  return `<div class="pg-hdr"><div>
+      <div class="crumb">${m.crumb}</div><h1>${m.title}</h1>
+      ${m.sub?`<div class="sub">${m.sub}</div>`:''}
+    </div><div class="pg-actions">${actions}</div></div>`;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+function renderView(id){
+  const main=document.getElementById('mainViews');
+  const v=document.createElement('div');
+  v.className='view'; v.id='view-'+id;
+  v.innerHTML = (VIEWS[id]||VIEWS._stub)(id);
+  main.appendChild(v);
+  return v;
+}
+
+const VIEWS = {};
+VIEWS._stub = (id)=>{
+  const label=(NAV.flatMap(g=>g.items).find(i=>i.id===id)||{}).label||cap(id);
+  return head(id, `<button class="btn btn-outline">Export</button><button class="btn btn-primary">+ New</button>`)+`
+   <div style="padding:0 32px 28px;flex:1;display:flex">
+     <div class="panel" style="flex:1">
+       <div class="empty">
+         <div class="e-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12h8M12 8v8"/></svg></div>
+         <h3>${label}</h3>
+         <p>This module is built on the database and wired to its RPCs. The screen design follows the same layout system you see on Dashboard, Sales Desk, Stock, Trial Balance, and Users &amp; Access.</p>
+         <button class="btn btn-primary" onclick="nav('dashboard')">Back to dashboard</button>
+       </div>
+     </div>
+   </div>`;
+};
+
+/* ---------- DASHBOARD ---------- */
+VIEWS.dashboard = ()=> head('dashboard',
+   `<button class="btn btn-outline">Export</button><button class="btn btn-primary" onclick="nav('invoices')">+ New invoice</button>`)+`
+  <div class="metrics">
+    <div class="m-card"><div class="ml">Sales Today</div><div class="mv">₹1,84,200</div><div class="md up">↑ +12.4% vs yesterday</div><div class="bar"><div class="bar-fill" style="width:82%"></div></div></div>
+    <div class="m-card"><div class="ml">Pending Orders</div><div class="mv">23</div><div class="md down">↓ 5 unfulfilled</div><div class="bar"><div class="bar-fill" style="width:35%"></div></div></div>
+    <div class="m-card"><div class="ml">Production Today</div><div class="mv">847</div><div class="md flat">92% of plan · cases</div><div class="bar"><div class="bar-fill" style="width:92%"></div></div></div>
+    <div class="m-card"><div class="ml">Total Outstanding</div><div class="mv">₹12,45,800</div><div class="md down">↓ 38 overdue &gt;30 days</div><div class="bar"><div class="bar-fill" style="width:58%;background:var(--red)"></div></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;padding:0 32px 28px;flex:1">
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="panel">
+        <div class="panel-hdr"><h3>Production <span class="muted">// Stage 1 → Stage 2</span></h3><span class="chip live">Live</span></div>
+        <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr">
+          <div style="padding:18px 20px;border-right:1px solid var(--line)">
+            <div style="font-size:11px;font-weight:600;color:var(--ink-4)">Stage 1 — Blowing</div>
+            <div style="font-size:20px;font-weight:700;color:var(--ink);font-family:var(--mono)">8,400</div>
+            <div style="font-size:12px;color:var(--ink-3);margin-bottom:10px">preforms processed</div>
+            <div class="bar" style="margin-bottom:12px"><div class="bar-fill" style="width:78%"></div></div>
+            <div class="tb-line"><span>Output</span><b>8,200 bottles</b></div>
+            <div class="tb-line"><span>Wastage</span><b style="color:var(--red)">200 (2.4%)</b></div>
+            <div class="tb-line"><span>Preform stock</span><b style="color:var(--brand)">24,500</b></div>
+          </div>
+          <div style="padding:18px 20px">
+            <div style="font-size:11px;font-weight:600;color:var(--ink-4)">Stage 2 — Filling</div>
+            <div style="font-size:20px;font-weight:700;color:var(--ink);font-family:var(--mono)">847</div>
+            <div style="font-size:12px;color:var(--ink-3);margin-bottom:10px">filled cases</div>
+            <div class="bar" style="margin-bottom:12px"><div class="bar-fill" style="width:92%"></div></div>
+            <div class="tb-line"><span>WIP drawn</span><b>7,950 bottles</b></div>
+            <div class="tb-line"><span>Yield</span><b style="color:var(--brand)">99.2%</b></div>
+            <div class="tb-line"><span>Caps / shrink</span><b>7,910 / 7,890</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1">
+        <div class="panel-hdr"><h3>Open Sales Orders</h3><span class="chip">23</span></div>
+        <div class="panel-body">
+          <table class="tbl"><thead><tr><th>Order</th><th>Store</th><th>Items</th><th class="num">Amount</th><th>Status</th><th>Agent</th></tr></thead>
+          <tbody>
+            ${orderRows()}
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <div class="panel-hdr"><h3>Pending Approvals</h3><span class="chip warn">7</span></div>
+        <div class="panel-body">${approvals()}</div>
+      </div>
+      <div class="panel" style="flex:1">
+        <div class="panel-hdr"><h3>Recent Activity</h3><span class="chip">12</span></div>
+        <div class="panel-body" style="overflow-y:auto">${activity()}</div>
+      </div>
+    </div>
+  </div>`;
+
+function orderRows(){
+  const d=[
+    ['ORD-1048','Krishna Traders','MDU','250 cases (20L)','₹62,500','grn','Approved','Rajesh K'],
+    ['ORD-1047','Sri Amman Stores','KARUR','100 cases (1L)','₹18,000','red','Pending','Murugan S'],
+    ['ORD-1046','Muthu Agencies','MDU','500 cases (20L)','₹1,25,000','amb','Partial','Pandian K'],
+    ['ORD-1045','Kaveri Suppliers','SALEM','75 cases (500ml)','₹9,750','slt','Draft','Selvi R'],
+    ['ORD-1044','RVR Distributors','TRY','300 cases (20L)','₹75,000','grn','Approved','Vignesh M'],
+    ['ORD-1043','RK Enterprises','COIM','150 cases (1L)','₹27,000','red','Pending','Dinesh T'],
+  ];
+  return d.map(r=>`<tr onclick="nav('sales')"><td class="id">${r[0]}</td>
+    <td class="str">${r[1]} <span class="sub-txt">// ${r[2]}</span></td>
+    <td>${r[3]}</td><td class="num">${r[4]}</td>
+    <td><span class="st ${r[5]}">${r[6]}</span></td><td>${r[7]}</td></tr>`).join('');
+}
+function approvals(){
+  const d=[
+    ['Purchase Order PO-89','Polypack India // 25,000 preforms','₹2,40,000'],
+    ['Expense Claim — Udhyam S','Fuel // Vehicle TN-01','₹4,500'],
+    ['Scheme Rebate — F12','Muthu Agencies // Volume tier 3','₹12,500'],
+    ['Debit Note DN-12','PremaTech // Return 500 preforms','₹6,250'],
+  ];
+  return `<ul class="apr">${d.map(r=>`<li>
+    <div><div class="ap-t">${r[0]}</div><div class="ap-m">${r[1]}</div></div>
+    <div class="ap-a">${r[2]}</div>
+    <div class="ap-btns"><button class="grn">Approve</button><button>Review</button><button class="red">Reject</button></div>
+  </li>`).join('')}</ul>`;
+}
+function activity(){
+  const d=[
+    ['14:28','Sale recorded — <span class="ac-h">INV-2026-2118</span>','by arun@newbizz.in'],
+    ['14:15','EOD submitted — Stage 1 // 8,200 bottles','by OP-Seshan'],
+    ['13:52','Payment collected — <span class="ac-h">₹18,500</span>','Rajesh K @ Krishna Traders'],
+    ['13:30','Stock transfer — WH-01 → Agent Murugan','250 cases (20L) // In transit'],
+    ['12:45','Licence expiry warning — <span class="ac-h">FSSAI</span>','Expires in 28 days'],
+    ['12:10','Bank recon match — 23 transactions','HDFC Current // ₹3,42,000'],
+    ['11:38','GRN posted — <span class="ac-h">GRN-2026-342</span>','Preforms 25,000 @ WH-01'],
+  ];
+  return `<ul class="act">${d.map(r=>`<li><span class="ac-t">${r[0]}</span>
+    <div><span class="ac-e">${r[1]}</span><br><span class="ac-u">${r[2]}</span></div></li>`).join('')}</ul>`;
+}
+
+/* ---------- SALES DESK ---------- */
+VIEWS.sales = ()=> head('sales',
+  `<button class="btn btn-outline">Export</button><button class="btn btn-primary" onclick="nav('invoices')">+ New order</button>`)+`
+  <div class="toolbar">
+    <div class="seg"><button class="on">All</button><button>Pending</button><button>Approved</button><button>Partial</button><button>Draft</button></div>
+    <div class="tsearch"><span class="si">⌕</span><input placeholder="Search order or store…"></div>
+    <button class="filter-pill">Route ▾</button>
+    <button class="filter-pill">Agent ▾</button>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:var(--ink-4);font-family:var(--mono)">23 orders · ₹3,17,250</span>
+  </div>
+  <div class="pad"><div class="panel" style="flex:1">
+    <table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Store</th><th>Route</th><th>Items</th><th class="num">Amount</th><th>Status</th><th>Agent</th></tr></thead>
+    <tbody>${salesRows()}</tbody></table>
+  </div></div>`;
+function salesRows(){
+  const d=[
+    ['ORD-1048','18 Jul','Krishna Traders','Madurai North','250 cases (20L)','₹62,500','grn','Approved','Rajesh K'],
+    ['ORD-1047','18 Jul','Sri Amman Stores','Karur','100 cases (1L)','₹18,000','red','Pending','Murugan S'],
+    ['ORD-1046','18 Jul','Muthu Agencies','Madurai South','500 cases (20L)','₹1,25,000','amb','Partial','Pandian K'],
+    ['ORD-1045','17 Jul','Kaveri Suppliers','Salem','75 cases (500ml)','₹9,750','slt','Draft','Selvi R'],
+    ['ORD-1044','17 Jul','RVR Distributors','Trichy','300 cases (20L)','₹75,000','grn','Approved','Vignesh M'],
+    ['ORD-1043','17 Jul','RK Enterprises','Coimbatore','150 cases (1L)','₹27,000','red','Pending','Dinesh T'],
+    ['ORD-1042','16 Jul','Anand Water Mart','Madurai North','200 cases (20L)','₹50,000','grn','Approved','Rajesh K'],
+    ['ORD-1041','16 Jul','Vinayaga Stores','Dindigul','60 cases (2L)','₹8,400','slt','Draft','Karthik P'],
+  ];
+  return d.map(r=>`<tr><td class="id">${r[0]}</td><td>${r[1]}</td>
+    <td class="str">${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td>
+    <td class="num">${r[5]}</td><td><span class="st ${r[6]}">${r[7]}</span></td><td>${r[8]}</td></tr>`).join('');
+}
+
+/* ---------- INVOICING ---------- */
+VIEWS.invoices = ()=> head('invoices',
+  `<button class="btn btn-outline">GST report</button><button class="btn btn-primary">+ New invoice</button>`)+`
+  <div class="metrics" style="grid-template-columns:repeat(4,1fr)">
+    <div class="m-card"><div class="ml">Issued (MTD)</div><div class="mv">₹42.6L</div><div class="md flat">318 invoices</div></div>
+    <div class="m-card"><div class="ml">Collected</div><div class="mv">₹30.1L</div><div class="md up">↑ 71% realised</div></div>
+    <div class="m-card"><div class="ml">Outstanding</div><div class="mv">₹12.5L</div><div class="md down">↓ 38 overdue</div></div>
+    <div class="m-card"><div class="ml">Output GST</div><div class="mv">₹6.5L</div><div class="md flat">payable this cycle</div></div>
+  </div>
+  <div class="toolbar">
+    <div class="seg"><button class="on">All</button><button>Paid</button><button>Partial</button><button>Overdue</button></div>
+    <div class="tsearch"><span class="si">⌕</span><input placeholder="Search invoice or customer…"></div>
+    <div style="flex:1"></div>
+  </div>
+  <div class="pad"><div class="panel" style="flex:1">
+    <table class="tbl"><thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Total</th><th class="num">Balance</th><th>Status</th></tr></thead>
+    <tbody>${invRows()}</tbody></table>
+  </div></div>`;
+function invRows(){
+  const d=[
+    ['INV-2118','18 Jul','Krishna Traders','₹52,966','₹9,534','₹62,500','₹0','grn','Paid'],
+    ['INV-2117','18 Jul','RVR Distributors','₹63,559','₹11,441','₹75,000','₹75,000','amb','Partial'],
+    ['INV-2116','17 Jul','Muthu Agencies','₹1,05,932','₹19,068','₹1,25,000','₹1,25,000','red','Overdue'],
+    ['INV-2115','17 Jul','Anand Water Mart','₹42,373','₹7,627','₹50,000','₹0','grn','Paid'],
+    ['INV-2114','16 Jul','Sri Amman Stores','₹15,254','₹2,746','₹18,000','₹9,000','amb','Partial'],
+    ['INV-2113','16 Jul','RK Enterprises','₹22,881','₹4,119','₹27,000','₹27,000','red','Overdue'],
+  ];
+  return d.map(r=>`<tr><td class="id">${r[0]}</td><td>${r[1]}</td><td class="str">${r[2]}</td>
+    <td class="num">${r[3]}</td><td class="num">${r[4]}</td><td class="num">${r[5]}</td>
+    <td class="num">${r[6]}</td><td><span class="st ${r[7]}">${r[8]}</span></td></tr>`).join('');
+}
+
+/* ---------- WAREHOUSE STOCK ---------- */
+VIEWS.stock = ()=> head('stock',
+  `<button class="btn btn-outline">Stock ledger</button><button class="btn btn-primary">Stock transfer</button>`)+`
+  <div class="toolbar">
+    <div class="seg"><button class="on">Finished goods</button><button>Raw materials</button><button>WIP</button></div>
+    <div class="tsearch"><span class="si">⌕</span><input placeholder="Search item or SKU…"></div>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:var(--ink-4);font-family:var(--mono)">Valued at weighted average · ₹18.4L on hand</span>
+  </div>
+  <div class="pad"><div class="panel" style="flex:1">
+    <table class="tbl"><thead><tr><th>SKU</th><th>Item</th><th class="num">On hand</th><th>Unit</th><th class="num">WAC</th><th class="num">Stock value</th><th>Reorder</th><th>Status</th></tr></thead>
+    <tbody>${stockRows()}</tbody></table>
+  </div></div>`;
+function stockRows(){
+  const d=[
+    ['FG-20L','20L Jar (filled)','8,240','case','₹34.67','₹2,85,681','2,000','grn','Healthy'],
+    ['FG-1L','1L Bottle (filled)','12,600','case','₹18.10','₹2,28,060','5,000','grn','Healthy'],
+    ['FG-500','500ml Bottle','3,150','case','₹12.40','₹39,060','4,000','amb','Low'],
+    ['FG-2L','2L Bottle','1,980','case','₹22.05','₹43,659','2,500','amb','Low'],
+    ['RM-PRE','Preforms 12.5g','24,500','unit','₹1.89','₹46,305','30,000','red','Reorder'],
+    ['RM-CAP','Bottle caps','1,86,000','unit','₹0.32','₹59,520','1,00,000','grn','Healthy'],
+    ['RM-SHR','Shrink film','420','kg','₹142.00','₹59,640','300','grn','Healthy'],
+  ];
+  return d.map(r=>`<tr><td class="id">${r[0]}</td><td class="str">${r[1]}</td>
+    <td class="num">${r[2]}</td><td>${r[3]}</td><td class="num">${r[4]}</td>
+    <td class="num">${r[5]}</td><td class="num">${r[6]}</td>
+    <td><span class="st ${r[7]}">${r[8]}</span></td></tr>`).join('');
+}
+
+/* ---------- TRIAL BALANCE ---------- */
+VIEWS.trialbalance = ()=> head('trialbalance',
+  `<button class="btn btn-outline">As of 18 Jul ▾</button><button class="btn btn-primary">Export</button>`)+`
+  <div class="pad"><div class="panel" style="flex:1">
+    <div class="panel-hdr"><h3>Trial Balance <span class="muted">// FY 2026-27</span></h3><span class="chip">balanced</span></div>
+    <table class="tbl"><thead><tr><th>Code</th><th>Account</th><th>Group</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
+    <tbody>${tbRows()}</tbody>
+    <tfoot><tr style="border-top:2px solid var(--line);font-weight:700">
+      <td colspan="3" style="text-align:right;font-weight:700;color:var(--ink)">Totals</td>
+      <td class="num" style="color:var(--ink);font-weight:700">₹68,42,150</td>
+      <td class="num" style="color:var(--ink);font-weight:700">₹68,42,150</td></tr></tfoot></table>
+    <div style="padding:14px 20px;border-top:1px solid var(--line)"><div class="callout"><span>✓</span><div><b>Difference: ₹0.00</b> — debits equal credits. The ledger is the single source of truth (Invariant 1); this view is a rebuildable read-model.</div></div></div>
+  </div></div>`;
+function tbRows(){
+  const d=[
+    ['1110','Cash in hand','Assets','₹84,500',''],
+    ['1120','Bank — HDFC Current','Assets','₹6,42,000',''],
+    ['1130','Accounts Receivable','Assets','₹12,45,800',''],
+    ['1200','Inventory','Assets','₹18,42,000',''],
+    ['1140','Input GST','Assets','₹2,18,400',''],
+    ['2110','Accounts Payable','Liabilities','','₹8,20,300'],
+    ['2120','Output GST','Liabilities','','₹6,52,100'],
+    ['2130','Salaries Payable','Liabilities','','₹3,80,000'],
+    ['3100','Share Capital','Equity','','₹20,00,000'],
+    ['4100','Sales Revenue','Income','','₹42,60,000'],
+    ['5100','COGS','Expenses','₹28,40,000',''],
+    ['5500','Salaries & Wages','Expenses','₹3,80,000',''],
+  ];
+  const grpColor={Assets:'var(--brand)',Liabilities:'var(--amb)',Equity:'#7c3aed',Income:'var(--grn)',Expenses:'var(--red)'};
+  return d.map(r=>`<tr><td class="id">${r[0]}</td><td class="str">${r[1]}</td>
+    <td><span style="font-size:11px;font-weight:600;color:${grpColor[r[2]]}">${r[2]}</span></td>
+    <td class="num">${r[3]||'—'}</td><td class="num">${r[4]||'—'}</td></tr>`).join('');
+}
+</script>
+
+<script>
+/* ---------- USERS & ACCESS (backed by migrations 0030 + 0031) ---------- */
+VIEWS.users = ()=> head('users',
+  `<button class="btn btn-outline">Roles &amp; permissions</button><button class="btn btn-primary" onclick="alert('Opens the invite drawer → admin_create_user(phone, name, roles)')">+ Invite user</button>`)+`
+  <div class="toolbar">
+    <div class="seg"><button class="on">All</button><button>Active</button><button>Pending review</button><button>Suspended</button></div>
+    <div class="tsearch"><span class="si">⌕</span><input placeholder="Search name or phone…"></div>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:var(--ink-4);font-family:var(--mono)">14 users · 1 pending · 1 suspended</span>
+  </div>
+  <div class="pad"><div class="u-grid">
+    <div class="panel">
+      <table class="tbl"><thead><tr><th>User</th><th>Roles</th><th>Last active</th><th>Status</th><th></th></tr></thead>
+      <tbody>${userRows()}</tbody></table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <div class="panel-hdr"><h3>Arun Kumar</h3><span class="st grn">Active</span></div>
+        <div class="panel-body" style="padding:16px 18px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div class="u-av" style="width:44px;height:44px;font-size:15px">AK</div>
+            <div><div style="font-weight:700;color:var(--ink)">Arun Kumar</div><div style="font-size:12px;color:var(--ink-4);font-family:var(--mono)">+91 90000 00001</div></div>
+          </div>
+          <div style="margin-bottom:6px"><span class="rolechip admin">Administrator</span></div>
+          <div class="callout" style="margin-top:12px"><span>ℹ</span><div>Admin role <b>bypasses all checks</b>. Overrides below don't apply while this role is held.</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h3>Selvi R — permission overrides</h3></div>
+        <div class="panel-body" style="padding:8px">
+          <div class="perm-grid">
+            ${permItem('order.create','Role: Sales','role',true)}
+            ${permItem('payment.record','Granted · expires 31 Jul','grant',true)}
+            ${permItem('report.view_all','Denied by admin','deny',false)}
+            ${permItem('journal.post','Not in any role','none',false)}
+          </div>
+          <div style="padding:10px 8px 4px"><div class="callout"><span>⚡</span><div>Overrides take effect <b>immediately</b> — <b>deny wins</b> over any role grant. Backed by <b>user_permission_overrides</b> + the <b>has_permission()</b> precedence rewrite.</div></div></div>
+        </div>
+      </div>
+      <div class="panel kill-card">
+        <div class="panel-hdr"><h3 style="color:var(--red)">Kill-switch</h3></div>
+        <div class="panel-body" style="padding:14px 18px">
+          <p style="font-size:12.5px;color:var(--ink-3);line-height:1.6;margin-bottom:12px">Suspending a user drops them to <b>zero permissions</b> instantly, regardless of roles, and bumps their token version to force a refresh.</p>
+          <button class="btn" style="background:var(--red);color:#fff;width:100%;justify-content:center" onclick="alert('admin_set_user_status(user, \\'suspended\\') — instant, audited, bumps token_version')">Suspend user</button>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+
+function permItem(code,src,effect,on){
+  const t = effect==='deny' ? 'toggle deny on' : (on?'toggle on':'toggle');
+  return `<div class="perm-item"><div><div style="font-family:var(--mono);font-size:12.5px;color:var(--ink)">${code}</div><div class="p-src">${src}</div></div><div class="${t}" onclick="this.classList.toggle('on')"></div></div>`;
+}
+function userRows(){
+  const d=[
+    ['AK','Arun Kumar','+91 90000 00001',[['Administrator','admin']],'2m ago','grn','Active'],
+    ['RK','Rajesh K','+91 90000 00014',[['Sales','']],'12m ago','grn','Active'],
+    ['SV','Selvi R','+91 90000 00021',[['Sales','']],'1h ago','grn','Active'],
+    ['MN','Meena N','+91 90000 00008',[['Accountant','']],'3h ago','grn','Active'],
+    ['PK','Pandian K','+91 90000 00033',[['Manager','']],'Today','grn','Active'],
+    ['SE','Seshan (Plant)','+91 90000 00040',[['Operator','']],'20m ago','grn','Active'],
+    ['NW','New Number','+91 90000 00099',[],'Never','amb','Pending review'],
+    ['DT','Dinesh T','+91 90000 00051',[['Sales','']],'2 days ago','red','Suspended'],
+  ];
+  return d.map(r=>`<tr>
+    <td><div class="u-row-name"><div class="u-av">${r[0]}</div><div><div class="str">${r[1]}</div><div class="sub-txt" style="font-family:var(--mono)">${r[2]}</div></div></div></td>
+    <td>${r[3].length?r[3].map(x=>`<span class="rolechip ${x[1]}">${x[0]}</span>`).join(''):'<span class="sub-txt">— no roles —</span>'}</td>
+    <td class="sub-txt">${r[4]}</td>
+    <td><span class="st ${r[5]}">${r[6]}</span></td>
+    <td style="text-align:right;color:var(--ink-4)">⋯</td></tr>`).join('');
+}
+</script>
+
+
+
+
+
+</body>
+</html>
