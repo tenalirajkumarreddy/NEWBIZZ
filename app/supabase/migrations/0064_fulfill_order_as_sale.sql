@@ -90,7 +90,7 @@ begin
   end if;
 
   perform write_audit('post','invoices', v_inv::text,
-    format('Order %s fulfilled via % %',
+    format('Order %s fulfilled via %s %s',
       v_o.order_no,
       case when p_is_official then 'invoice' else 'cash memo' end,
       v_inv),
