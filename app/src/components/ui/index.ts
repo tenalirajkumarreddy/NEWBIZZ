@@ -23,3 +23,4 @@ export { Dialog, ConfirmDialog, type DialogProps, type ConfirmDialogProps } from
 export { Drawer, type DrawerProps } from "./Drawer";
 export { ToastProvider, useToast } from "./Toast";
 export { Money, Rupee } from "./Money";
+export { ViewToggle, type ViewMode } from "./ViewToggle";

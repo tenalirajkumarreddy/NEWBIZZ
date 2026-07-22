@@ -75,7 +75,7 @@ export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
               <TH numeric>Lines</TH>
               <TH numeric>Net Value</TH>
               <TH>Status</TH>
-              <TH className="w-72">Actions</TH>
+              <TH>Actions</TH>
             </TR>
           </THead>
           <TBody>
@@ -106,12 +106,14 @@ export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
                 <TD numeric><Money value={o.netValue} /></TD>
                 <TD><StatusBadge status={o.status} /></TD>
                 <TD>
-                  <OrderRowActions orderId={o.id} orderNo={o.order_no} status={o.status} />
-                  {(o.status === "confirmed" || o.status === "approved") && (
-                    <Link href={`/orders/${o.id}`} className="ml-1.5">
-                      <Button variant="primary" size="sm">Fulfill</Button>
-                    </Link>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {(o.status === "confirmed" || o.status === "approved") && (
+                      <Link href={`/orders/${o.id}`}>
+                        <Button variant="primary" size="sm">Fulfill</Button>
+                      </Link>
+                    )}
+                    <OrderRowActions orderId={o.id} orderNo={o.order_no} status={o.status} />
+                  </div>
                 </TD>
               </TR>
             ))}

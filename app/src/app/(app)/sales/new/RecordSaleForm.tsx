@@ -70,9 +70,11 @@ export function RecordSaleForm({
     setLines((xs) => xs.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
 
+  const selectedItemIds = useMemo(() => new Set(lines.map((l) => l.itemId).filter(Boolean)), [lines]);
+
   // When an item is picked, prefill the price with its default list price.
   function onItemChange(key: number, itemId: string) {
-    const it = itemsById.get(itemId);
+    const it = itemId ? itemsById.get(itemId) : undefined;
     patchLine(key, { itemId, price: it ? String(it.defaultPrice) : "" });
   }
 
@@ -221,9 +223,11 @@ export function RecordSaleForm({
                       onChange={(e) => onItemChange(l.key, e.target.value)}
                     >
                       <option value="">Select item…</option>
-                      {items.map((item) => (
+                      {items
+                        .filter((item) => item.id === l.itemId || !selectedItemIds.has(item.id))
+                        .map((item) => (
                         <option key={item.id} value={item.id}>
-                          {item.name} ({item.sku})
+                          {item.name} ({item.sku}) · <strong>{item.qtyOnHand}</strong> in stock
                         </option>
                       ))}
                     </Select>

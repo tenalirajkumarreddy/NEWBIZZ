@@ -8,13 +8,7 @@ import { Money } from "@/components/ui/Money";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { PartyLedger } from "@/components/shared/PartyLedger";
 import { count as fmtCount, money, percent, titleCase } from "@/lib/format";
-
-const KIND_TONE: Record<string, "brand" | "amb" | "grn" | "slate"> = {
-  retail: "grn",
-  wholesale: "brand",
-  distributor: "amb",
-  institution: "slate",
-};
+import { StoresPanel } from "./StoresPanel";
 
 const BUCKET_LABEL: Record<string, string> = {
   current: "Not due",
@@ -123,52 +117,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         </div>
 
-        {/* Right column — stores as cards */}
+        {/* Right column — stores with card/table toggle */}
         <div>
-          <Panel
-            title={`Stores (${fmtCount(customer.stores.length)})`}
-            actions={
-              <Link href={`/customers/${customer.id}/stores/new`} className="text-[12px] font-medium text-brand hover:underline">
-                Add store
-              </Link>
-            }
-          >
-            {customer.stores.length === 0 ? (
-              <p className="p-4 text-[13px] text-ink-4">
-                No stores yet —{" "}
-                <Link href={`/customers/${customer.id}/stores/new`} className="text-brand hover:underline">add the first one</Link>.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2 p-3">
-                {customer.stores.map((s) => (
-                  <Link
-                    key={s.id}
-                    href={`/customers/${customer.id}/stores/${s.id}`}
-                    className="group block rounded-lg border border-line bg-surface p-3.5 transition hover:border-ink-2 hover:shadow-sm active:scale-[0.99]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] font-semibold text-brand">{s.code}</span>
-                          {s.isPrimary && <Badge tone="brand" size="sm">Primary</Badge>}
-                        </div>
-                        <div className="mt-0.5 text-[14px] font-medium text-ink">{s.name}</div>
-                      </div>
-                      <Badge tone={KIND_TONE[s.kind] ?? "slate"} size="sm">{titleCase(s.kind)}</Badge>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-ink-3">
-                      {s.city && <span>{s.city}</span>}
-                      {s.phone && <span>{s.phone}</span>}
-                      {s.priceListName && <span>Rate: {s.priceListName}</span>}
-                    </div>
-                    <div className="mt-1.5">
-                      <Badge tone={s.status === "active" ? "grn" : "slate"} size="sm">{s.status}</Badge>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Panel>
+          <StoresPanel customerId={customer.id} stores={customer.stores} />
         </div>
 
       </div>

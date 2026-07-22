@@ -77,9 +77,11 @@ export function NewOrderForm({
   }
 
   function onItemChange(key: number, itemId: string) {
-    const it = itemsById.get(itemId);
+    const it = itemId ? itemsById.get(itemId) : undefined;
     patchLine(key, { itemId, price: it ? String(it.defaultPrice) : "" });
   }
+
+  const selectedItemIds = useMemo(() => new Set(lines.map((l) => l.itemId).filter(Boolean)), [lines]);
 
   const netTotal = useMemo(
     () =>
@@ -213,11 +215,13 @@ export function NewOrderForm({
                       onChange={(e) => onItemChange(l.key, e.target.value)}
                     >
                       <option value="">Select item…</option>
-                      {items.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} ({item.sku})
-                        </option>
-                      ))}
+                      {items
+                        .filter((item) => item.id === l.itemId || !selectedItemIds.has(item.id))
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name} ({item.sku}) · <strong>{item.qtyOnHand}</strong> in stock
+                          </option>
+                        ))}
                     </Select>
                   </TD>
                   <TD numeric>
