@@ -53,6 +53,7 @@ export interface OrderDetail {
   notes: string | null;
   storeName: string | null;
   storeCode: string | null;
+  storeStateCode: string | null;
   customerName: string | null;
   customerId: string;
   branchId: string;
@@ -64,7 +65,7 @@ export interface OrderDetail {
 // are single embedded rows; `sales_order_lines` is the child collection.
 const ORDER_SELECT =
   "id, order_no, order_date, status, notes, customer_id, branch_id, " +
-  "customer:customers(name), store:customer_stores(name, code), " +
+  "customer:customers(name), store:customer_stores(name, code, state_code), " +
   "lines:sales_order_lines(id, item_id, qty, qty_fulfilled, unit_price, gst_rate, line_no, item:items(name, sku))";
 
 type RawLine = {
@@ -83,7 +84,7 @@ type RawOrder = Pick<
   "id" | "order_no" | "order_date" | "status" | "notes" | "customer_id" | "branch_id"
 > & {
   customer: { name: string } | null;
-  store: { name: string; code: string } | null;
+  store: { name: string; code: string; state_code: string | null } | null;
   lines: RawLine[] | null;
 };
 
@@ -160,6 +161,7 @@ export async function getOrder(id: string): Promise<OrderDetail | null> {
     notes: r.notes,
     storeName: r.store?.name ?? null,
     storeCode: r.store?.code ?? null,
+    storeStateCode: r.store?.state_code ?? null,
     customerName: r.customer?.name ?? null,
     customerId: r.customer_id,
     branchId: r.branch_id,
@@ -224,29 +226,39 @@ export interface ItemOption {
   sku: string;
   defaultPrice: number;
   gstRate: number;
+  qtyOnHand: number;
 }
 
 /** Active, sellable items for the order line editor. */
 export async function listSellableItems(): Promise<ItemOption[]> {
   const supabase = createClient();
-  const res = await supabase
-    .from("items")
-    .select("id, name, sku, default_price, gst_rate, is_sellable, status")
-    .eq("is_sellable", true)
-    .eq("status", "active")
-    .order("name");
   type Raw = Pick<
     Tables["items"]["Row"],
     "id" | "name" | "sku" | "default_price" | "gst_rate"
-  >;
+  > & { stock: { qty_on_hand: number }[] | null };
+  const res = await supabase
+    .from("items")
+    .select(
+      "id, name, sku, default_price, gst_rate, is_sellable, status, " +
+      "stock(qty_on_hand)",
+    )
+    .eq("is_sellable", true)
+    .eq("status", "active")
+    .order("name")
+    .returns<Raw[]>();
   const rows = unwrap(res, [] as Raw[], "listSellableItems");
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    sku: r.sku,
-    defaultPrice: Number(r.default_price),
-    gstRate: Number(r.gst_rate),
-  }));
+  return rows.map((r) => {
+    const entries = r.stock;
+    const qtyOnHand = Array.isArray(entries) ? entries.reduce((s, e) => s + Number(e.qty_on_hand), 0) : 0;
+    return {
+      id: r.id,
+      name: r.name,
+      sku: r.sku,
+      defaultPrice: Number(r.default_price),
+      gstRate: Number(r.gst_rate),
+      qtyOnHand,
+    };
+  });
 }
 
 export interface CustomerCreditInfo {

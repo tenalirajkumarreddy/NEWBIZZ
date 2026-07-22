@@ -6908,7 +6908,7 @@ export type Database = {
       post_delivery: { Args: { p_order: string }; Returns: string }
       post_invoice: { Args: { p_header: Json; p_lines: Json }; Returns: string }
       post_invoice_from_order: {
-        Args: { p_date?: string; p_order: string }
+        Args: { p_date?: string; p_is_official?: boolean; p_lines?: Json; p_order: string }
         Returns: string
       }
       post_journal: { Args: { p_header: Json; p_lines: Json }; Returns: string }

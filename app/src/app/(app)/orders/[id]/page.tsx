@@ -1,32 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrder, type OrderLine } from "@/lib/data/sales";
-import { listChallans } from "@/lib/data/challans";
+import { getOrder, getHomeStateCode } from "@/lib/data/sales";
 import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty, percent } from "@/lib/format";
 import { OrderRowActions } from "../OrderRowActions";
-import { OrderFulfilment } from "./OrderFulfilment";
+import { FulfilOrderAction } from "./FulfilOrderAction";
+import type { OrderLine } from "@/lib/data/sales";
 
-// Order detail — header facts, line items, and the value roll-up. A confirmed
-// order shows the "Deliver" action (post_delivery RPC); an already fulfilled
-// order shows "Generate GST invoice" as an optional doc-only action.
-// Invoiced or cancelled orders show their status. Read-only otherwise.
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
-  const order = await getOrder(params.id);
+  const [order, homeStateCode] = await Promise.all([
+    getOrder(params.id),
+    getHomeStateCode(),
+  ]);
   if (!order) notFound();
 
   const netTotal = order.lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
-  const canDeliver = order.status === "confirmed" || order.status === "approved" || order.status === "partially_fulfilled";
-  // Fulfilment is relevant for any non-terminal order.
-  const showFulfilment =
-    order.status === "confirmed" ||
-    order.status === "approved" ||
-    order.status === "partially_fulfilled" ||
-    order.status === "fulfilled";
-  const challans = showFulfilment ? await listChallans({ orderId: order.id, limit: 100 }) : [];
+  const canFulfil = order.status === "confirmed" || order.status === "approved";
+  const canCancel = order.status === "confirmed" || order.status === "approved" || order.status === "draft";
 
   return (
     <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
@@ -45,11 +38,24 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             {order.customerName ? ` · ${order.customerName}` : ""}
           </p>
         </div>
-        {canDeliver || order.status === "draft" || order.status === "fulfilled" ? (
-          <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />
-        ) : order.status === "invoiced" ? (
-          <span className="text-[12px] font-medium text-grn">Invoiced</span>
-        ) : null}
+        <div className="flex items-center gap-1.5">
+          {canFulfil && (
+            <FulfilOrderAction
+              orderId={order.id}
+              orderNo={order.order_no}
+              lines={order.lines}
+              storeStateCode={order.storeStateCode}
+              homeStateCode={homeStateCode}
+            />
+          )}
+          {canCancel && <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />}
+          {order.status === "fulfilled" && (
+            <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />
+          )}
+          {order.status === "invoiced" && (
+            <span className="text-[12px] font-medium text-grn">Invoiced</span>
+          )}
+        </div>
       </div>
 
       {/* Facts */}
@@ -80,16 +86,6 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           </TBody>
         </Table>
       </Panel>
-
-      {showFulfilment && (
-        <OrderFulfilment
-          orderId={order.id}
-          orderNo={order.order_no}
-          status={order.status}
-          lines={order.lines}
-          challans={challans}
-        />
-      )}
 
       {order.notes && (
         <Card className="p-4">

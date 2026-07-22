@@ -162,6 +162,55 @@ export async function invoiceOrder(
 }
 
 /**
+ * Fulfil an order by recording the sale — the value event.  This wraps
+ * post_invoice_from_order with the new (0064) signature: edited lines and
+ * is_official flag caller-controlled.  Posts revenue + GST + AR + COGS +
+ * stock + customer_ledger, links the invoice to the order, marks the
+ * order lines as fulfilled, and sets the order status (invoiced when
+ * official, fulfilled when cash memo).  The caller then deals with the
+ * sale, not the order.
+ */
+export interface FulfilLineInput {
+  item_id: string;
+  qty: number;
+  unit_price?: number;
+}
+
+export async function fulfilOrderAsSale(
+  orderId: string,
+  lines: FulfilLineInput[],
+  isOfficial: boolean = true,
+  invoiceDate?: string,
+): Promise<ActionResult<{ invoiceId: string }>> {
+  if (!orderId) return { ok: false, error: "Missing order." };
+  const valid = (lines ?? []).filter((l) => l.item_id && Number(l.qty) > 0);
+  if (valid.length === 0) return { ok: false, error: "Add at least one line with a quantity." };
+
+  const supabase = createClient();
+  const p_lines = valid.map((l) => {
+    const o: { item_id: string; qty: number; unit_price?: number } = { item_id: l.item_id, qty: Number(l.qty) };
+    if (l.unit_price != null) o.unit_price = Number(l.unit_price);
+    return o;
+  });
+
+  const res = await supabase.rpc("post_invoice_from_order", {
+    p_order: orderId,
+    p_lines,
+    p_is_official: isOfficial,
+    ...(invoiceDate ? { p_date: invoiceDate } : {}),
+  });
+
+  if (res.error || !res.data) return fail("fulfilOrderAsSale", res.error?.message);
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/challans");
+  revalidatePath("/");
+  return { ok: true, invoiceId: res.data };
+}
+
+/**
  * Cancel a draft/confirmed order via cancel_order. Pure status change — an
  * order that reached "invoiced" already posted value and can only be undone
  * with a credit note, so the RPC refuses it.
