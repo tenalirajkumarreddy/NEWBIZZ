@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
@@ -74,7 +75,7 @@ export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
               <TH numeric>Lines</TH>
               <TH numeric>Net Value</TH>
               <TH>Status</TH>
-              <TH className="w-56">Actions</TH>
+              <TH className="w-72">Actions</TH>
             </TR>
           </THead>
           <TBody>
@@ -106,6 +107,11 @@ export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
                 <TD><StatusBadge status={o.status} /></TD>
                 <TD>
                   <OrderRowActions orderId={o.id} orderNo={o.order_no} status={o.status} />
+                  {(o.status === "confirmed" || o.status === "approved") && (
+                    <Link href={`/orders/${o.id}`} className="ml-1.5">
+                      <Button variant="primary" size="sm">Fulfill</Button>
+                    </Link>
+                  )}
                 </TD>
               </TR>
             ))}
