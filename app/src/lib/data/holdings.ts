@@ -24,14 +24,15 @@ type RawCashHolding = {
   user: { full_name: string } | null;
 };
 
-export async function listCashHoldings(): Promise<CashHoldingRow[]> {
+export async function listCashHoldings(userId?: string): Promise<CashHoldingRow[]> {
   const supabase = createClient();
+  let query = supabase
+    .from("user_cash_holdings")
+    .select("user_id, amount, user:users(full_name)")
+    .order("amount", { ascending: false });
+  if (userId) query = query.eq("user_id", userId);
   const rows = unwrap(
-    await supabase
-      .from("user_cash_holdings")
-      .select("user_id, amount, user:users(full_name)")
-      .order("amount", { ascending: false })
-      .returns<RawCashHolding[]>(),
+    await query.returns<RawCashHolding[]>(),
     [] as RawCashHolding[],
     "listCashHoldings",
   );
@@ -65,17 +66,18 @@ type RawStockHolding = {
   item: { sku: string; name: string; base_unit: { code: string } | null } | null;
 };
 
-export async function listStockHoldings(): Promise<StockHoldingRow[]> {
+export async function listStockHoldings(userId?: string): Promise<StockHoldingRow[]> {
   const supabase = createClient();
+  let query = supabase
+    .from("user_stock_holdings")
+    .select(
+      "user_id, item_id, qty, avg_cost, user:users(full_name), " +
+      "item:items(sku, name, base_unit:units!items_base_unit_id_fkey(code))",
+    )
+    .gt("qty", 0);
+  if (userId) query = query.eq("user_id", userId);
   const rows = unwrap(
-    await supabase
-      .from("user_stock_holdings")
-      .select(
-        "user_id, item_id, qty, avg_cost, user:users(full_name), " +
-        "item:items(sku, name, base_unit:units!items_base_unit_id_fkey(code))",
-      )
-      .gt("qty", 0)
-      .returns<RawStockHolding[]>(),
+    await query.returns<RawStockHolding[]>(),
     [] as RawStockHolding[],
     "listStockHoldings",
   );
@@ -218,15 +220,18 @@ function mapTransfer(r: RawTransfer): TransferRow {
   };
 }
 
-export async function listTransfers(opts: { limit?: number } = {}): Promise<TransferRow[]> {
+export async function listTransfers(opts: { limit?: number; userId?: string } = {}): Promise<TransferRow[]> {
   const supabase = createClient();
+  let query = supabase
+    .from("transfers")
+    .select(TRANSFER_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(opts.limit ?? 100);
+  if (opts.userId) {
+    query = query.or(`from_user_id.eq.${opts.userId},to_user_id.eq.${opts.userId}`);
+  }
   const rows = unwrap(
-    await supabase
-      .from("transfers")
-      .select(TRANSFER_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(opts.limit ?? 100)
-      .returns<RawTransfer[]>(),
+    await query.returns<RawTransfer[]>(),
     [] as RawTransfer[],
     "listTransfers",
   );

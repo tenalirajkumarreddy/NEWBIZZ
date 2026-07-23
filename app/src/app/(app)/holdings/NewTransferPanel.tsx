@@ -7,6 +7,13 @@
 //   stock    warehouse → user (issue), my custody → user, or my custody →
 //            warehouse (return)
 // The DB RPC enforces permissions and balances; this form only guides.
+//
+// Role gating (§2.3 baseline matrix):
+//   Admin/Manager  → all modes, full origin/dest
+//   Operator       → Stock (WH→user only) + Cash + Deposit
+//   Agent          → Stock (self→user/WH) + Cash + Deposit
+//   Sales          → Cash + Deposit only
+//   Marketer       → Cash + Deposit only
 // =====================================================================
 
 import { useMemo, useState, useTransition } from "react";
@@ -16,12 +23,14 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { money, qty as fmtQty } from "@/lib/format";
+import { can } from "@/lib/auth/claims";
 import {
   createCashTransfer,
   createStockTransfer,
   type StockTransferLineInput,
 } from "@/lib/actions/transfers";
 import type { UserOption } from "@/lib/data/holdings";
+import type { AppClaims } from "@/lib/auth/claims";
 import type { BranchOption, StockableItemOption } from "@/lib/data/stock";
 
 type Mode = "cash" | "deposit" | "stock";
@@ -42,7 +51,10 @@ interface Line {
   qty: string;
 }
 
+type StockConfig = "full" | "wh2user" | "self2any";
+
 export function NewTransferPanel({
+  claims,
   users,
   branches,
   items,
@@ -50,6 +62,7 @@ export function NewTransferPanel({
   myCash,
   myStock,
 }: {
+  claims: AppClaims;
   users: UserOption[];
   branches: BranchOption[];
   items: StockableItemOption[];
@@ -61,11 +74,37 @@ export function NewTransferPanel({
   const toast = useToast();
   const [pending, startTransition] = useTransition();
 
+  const isAdmin = claims.is_admin;
+  const roles = claims.roles;
+  const scopeAll = isAdmin || roles.includes("manager");
+  const isOperator = roles.includes("operator");
+  const isAgent = roles.includes("agent");
+  const hasStockTransfer = can(claims, "stock.transfer");
+
+  const stockConfig: StockConfig | null = useMemo(() => {
+    if (!hasStockTransfer) return null;
+    if (scopeAll) return "full";
+    if (isOperator) return "wh2user";
+    if (isAgent) return "self2any";
+    return null;
+  }, [hasStockTransfer, scopeAll, isOperator, isAgent]);
+
+  const availableModes = useMemo(() => {
+    const modes: Mode[] = [];
+    if (stockConfig) modes.push("stock");
+    modes.push("cash", "deposit");
+    return modes;
+  }, [stockConfig]);
+
   const others = useMemo(() => users.filter((u) => u.id !== myUserId), [users, myUserId]);
 
-  const [mode, setMode] = useState<Mode>("stock");
-  const [origin, setOrigin] = useState<StockOrigin>("warehouse");
-  const [dest, setDest] = useState<StockDest>("user");
+  const [mode, setMode] = useState<Mode>(() => stockConfig ? "stock" : "cash");
+  const [origin, setOrigin] = useState<StockOrigin>(
+    stockConfig === "wh2user" ? "warehouse" : stockConfig === "self2any" ? "self" : "warehouse"
+  );
+  const [dest, setDest] = useState<StockDest>(
+    stockConfig === "wh2user" ? "user" : "user"
+  );
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
   const [toUserId, setToUserId] = useState(others[0]?.id ?? "");
   const [amount, setAmount] = useState("");
@@ -157,39 +196,49 @@ export function NewTransferPanel({
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="What moves" htmlFor="t-mode">
             <Select id="t-mode" value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
-              <option value="stock">Stock</option>
-              <option value="cash">Cash → another user</option>
-              <option value="deposit">Cash → bank deposit</option>
+              {availableModes.map((m) => (
+                <option key={m} value={m}>
+                  {m === "stock" ? "Stock" : m === "cash" ? "Cash → another user" : "Cash → bank deposit"}
+                </option>
+              ))}
             </Select>
           </Field>
 
-          {mode === "stock" && (
+          {mode === "stock" && stockConfig && (
             <>
-              <Field label="From" htmlFor="t-origin">
-                <Select
-                  id="t-origin"
-                  value={origin}
-                  onChange={(e) => {
-                    setOrigin(e.target.value as StockOrigin);
-                    setLines([{ key: nextKey, itemId: "", qty: "" }]);
-                    setNextKey((k) => k + 1);
-                  }}
-                >
-                  <option value="warehouse">Warehouse</option>
-                  <option value="self">My custody</option>
-                </Select>
-              </Field>
-              <Field label="To" htmlFor="t-dest">
-                <Select
-                  id="t-dest"
-                  value={origin === "warehouse" ? "user" : dest}
-                  onChange={(e) => setDest(e.target.value as StockDest)}
-                  disabled={origin === "warehouse"}
-                >
-                  <option value="user">A user</option>
-                  {origin === "self" && <option value="warehouse">Back to warehouse</option>}
-                </Select>
-              </Field>
+              {stockConfig !== "wh2user" && (
+                <Field label="From" htmlFor="t-origin">
+                  <Select
+                    id="t-origin"
+                    value={origin}
+                    onChange={(e) => {
+                      setOrigin(e.target.value as StockOrigin);
+                      setLines([{ key: nextKey, itemId: "", qty: "" }]);
+                      setNextKey((k) => k + 1);
+                    }}
+                    disabled={stockConfig === "self2any"}
+                  >
+                    {stockConfig === "full" && <option value="warehouse">Warehouse</option>}
+                    <option value="self">My custody</option>
+                  </Select>
+                </Field>
+              )}
+              {stockConfig !== "wh2user" ? (
+                <Field label="To" htmlFor="t-dest">
+                  <Select
+                    id="t-dest"
+                    value={dest}
+                    onChange={(e) => setDest(e.target.value as StockDest)}
+                  >
+                    <option value="user">A user</option>
+                    {origin === "self" && <option value="warehouse">Back to warehouse</option>}
+                  </Select>
+                </Field>
+              ) : (
+                <div className="text-[13px] text-ink-3 self-end pb-2">
+                  Warehouse → user
+                </div>
+              )}
             </>
           )}
 

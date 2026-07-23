@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { listCashHoldings, listStockHoldings, listTransfers, listActiveUsers, getMyHoldings } from "@/lib/data/holdings";
 import { listBranches, listStockableItems } from "@/lib/data/stock";
+import { getSession } from "@/lib/auth/session";
 import { Panel } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -12,18 +14,26 @@ import { NewTransferPanel } from "./NewTransferPanel";
 export const metadata = { title: "Holdings & Handover — NEWBIZZ" };
 
 export default async function HoldingsPage() {
-  const [cash, stock, transfers, users, branches, items, mine] = await Promise.all([
+  const session = await getSession();
+  if (!session) redirect("/login");
+  const { user, claims } = session;
+  const scopeAll = claims.is_admin || claims.roles.includes("manager");
+  const sessionUserId = user.id;
+
+  const [allCash, allStock, transfers, users, branches, items, mine] = await Promise.all([
     listCashHoldings(),
     listStockHoldings(),
-    listTransfers({ limit: 100 }),
+    scopeAll ? listTransfers({ limit: 100 }) : listTransfers({ limit: 100, userId: sessionUserId }),
     listActiveUsers(),
     listBranches(),
     listStockableItems(),
     getMyHoldings(),
   ]);
 
-  const totalCash = cash.reduce((s, r) => s + r.amount, 0);
-  const totalStockValue = stock.reduce((s, r) => s + r.carryingValue, 0);
+  const cash = scopeAll ? allCash : allCash.filter((r) => r.userId === sessionUserId);
+  const stock = scopeAll ? allStock : allStock.filter((r) => r.userId === sessionUserId);
+  const totalCash = allCash.reduce((s, r) => s + r.amount, 0);
+  const totalStockValue = allStock.reduce((s, r) => s + r.carryingValue, 0);
   const pending = transfers.filter((t) => t.status === "pending");
 
   return (
@@ -43,6 +53,7 @@ export default async function HoldingsPage() {
       </div>
 
       <NewTransferPanel
+        claims={claims}
         users={users}
         branches={branches}
         items={items}
