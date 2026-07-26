@@ -62,8 +62,8 @@ export function MoveStoreAction({
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={openPicker}>
-        Move to another customer
+      <Button variant="secondary" size="sm" onClick={openPicker}>
+        Move
       </Button>
 
       <Dialog

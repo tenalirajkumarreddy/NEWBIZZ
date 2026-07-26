@@ -34,10 +34,12 @@ export function NewStoreForm({
   customerId,
   priceLists,
   hasExistingStores,
+  onClose,
 }: {
   customerId: string;
   priceLists: PriceListRow[];
   hasExistingStores: boolean;
+  onClose?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -76,8 +78,8 @@ export function NewStoreForm({
       });
       if (res.ok) {
         toast.success("Store added", `${name} is ready for orders.`);
-        router.push(`/customers/${customerId}`);
         router.refresh();
+        onClose?.();
       } else {
         toast.error("Could not add store", res.error);
       }
@@ -152,7 +154,7 @@ export function NewStoreForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push(`/customers/${customerId}`)}>
+        <Button variant="ghost" size="sm" onClick={() => { onClose?.(); router.push(`/customers/${customerId}`); }}>
           Cancel
         </Button>
         <Button variant="primary" size="md" onClick={submit} loading={pending} disabled={!canSubmit}>

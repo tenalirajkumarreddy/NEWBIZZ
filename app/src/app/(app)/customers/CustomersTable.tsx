@@ -19,7 +19,7 @@ export function CustomersTable({ customers }: { customers: CustomerListRow[] }) 
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  const [view, setView] = useState<ViewMode>("table");
+  const [view, setView] = useState<ViewMode>("cards");
 
   const query = sp.get("q") ?? "";
   const kind = sp.get("kind") ?? "";
@@ -167,39 +167,49 @@ export function CustomersTable({ customers }: { customers: CustomerListRow[] }) 
             <Link
               key={c.id}
               href={`/customers/${c.id}`}
-              className="group block rounded-lg border border-line bg-surface p-4 transition hover:border-ink-2 hover:shadow-sm active:scale-[0.99]"
+              className="group block overflow-hidden rounded-lg border border-line bg-surface transition hover:border-ink-2 hover:shadow-sm active:scale-[0.99]"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Avatar url={c.imageUrl} name={c.name} />
+              <div className="aspect-[2/1] w-full overflow-hidden bg-fill">
+                {c.imageUrl ? (
+                  <img src={c.imageUrl} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <span className="text-[28px] font-bold text-ink-3">
+                      {c.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate text-[14px] font-medium text-ink group-hover:text-brand">{c.name}</div>
-                    <div className="font-mono text-[11px] text-brand">{c.code}</div>
+                    <div className="truncate text-[15px] font-semibold text-ink group-hover:text-brand">{c.name}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-brand">{c.code}</div>
+                  </div>
+                  <Badge tone={c.status === "active" ? "grn" : "slate"} size="sm">{c.status}</Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+                  <div>
+                    <span className="text-ink-4">GSTIN</span>
+                    <div className="font-mono text-ink">{c.gstin ?? "—"}</div>
+                  </div>
+                  <div>
+                    <span className="text-ink-4">Phone</span>
+                    <div className="text-ink">{c.phone ?? "—"}</div>
+                  </div>
+                  <div>
+                    <span className="text-ink-4">Outstanding</span>
+                    <div className="font-mono font-semibold text-amb tnum">
+                      {c.outstanding > 0 ? <Money value={c.outstanding} /> : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-ink-4">Credit</span>
+                    <div className="font-mono tnum">{c.creditLimit > 0 ? <Money value={c.creditLimit} /> : "Cash only"}</div>
                   </div>
                 </div>
-                <Badge tone={c.status === "active" ? "grn" : "slate"} size="sm">{c.status}</Badge>
+                <div className="mt-2 text-[11px] text-ink-4">{fmtCount(c.storeCount)} store{c.storeCount !== 1 ? "s" : ""}</div>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
-                <div>
-                  <span className="text-ink-4">GSTIN</span>
-                  <div className="font-mono text-ink">{c.gstin ?? "—"}</div>
-                </div>
-                <div>
-                  <span className="text-ink-4">Phone</span>
-                  <div className="text-ink">{c.phone ?? "—"}</div>
-                </div>
-                <div>
-                  <span className="text-ink-4">Outstanding</span>
-                  <div className="font-mono font-semibold text-amb tnum">
-                    {c.outstanding > 0 ? <Money value={c.outstanding} /> : "—"}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-ink-4">Credit</span>
-                  <div className="font-mono tnum">{c.creditLimit > 0 ? <Money value={c.creditLimit} /> : "Cash only"}</div>
-                </div>
-              </div>
-              <div className="mt-2 text-[11px] text-ink-4">{fmtCount(c.storeCount)} store{c.storeCount !== 1 ? "s" : ""}</div>
             </Link>
           ))}
         </div>

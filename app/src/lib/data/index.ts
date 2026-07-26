@@ -6,3 +6,4 @@ export * from "./accounting";
 export * from "./notifications";
 export * from "./licenses";
 export * from "./permissions";
+export * from "./crm";

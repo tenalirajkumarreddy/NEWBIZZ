@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCustomer, getCustomerActivity } from "@/lib/data/customers";
+import { listPriceLists } from "@/lib/data/catalog";
 import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Kpi } from "@/components/ui/Kpi";
 import { Money } from "@/components/ui/Money";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { PartyLedger } from "@/components/shared/PartyLedger";
-import { count as fmtCount, money, percent, titleCase } from "@/lib/format";
+import { count as fmtCount, money, percent } from "@/lib/format";
+import { CustomerProfileActions } from "./CustomerProfileActions";
 import { StoresPanel } from "./StoresPanel";
 
 const BUCKET_LABEL: Record<string, string> = {
@@ -21,14 +23,16 @@ const BUCKET_LABEL: Record<string, string> = {
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const customer = await getCustomer(params.id);
   if (!customer) notFound();
-  const activity = await getCustomerActivity(customer.id);
+  const [activity, priceLists] = await Promise.all([
+    getCustomerActivity(customer.id),
+    listPriceLists(),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-6 py-6 lg:px-8">
       {/* ── Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <ImageUpload target="customer" id={customer.id} imageUrl={customer.imageUrl} name={customer.name} />
           <div>
             <Link href="/customers" className="text-[12px] font-medium text-ink-4 hover:text-brand">
               ← Customers
@@ -39,26 +43,12 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
               <Badge tone={customer.status === "active" ? "grn" : "slate"} size="sm">{customer.status}</Badge>
               {customer.overLimit && <Badge tone="red" size="sm">Over limit</Badge>}
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px] text-ink-3">
-              {customer.gstin && <span>GSTIN {customer.gstin}</span>}
-              {customer.phone && <span>{customer.phone}</span>}
-              {customer.email && <span>{customer.email}</span>}
-              {!customer.gstin && !customer.phone && !customer.email && <span>No contact info</span>}
-            </div>
           </div>
         </div>
-        <Link
-          href={`/customers/${customer.id}/edit`}
-          className="shrink-0 rounded-md border border-line bg-surface px-3 py-1.5 text-[12px] font-medium text-ink-2 hover:bg-fill"
-        >
-          Edit
-        </Link>
+        <CustomerProfileActions customer={customer} />
       </div>
 
-      {/* ── KPI row — combined across all stores ── */}
-      <Card className="p-3">
-        <p className="eyebrow text-ink-4">Combined across all stores</p>
-      </Card>
+      {/* ── KPI row ── */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           label="Total outstanding"
@@ -106,11 +96,18 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
           {/* Details */}
           <Panel title="Details">
             <div className="divide-y divide-line">
-              <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-4">
-                <Info label="GSTIN" value={customer.gstin ?? "—"} mono />
-                <Info label="PAN" value={customer.pan ?? "—"} mono />
-                <Info label="Email" value={customer.email ?? "—"} />
-                <Info label="State code" value={customer.stateCode} mono />
+              <div className="flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
+                <ImageUpload target="customer" id={customer.id} imageUrl={customer.imageUrl} name={customer.name} size={160} />
+                <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Info label="GSTIN" value={customer.gstin ?? "—"} mono />
+                  <Info label="PAN" value={customer.pan ?? "—"} mono />
+                  <Info label="Phone" value={customer.phone ?? "—"} />
+                  <Info label="Email" value={customer.email ?? "—"} />
+                  <Info label="State code" value={customer.stateCode} mono />
+                  <Info label="Credit limit" value={customer.creditLimit > 0 ? money(customer.creditLimit) : "Cash only"} />
+                  <Info label="Credit days" value={customer.creditDays > 0 ? `${customer.creditDays} days` : "None"} />
+                  <Info label="Status" value={customer.status === "active" ? "Active" : "Inactive"} />
+                </div>
               </div>
             </div>
           </Panel>
@@ -119,13 +116,37 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         {/* Right column — stores with card/table toggle */}
         <div>
-          <StoresPanel customerId={customer.id} stores={customer.stores} />
+          <StoresPanel customerId={customer.id} stores={customer.stores} priceLists={priceLists} />
         </div>
 
       </div>
 
       {/* ── Account ledger ── */}
-      <PartyLedger rows={activity} title="Account ledger" filename={`ledger-${customer.code}`} showStore />
+      <PartyLedger
+        rows={activity}
+        title="Account ledger"
+        filename={`ledger-${customer.code}`}
+        showStore
+        printStatement={{
+          imageUrl: customer.imageUrl,
+          title: "Account Statement",
+          entityName: customer.name,
+          entityCode: customer.code,
+          info: [
+            { label: "GSTIN", value: customer.gstin ?? "—" },
+            { label: "PAN", value: customer.pan ?? "—" },
+            { label: "Phone", value: customer.phone ?? "—" },
+            { label: "Email", value: customer.email ?? "—" },
+            { label: "State code", value: customer.stateCode },
+            { label: "Credit limit", value: customer.creditLimit > 0 ? money(customer.creditLimit) : "Cash only" },
+            { label: "Credit days", value: customer.creditDays > 0 ? `${customer.creditDays} days` : "None" },
+            { label: "Status", value: customer.status === "active" ? "Active" : "Inactive" },
+            { label: "Stores", value: String(customer.stores.length) },
+          ],
+          aging: customer.aging,
+          outstanding: customer.outstanding,
+        }}
+      />
     </div>
   );
 }
