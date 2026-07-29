@@ -7,3 +7,4 @@ export * from "./notifications";
 export * from "./licenses";
 export * from "./permissions";
 export * from "./crm";
+export * from "./commissions";

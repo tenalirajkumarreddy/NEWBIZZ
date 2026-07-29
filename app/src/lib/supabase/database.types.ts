@@ -4324,6 +4324,68 @@ export type Database = {
           },
         ]
       }
+      production_device_config: {
+        Row: {
+          created_at: string
+          device_id: string
+          device_index: number
+          id: string
+          item_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          device_index: number
+          id?: string
+          item_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          device_index?: number
+          id?: string
+          item_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_device_config_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_logs: {
+        Row: {
+          device_id: string
+          device_index: number
+          id: string
+          logged_at: string
+          quantity: number
+          synced_at: string
+        }
+        Insert: {
+          device_id: string
+          device_index: number
+          id?: string
+          logged_at: string
+          quantity?: number
+          synced_at?: string
+        }
+        Update: {
+          device_id?: string
+          device_index?: number
+          id?: string
+          logged_at?: string
+          quantity?: number
+          synced_at?: string
+        }
+        Relationships: []
+      }
       purchase_order_lines: {
         Row: {
           gst_rate: number
