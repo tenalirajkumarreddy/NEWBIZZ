@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getStore, getCustomerActivity } from "@/lib/data/customers";
 import { getStore360, listInteractions, listComplaints } from "@/lib/data/crm";
 import { Badge } from "@/components/ui/Badge";
-import { Kpi } from "@/components/ui/Kpi";
+import { Button } from "@/components/ui/Button";
+import { Kpi } from "@/components/ui";
 import { Money } from "@/components/ui/Money";
 import { titleCase } from "@/lib/format";
 import { StoreProfileActions } from "./StoreProfileActions";
@@ -46,11 +47,8 @@ export default async function StoreProfilePage({ params }: { params: { id: strin
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/receipts/new?customer=${store.customerId}&store=${store.id}`}
-            className="shrink-0 rounded-md border border-line bg-surface px-3 py-1.5 text-[12px] font-medium text-ink-2 hover:bg-fill transition-colors"
-          >
-            Record payment
+          <Link href={`/receipts/new?customer=${store.customerId}&store=${store.id}`}>
+            <Button variant="secondary" size="sm">Record payment</Button>
           </Link>
           <StoreProfileActions
             storeId={store.id}

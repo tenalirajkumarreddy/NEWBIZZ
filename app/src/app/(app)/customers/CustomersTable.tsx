@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
@@ -24,15 +24,24 @@ export function CustomersTable({ customers }: { customers: CustomerListRow[] }) 
   const query = sp.get("q") ?? "";
   const kind = sp.get("kind") ?? "";
   const status = sp.get("status") ?? "";
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const setParam = useCallback(
-    (key: string, value: string) => {
-      const p = new URLSearchParams(sp);
-      if (value) p.set(key, value);
-      else p.delete(key);
-      router.replace(`${pathname}?${p.toString()}`);
+  const pushParams = useCallback(
+    (params: URLSearchParams) => {
+      router.replace(`${pathname}?${params.toString()}`);
     },
-    [router, pathname, sp],
+    [router, pathname],
+  );
+
+  const flushParams = useCallback(
+    (form: HTMLFormElement) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      const fd = new FormData(form);
+      const p = new URLSearchParams();
+      for (const [k, v] of fd) if (v) p.set(k, v.toString());
+      pushParams(p);
+    },
+    [pushParams],
   );
 
   const filtered = useMemo(() => {
@@ -55,11 +64,8 @@ export function CustomersTable({ customers }: { customers: CustomerListRow[] }) 
       <form
         className="flex flex-col gap-2 border-b border-line px-4 py-3 sm:flex-row sm:items-center"
         onChange={(e) => {
-          const form = e.currentTarget;
-          const fd = new FormData(form);
-          const p = new URLSearchParams();
-          for (const [k, v] of fd) if (v) p.set(k, v.toString());
-          router.replace(`${pathname}?${p.toString()}`);
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => flushParams(e.currentTarget), 300);
         }}
       >
         <Input
@@ -204,7 +210,7 @@ export function CustomersTable({ customers }: { customers: CustomerListRow[] }) 
                     </div>
                   </div>
                   <div>
-                    <span className="text-ink-4">Credit</span>
+                    <span className="text-ink-4">Credit limit</span>
                     <div className="font-mono tnum">{c.creditLimit > 0 ? <Money value={c.creditLimit} /> : "Cash only"}</div>
                   </div>
                 </div>

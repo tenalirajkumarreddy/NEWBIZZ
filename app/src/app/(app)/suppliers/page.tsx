@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listSuppliers } from "@/lib/data/suppliers";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount } from "@/lib/format";
 import { SuppliersTable } from "./SuppliersTable";
@@ -28,7 +28,7 @@ export default async function SuppliersPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Total suppliers" value={fmtCount(suppliers.length)} sub="All parties" />
+        <Kpi label="Suppliers" value={fmtCount(suppliers.length)} sub="All parties" />
         <Kpi label="Active" value={fmtCount(active)} sub="Available to purchase from" tone={active > 0 ? "grn" : undefined} />
         <Kpi label="GST-registered" value={fmtCount(registered)} sub="Carry a GSTIN" />
       </div>

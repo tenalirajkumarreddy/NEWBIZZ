@@ -49,87 +49,84 @@ export function RulesSection({
 
   return (
     <>
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-1 py-2 transition-colors hover:bg-fill">
-          <SectionHeading trailing={canManage &&
-            <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); openAdd(); }}>
-              Add rule
-            </Button>
-          }>
-            <span className="flex items-center gap-2">
-              Commission Rules
-              <Badge tone="brand" size="sm">{openRules.length}</Badge>
-            </span>
-          </SectionHeading>
-        </summary>
-        <div className="pt-1">
-          <Panel flush>
-            {rules.length === 0 ? (
-              <EmptyState
-                title="No rules defined"
-                description="Add rules to enable commission computation. Rules can apply to a role or a specific user."
-                action={
-                  canManage ? <Button variant="secondary" size="sm" onClick={openAdd}>Add a rule</Button> : undefined
-                }
-              />
-            ) : (
-              <Table>
-                <THead>
-                  <TR>
-                    <TH>Type</TH>
-                    <TH>Entity</TH>
-                    <TH>Basis</TH>
-                    <TH numeric>Rate</TH>
-                    <TH numeric>Threshold</TH>
-                    <TH numeric>Tiers</TH>
-                    <TH>Status</TH>
-                    {canManage && <TH className="w-20" />}
-                  </TR>
-                </THead>
-                <TBody>
-                  {sorted.map((r) => (
-                    <TR key={r.id}>
-                      <TD>
-                        <Badge tone={r.userId ? "brand" : "slate"} size="sm">
-                          {r.userId ? "User" : "Role"}
-                        </Badge>
-                      </TD>
-                      <TD className="font-medium text-ink">
-                        {r.userId ? r.userName : r.roleCode}
-                      </TD>
-                      <TD className="text-ink-3">{titleCase(r.basis)}</TD>
-                      <TD numeric className="font-mono text-[12px]">{r.rate}%</TD>
-                      <TD numeric><Money value={r.threshold} /></TD>
-                      <TD numeric className="font-mono text-[12px]">
-                        {r.tiers.length > 0 ? r.tiers.length : "—"}
-                      </TD>
-                      <TD>
-                        <Badge tone={r.status === "active" ? "grn" : "slate"} size="sm">
-                          {titleCase(r.status)}
-                        </Badge>
-                      </TD>
-                      {canManage && (
-                        <TD>
-                          <div className="flex gap-1">
-                            <Button variant="subtle" size="sm" onClick={() => openEdit(r)}>
-                              Edit
-                            </Button>
-                            {r.status === "active" && (
-                              <Button variant="subtle" size="sm" onClick={() => handleDeactivate(r.id)}>
-                                Deactivate
-                              </Button>
-                            )}
-                          </div>
-                        </TD>
-                      )}
-                    </TR>
-                  ))}
-                </TBody>
-              </Table>
-            )}
-          </Panel>
-        </div>
-      </details>
+      <div className="flex items-center justify-between">
+        <SectionHeading>
+          <span className="flex items-center gap-2">
+            Commission Rules
+            <Badge tone="brand" size="sm">{openRules.length}</Badge>
+          </span>
+        </SectionHeading>
+        {canManage && (
+          <Button variant="primary" size="sm" onClick={openAdd}>
+            Add rule
+          </Button>
+        )}
+      </div>
+      <Panel flush>
+        {rules.length === 0 ? (
+          <EmptyState
+            title="No rules defined"
+            description="Add rules to enable commission computation. Rules can apply to a role or a specific user."
+            action={
+              canManage ? <Button variant="secondary" size="sm" onClick={openAdd}>Add a rule</Button> : undefined
+            }
+          />
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Type</TH>
+                <TH>Entity</TH>
+                <TH>Basis</TH>
+                <TH numeric>Rate</TH>
+                <TH numeric>Threshold</TH>
+                <TH numeric>Tiers</TH>
+                <TH>Status</TH>
+                {canManage && <TH className="w-20" />}
+              </TR>
+            </THead>
+            <TBody>
+              {sorted.map((r) => (
+                <TR key={r.id}>
+                  <TD>
+                    <Badge tone={r.userId ? "brand" : "slate"} size="sm">
+                      {r.userId ? "User" : "Role"}
+                    </Badge>
+                  </TD>
+                  <TD className="font-medium text-ink">
+                    {r.userId ? r.userName : r.roleCode}
+                  </TD>
+                  <TD className="text-ink-3">{titleCase(r.basis)}</TD>
+                  <TD numeric className="font-mono text-[12px]">{r.rate}%</TD>
+                  <TD numeric><Money value={r.threshold} /></TD>
+                  <TD numeric className="font-mono text-[12px]">
+                    {r.tiers.length > 0 ? r.tiers.length : "—"}
+                  </TD>
+                  <TD>
+                    <Badge tone={r.status === "active" ? "grn" : "slate"} size="sm">
+                      {titleCase(r.status)}
+                    </Badge>
+                  </TD>
+                  {canManage && (
+                    <TD>
+                      <div className="flex gap-1">
+                        <Button variant="subtle" size="sm" onClick={() => openEdit(r)}>
+                          Edit
+                        </Button>
+                        {r.status === "active" && (
+                          <Button variant="subtle" size="sm" onClick={() => handleDeactivate(r.id)}>
+                            Deactivate
+                          </Button>
+                        )}
+                      </div>
+                    </TD>
+                  )}
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </Panel>
 
       <RuleDrawer
         open={open}

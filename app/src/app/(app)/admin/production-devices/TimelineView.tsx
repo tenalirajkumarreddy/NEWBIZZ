@@ -1,8 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
-import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { count as fmtCount } from "@/lib/format";
 import type { HourlyProductionRow } from "@/lib/data/production-devices";
 
@@ -27,34 +25,26 @@ export function TimelineView({
   data,
   date,
   totalUnits,
+  realtime = false,
+  currentHour = -1,
 }: {
   data: HourlyProductionRow[];
   date: string;
   totalUnits: number;
+  realtime?: boolean;
+  currentHour?: number;
 }) {
-  const router = useRouter();
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Date picker */}
-      <div className="flex items-center gap-3">
-        <label htmlFor="tl-date" className="text-[13px] font-medium text-ink">
-          Date
-        </label>
-        <input
-          id="tl-date"
-          type="date"
-          value={date}
-          onChange={(e) => {
-            const d = e.target.value;
-            router.push(`/admin/production-devices?date=${d}`);
-          }}
-          className="h-9 rounded-lg border border-line bg-white px-3 text-[13px] text-ink shadow-sm focus:border-brand focus:outline-none"
-        />
-        <span className="text-[12px] text-ink-3">
-          {fmtCount(totalUnits)} units produced
-        </span>
-      </div>
+      <style>{`
+        @keyframes tl-blink {
+          0%, 100% { box-shadow: inset 0 0 0 2px rgba(59,130,246,0.6); }
+          50% { box-shadow: inset 0 0 0 2px rgba(59,130,246,1), 0 0 8px rgba(59,130,246,0.3); }
+        }
+        .tl-current-realtime {
+          animation: tl-blink 1.2s ease-in-out infinite;
+        }
+      `}</style>
 
       {/* Hourly breakdown per device */}
       {data.length === 0 ? (
@@ -93,16 +83,24 @@ export function TimelineView({
                 <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8 md:grid-cols-12">
                   {row.hours.map((val, h) => {
                     const pct = maxVal > 0 ? val / maxVal : 0;
+                    const isCurrent = h === currentHour;
                     const bg =
-                      val === 0
+                      val === 0 && !isCurrent
                         ? "bg-fill"
-                        : pct > 0.5
-                          ? "bg-brand/20"
-                          : "bg-brand/8";
+                        : isCurrent
+                          ? "bg-brand/12"
+                          : pct > 0.5
+                            ? "bg-brand/20"
+                            : "bg-brand/8";
+                    const currentClass = isCurrent
+                      ? realtime
+                        ? "tl-current-realtime"
+                        : "ring-2 ring-brand"
+                      : "";
                     return (
                       <div
                         key={h}
-                        className={`flex flex-col items-center rounded-md px-1 py-1.5 ${bg}`}
+                        className={`flex flex-col items-center rounded-md px-1 py-1.5 transition-colors ${bg} ${currentClass}`}
                         title={`${HOUR_LABELS[h]}: ${fmtCount(val)} units`}
                       >
                         <span className="text-[10px] font-medium text-ink-3">

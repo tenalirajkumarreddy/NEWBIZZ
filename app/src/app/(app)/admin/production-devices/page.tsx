@@ -3,7 +3,7 @@ import { listDeviceConfigs, listItemOptions, getHourlyProduction } from "@/lib/d
 import { Panel } from "@/components/ui/Card";
 import { count as fmtCount } from "@/lib/format";
 import { DeviceConfigManager } from "./DeviceConfigManager";
-import { TimelineView } from "./TimelineView";
+import { LiveTimeline } from "./LiveTimeline";
 import Link from "next/link";
 
 export default async function ProductionDevicesPage({
@@ -72,8 +72,8 @@ async function TimelineTab({ date }: { date: string }) {
   const totalUnits = data.reduce((sum, r) => sum + r.hours.reduce((a, b) => a + b, 0), 0);
 
   return (
-    <TimelineView
-      data={data}
+    <LiveTimeline
+      initialData={data}
       date={date}
       totalUnits={totalUnits}
     />

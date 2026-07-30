@@ -3,7 +3,7 @@ import { listPurchaseOrders, listGrns, listBills, listSupplierPayments, listDebi
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";

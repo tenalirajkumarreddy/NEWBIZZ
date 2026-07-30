@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listChallans } from "@/lib/data/challans";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount } from "@/lib/format";
 import { ChallansTable } from "./ChallansTable";

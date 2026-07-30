@@ -53,7 +53,7 @@ export function TargetEditorSection({
     const mo = String(d.getMonth() + 1).padStart(2, "0");
     const params = new URLSearchParams(searchParams.toString());
     params.set("month", `${yr}-${mo}-01`);
-    router.replace(`/commissions?${params.toString()}`);
+    router.replace(`/commissions/targets?${params.toString()}`);
   }
 
   async function handleSave() {
@@ -70,70 +70,67 @@ export function TargetEditorSection({
   const entries = Object.entries(edits);
 
   return (
-    <details className="group">
-      <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-1 py-2 transition-colors hover:bg-fill">
-        <SectionHeading trailing={
-          canManage ? (
-            <div className="flex gap-2">
-              <Button variant="subtle" size="sm" onClick={(e) => { e.stopPropagation(); nextMonth(); }}>
-                Next month
-              </Button>
-              <Button variant="primary" size="sm" loading={saving} onClick={(e) => { e.stopPropagation(); handleSave(); }}>
-                Save all
-              </Button>
-            </div>
-          ) : undefined
-        }>
+    <>
+      <div className="flex items-center justify-between">
+        <SectionHeading>
           <span className="flex items-center gap-2">
             Set Monthly Targets
             <Badge tone="brand" size="sm">{users.length} users</Badge>
           </span>
         </SectionHeading>
-      </summary>
-      <div className="pt-1">
-        <Panel flush>
-          <Table>
-            <THead>
-              <TR>
-                <TH>User</TH>
-                <TH numeric>Target Amount (₹)</TH>
-                <TH numeric>Target Cases</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {entries.map(([userId, vals]) => {
-                const user = users.find((u) => u.id === userId);
-                return (
-                  <TR key={userId}>
-                    <TD className="font-medium text-ink">{user?.fullName ?? "—"}</TD>
-                    <TD numeric>
-                      <Input
-                        type="number"
-                        mono
-                        className="h-8 w-36 text-right"
-                        value={vals.amount}
-                        onChange={(e) => setTarget(userId, "amount", e.target.value)}
-                        disabled={!canManage}
-                      />
-                    </TD>
-                    <TD numeric>
-                      <Input
-                        type="number"
-                        mono
-                        className="h-8 w-36 text-right"
-                        value={vals.cases}
-                        onChange={(e) => setTarget(userId, "cases", e.target.value)}
-                        disabled={!canManage}
-                      />
-                    </TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        </Panel>
+        {canManage && (
+          <div className="flex gap-2">
+            <Button variant="subtle" size="sm" onClick={nextMonth}>
+              Next month
+            </Button>
+            <Button variant="primary" size="sm" loading={saving} onClick={handleSave}>
+              Save all
+            </Button>
+          </div>
+        )}
       </div>
-    </details>
+      <Panel flush>
+        <Table>
+          <THead>
+            <TR>
+              <TH>User</TH>
+              <TH numeric>Target Amount (₹)</TH>
+              <TH numeric>Target Cases</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {entries.map(([userId, vals]) => {
+              const user = users.find((u) => u.id === userId);
+              return (
+                <TR key={userId}>
+                  <TD className="font-medium text-ink">{user?.fullName ?? "—"}</TD>
+                  <TD numeric>
+                    <Input
+                      type="number"
+                      mono
+                      className="h-8 w-36 text-right"
+                      value={vals.amount}
+                      onChange={(e) => setTarget(userId, "amount", e.target.value)}
+                      disabled={!canManage}
+                    />
+                  </TD>
+                  <TD numeric>
+                    <Input
+                      type="number"
+                      mono
+                      className="h-8 w-36 text-right"
+                      value={vals.cases}
+                      onChange={(e) => setTarget(userId, "cases", e.target.value)}
+                      disabled={!canManage}
+                    />
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </Panel>
+    </>
   );
 }
 

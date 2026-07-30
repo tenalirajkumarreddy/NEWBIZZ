@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { get2bReport } from "@/lib/data/gst";
 import { Panel, Card } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Drawer } from "@/components/ui/Drawer";
 import { count as fmtCount, titleCase } from "@/lib/format";
 import type { StoreListRow } from "@/lib/data/customers";
@@ -41,10 +42,11 @@ export function StoresPanel({
       }
     >
       {stores.length === 0 ? (
-        <p className="p-4 text-[13px] text-ink-4">
-          No stores yet —{" "}
-          <button type="button" onClick={() => setDrawerOpen(true)} className="text-brand hover:underline">add the first one</button>.
-        </p>
+        <EmptyState
+          title="No stores yet"
+          description="A store is a ship-to outlet under this customer."
+          action={<Button variant="secondary" size="sm" onClick={() => setDrawerOpen(true)}>Add store</Button>}
+        />
       ) : (
         <div className="flex flex-col gap-2 p-3">
           {stores.map((s) => (

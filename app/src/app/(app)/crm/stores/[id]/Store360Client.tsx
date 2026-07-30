@@ -5,7 +5,9 @@ import Link from "next/link";
 import type { Store360Data, InteractionRow, ComplaintRow } from "@/lib/data/crm";
 import type { ActivityRow } from "@/lib/data/customers";
 import { Badge } from "@/components/ui/Badge";
-import { Kpi } from "@/components/ui/Kpi";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { InfoRow } from "@/components/ui/InfoRow";
+import { Kpi } from "@/components/ui";
 import { Money } from "@/components/ui/Money";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -168,7 +170,7 @@ function OverviewTab({ data, complaints }: { data: Store360Data; complaints: Com
         <div className="flex flex-col gap-4">
           <Panel title={`Complaints`} actions={data.openComplaints > 0 ? <Badge tone="amb" size="sm">{data.openComplaints}</Badge> : undefined} flush>
             {complaints.length === 0 ? (
-              <p className="p-3 text-center text-[13px] text-ink-4">No complaints</p>
+              <EmptyState title="No complaints" />
             ) : (
               <div className="divide-y divide-line">
                 {complaints.slice(0, 3).map((c) => (
@@ -194,15 +196,6 @@ function OverviewTab({ data, complaints }: { data: Store360Data; complaints: Com
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <div className="flex items-center justify-between py-2.5 text-[13px] first:pt-0 last:pb-0">
-      <span className="text-ink-3">{label}</span>
-      <span className={`text-right font-semibold text-ink ${mono ? "font-mono tnum" : ""}`}>{value}</span>
     </div>
   );
 }

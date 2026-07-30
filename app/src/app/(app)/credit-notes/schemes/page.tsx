@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listSchemes } from "@/lib/data/creditnotes";
 import { Panel, Card } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";

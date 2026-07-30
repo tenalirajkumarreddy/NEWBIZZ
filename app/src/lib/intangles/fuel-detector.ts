@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getFleetThresholds } from "@/lib/data/settings";
 
 interface GpsSnapshotWithFuel {
@@ -11,9 +11,9 @@ interface GpsSnapshotWithFuel {
 
 export async function runFuelDetection(
   snapshots: GpsSnapshotWithFuel[],
+  supabase: SupabaseClient,
 ): Promise<{ refillsDetected: number; leaksDetected: number }> {
-  const thresholds = await getFleetThresholds();
-  const supabase = createClient();
+  const thresholds = await getFleetThresholds(supabase);
   let refillsDetected = 0;
   let leaksDetected = 0;
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listExpenses, getPettyCashBalance } from "@/lib/data/expenses";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount, money } from "@/lib/format";

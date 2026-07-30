@@ -4,9 +4,9 @@ import { getCustomer, getCustomerActivity } from "@/lib/data/customers";
 import { listPriceLists } from "@/lib/data/catalog";
 import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { Money } from "@/components/ui/Money";
-import { ImageUpload } from "@/components/ui/ImageUpload";
+import { ImageUpload } from "@/components/ui";
 import { PartyLedger } from "@/components/shared/PartyLedger";
 import { count as fmtCount, money, percent } from "@/lib/format";
 import { CustomerProfileActions } from "./CustomerProfileActions";
@@ -95,19 +95,17 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
           {/* Details */}
           <Panel title="Details">
-            <div className="divide-y divide-line">
-              <div className="flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
-                <ImageUpload target="customer" id={customer.id} imageUrl={customer.imageUrl} name={customer.name} size={160} />
-                <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Info label="GSTIN" value={customer.gstin ?? "—"} mono />
-                  <Info label="PAN" value={customer.pan ?? "—"} mono />
-                  <Info label="Phone" value={customer.phone ?? "—"} />
-                  <Info label="Email" value={customer.email ?? "—"} />
-                  <Info label="State code" value={customer.stateCode} mono />
-                  <Info label="Credit limit" value={customer.creditLimit > 0 ? money(customer.creditLimit) : "Cash only"} />
-                  <Info label="Credit days" value={customer.creditDays > 0 ? `${customer.creditDays} days` : "None"} />
-                  <Info label="Status" value={customer.status === "active" ? "Active" : "Inactive"} />
-                </div>
+            <div className="flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
+              <ImageUpload target="customer" id={customer.id} imageUrl={customer.imageUrl} name={customer.name} size={160} />
+              <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Info label="GSTIN" value={customer.gstin ?? "—"} mono />
+                <Info label="PAN" value={customer.pan ?? "—"} mono />
+                <Info label="Phone" value={customer.phone ?? "—"} />
+                <Info label="Email" value={customer.email ?? "—"} />
+                <Info label="State code" value={customer.stateCode} mono />
+                <Info label="Credit limit" value={customer.creditLimit > 0 ? money(customer.creditLimit) : "Cash only"} />
+                <Info label="Credit days" value={customer.creditDays > 0 ? `${customer.creditDays} days` : "None"} />
+                <Info label="Status" value={customer.status === "active" ? "Active" : "Inactive"} />
               </div>
             </div>
           </Panel>

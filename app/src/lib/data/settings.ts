@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { unwrap } from "./types";
 
 export interface FleetThresholds {
@@ -18,10 +19,10 @@ const DEFAULTS: FleetThresholds = {
   warehouseArrivalKm: 1,
 };
 
-export async function getFleetThresholds(): Promise<FleetThresholds> {
-  const supabase = createClient();
+export async function getFleetThresholds(supabase?: SupabaseClient): Promise<FleetThresholds> {
+  const db = supabase ?? createClient();
   const row = unwrap(
-    await supabase
+    await db
       .from("company_settings")
       .select("feature_flags")
       .limit(1)

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getHourlyProduction as getHourlyProductionData } from "@/lib/data/production-devices";
+import type { HourlyProductionRow } from "@/lib/data/production-devices";
 
 export type ActionResult<T = unknown> =
   | ({ ok: true } & T)
@@ -70,4 +72,8 @@ export async function deleteMapping(id: string): Promise<ActionResult> {
   if (error) return fail("deleteMapping", error.message);
   revalidatePath("/admin/production-devices");
   return { ok: true };
+}
+
+export async function getHourlyProductionAction(date: string): Promise<HourlyProductionRow[]> {
+  return getHourlyProductionData(date);
 }

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getFleetThresholds } from "@/lib/data/settings";
 
 function deg2rad(deg: number): number {
@@ -27,8 +27,7 @@ export interface WarehouseLocation {
   lng: number;
 }
 
-export async function getWarehouses(): Promise<WarehouseLocation[]> {
-  const supabase = createClient();
+export async function getWarehouses(supabase: SupabaseClient): Promise<WarehouseLocation[]> {
   const { data } = await supabase
     .from("branches")
     .select("id, name, lat, lng")
@@ -55,10 +54,10 @@ interface GpsSnapshot {
 
 export async function runTripDetection(
   snapshots: GpsSnapshot[],
+  supabase: SupabaseClient,
 ): Promise<{ tripsStarted: number; tripsEnded: number }> {
-  const thresholds = await getFleetThresholds();
-  const warehouses = await getWarehouses();
-  const supabase = createClient();
+  const thresholds = await getFleetThresholds(supabase);
+  const warehouses = await getWarehouses(supabase);
   const tripsApi = supabase.from("trips") as any;
 
   let tripsStarted = 0;

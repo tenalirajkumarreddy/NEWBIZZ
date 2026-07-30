@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listCustomers } from "@/lib/data/customers";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { count as fmtCount } from "@/lib/format";

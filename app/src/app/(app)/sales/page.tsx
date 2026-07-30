@@ -3,7 +3,7 @@ import { listInvoices, getSalesTodayKpis, listStores, listSellableItems, getHome
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { count as fmtCount } from "@/lib/format";

@@ -63,94 +63,90 @@ export function RunsSection({
 
   return (
     <>
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-1 py-2 transition-colors hover:bg-fill">
-          <SectionHeading>
-            <span className="flex items-center gap-2">
-              Commission Runs
-              <Badge tone="brand" size="sm">{runs.length}</Badge>
-            </span>
-          </SectionHeading>
-        </summary>
-        <div className="pt-1">
-          <Panel flush>
-            {runs.length === 0 ? (
-              <EmptyState
-                title="No commission runs yet"
-                description="Compute a commission run to calculate commissions based on rules and actual sales for a month."
-                action={
-                  canManage ? (
-                    <Button variant="secondary" size="sm" onClick={() => {
-                      const now = new Date();
-                      const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-                      handleCompute(m);
-                    }}>
-                      Compute current month
-                    </Button>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <Table>
-                <THead>
-                  <TR>
-                    <TH>Month</TH>
-                    <TH>Status</TH>
-                    <TH numeric>Total Amount</TH>
-                    <TH>Computed</TH>
-                    <TH className="w-36" />
-                  </TR>
-                </THead>
-                <TBody>
-                  {runs.map((run) => (
-                    <TR key={run.id}>
-                      <TD className="font-mono text-[12px] font-semibold text-ink">
-                        {dateIST(run.periodMonth)}
-                      </TD>
-                      <TD><StatusBadge status={run.status} /></TD>
-                      <TD numeric><Money value={run.totalAmount} /></TD>
-                      <TD className="font-mono text-[12px] text-ink-4">
-                        {run.computedAt ? dateIST(run.computedAt) : "—"}
-                      </TD>
-                      <TD>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="subtle"
-                            size="sm"
-                            onClick={() => handleViewRun(run)}
-                          >
-                            View
-                          </Button>
-                          {canManage && run.status === "computed" && (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              loading={posting === run.id}
-                              onClick={() => handlePost(run.id)}
-                            >
-                              Post
-                            </Button>
-                          )}
-                          {canManage && run.status === "draft" && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              loading={computing === run.periodMonth}
-                              onClick={() => handleCompute(run.periodMonth)}
-                            >
-                              Compute
-                            </Button>
-                          )}
-                        </div>
-                      </TD>
-                    </TR>
-                  ))}
-                </TBody>
-              </Table>
-            )}
-          </Panel>
-        </div>
-      </details>
+      <div className="flex items-center justify-between">
+        <SectionHeading>
+          <span className="flex items-center gap-2">
+            Commission Runs
+            <Badge tone="brand" size="sm">{runs.length}</Badge>
+          </span>
+        </SectionHeading>
+      </div>
+      <Panel flush>
+        {runs.length === 0 ? (
+          <EmptyState
+            title="No commission runs yet"
+            description="Compute a commission run to calculate commissions based on rules and actual sales for a month."
+            action={
+              canManage ? (
+                <Button variant="secondary" size="sm" onClick={() => {
+                  const now = new Date();
+                  const m = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+                  handleCompute(m);
+                }}>
+                  Compute current month
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>Month</TH>
+                <TH>Status</TH>
+                <TH numeric>Total Amount</TH>
+                <TH>Computed</TH>
+                <TH className="w-36" />
+              </TR>
+            </THead>
+            <TBody>
+              {runs.map((run) => (
+                <TR key={run.id}>
+                  <TD className="font-mono text-[12px] font-semibold text-ink">
+                    {dateIST(run.periodMonth)}
+                  </TD>
+                  <TD><StatusBadge status={run.status} /></TD>
+                  <TD numeric><Money value={run.totalAmount} /></TD>
+                  <TD className="font-mono text-[12px] text-ink-4">
+                    {run.computedAt ? dateIST(run.computedAt) : "—"}
+                  </TD>
+                  <TD>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => handleViewRun(run)}
+                      >
+                        View
+                      </Button>
+                      {canManage && run.status === "computed" && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          loading={posting === run.id}
+                          onClick={() => handlePost(run.id)}
+                        >
+                          Post
+                        </Button>
+                      )}
+                      {canManage && run.status === "draft" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={computing === run.periodMonth}
+                          onClick={() => handleCompute(run.periodMonth)}
+                        >
+                          Compute
+                        </Button>
+                      )}
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </Panel>
 
       {/* Run lines drawer */}
       <Drawer

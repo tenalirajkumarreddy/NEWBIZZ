@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listLoans } from "@/lib/data/loans";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";

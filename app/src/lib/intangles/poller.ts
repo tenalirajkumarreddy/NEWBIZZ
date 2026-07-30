@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   fetchIntangles,
   buildVehicleListPath,
@@ -19,7 +19,7 @@ export async function runIntanglesPoll(): Promise<PollResult> {
       buildVehicleListPath(accountId, true),
     );
 
-    const supabase = createClient();
+    const supabase = createServiceClient();
     const rows: {
       vehicle_id: string;
       lat: number | null;
@@ -71,8 +71,8 @@ export async function runIntanglesPoll(): Promise<PollResult> {
       inserted = rows.length;
     }
 
-    const { tripsStarted, tripsEnded } = await runTripDetection(rows);
-    const { refillsDetected, leaksDetected } = await runFuelDetection(rows);
+    const { tripsStarted, tripsEnded } = await runTripDetection(rows, supabase);
+    const { refillsDetected, leaksDetected } = await runFuelDetection(rows, supabase);
 
     return { ok: true, inserted, tripsStarted, tripsEnded, refillsDetected, leaksDetected };
   } catch (err) {

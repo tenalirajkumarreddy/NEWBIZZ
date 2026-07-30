@@ -7,8 +7,10 @@ import type { StoreDetail, ActivityRow } from "@/lib/data/customers";
 import { Badge } from "@/components/ui/Badge";
 import { titleCase } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { InfoRow } from "@/components/ui/InfoRow";
 import { Panel } from "@/components/ui/Card";
-import { ImageUpload } from "@/components/ui/ImageUpload";
+import { ImageUpload } from "@/components/ui";
 import { PartyLedger } from "@/components/shared/PartyLedger";
 import { InteractionLog } from "@/components/crm/InteractionLog";
 
@@ -213,7 +215,7 @@ function OverviewTab({ data, complaints, interactions, store }: {
         {/* Complaints */}
         <Panel title="Complaints" actions={complaints.length > 0 ? <Badge tone="amb" size="sm">{complaints.length}</Badge> : undefined} flush>
           {complaints.length === 0 ? (
-            <p className="p-3 text-center text-[13px] text-ink-4">No complaints</p>
+            <EmptyState title="No complaints" />
           ) : (
             <div className="divide-y divide-line">
               {complaints.slice(0, 3).map((c) => (
@@ -251,13 +253,4 @@ function OverviewTab({ data, complaints, interactions, store }: {
   );
 }
 
-/* ── Shared ───────────────────────────────────────────────────────────────── */
 
-function InfoRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <div className="flex items-center justify-between py-2.5 text-[13px] first:pt-0 last:pb-0">
-      <span className="text-ink-3">{label}</span>
-      <span className={`text-right font-semibold text-ink ${mono ? "font-mono tnum" : ""}`}>{value}</span>
-    </div>
-  );
-}

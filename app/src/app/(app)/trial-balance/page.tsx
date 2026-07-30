@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTrialBalance } from "@/lib/data/accounting";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { money } from "@/lib/format";

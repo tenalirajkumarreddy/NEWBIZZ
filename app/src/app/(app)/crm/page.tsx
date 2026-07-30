@@ -1,5 +1,5 @@
 import { listLeads, getCrmKpis } from "@/lib/data/crm";
-import { Kpi } from "@/components/ui/Kpi";
+import { Kpi } from "@/components/ui";
 import { count as fmtCount } from "@/lib/format";
 import { LeadsTable } from "./LeadsTable";
 
