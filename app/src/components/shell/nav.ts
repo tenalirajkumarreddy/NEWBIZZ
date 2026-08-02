@@ -96,6 +96,7 @@ export const NAV: NavGroup[] = [
       { id: "audit", label: "Audit Log", href: "/admin/audit", perm: "audit.view" },
       { id: "licenses", label: "Licence Register", href: "/admin/licenses", perm: "license.view", badgeKey: "licensesDue" },
       { id: "settings", label: "Company Settings", href: "/admin/settings", perm: "settings.manage" },
+      { id: "whatsapp", label: "WhatsApp Settings", href: "/admin/whatsapp", perm: "settings.manage" },
       { id: "production-devices", label: "Production Devices", href: "/admin/production-devices", perm: "settings.manage" },
     ],
   },
