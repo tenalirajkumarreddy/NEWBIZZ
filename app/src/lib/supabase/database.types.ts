@@ -126,8 +126,9 @@ export type Database = {
           shift: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           updated_at: string | null
-          user_id: string
+          user_id: string | null
           work_date: string
+          worker_id: string | null
         }
         Insert: {
           check_in?: string | null
@@ -141,8 +142,9 @@ export type Database = {
           shift?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
           work_date: string
+          worker_id?: string | null
         }
         Update: {
           check_in?: string | null
@@ -156,8 +158,9 @@ export type Database = {
           shift?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
           work_date?: string
+          worker_id?: string | null
         }
         Relationships: [
           {
@@ -172,6 +175,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
             referencedColumns: ["id"]
           },
         ]
@@ -223,43 +233,55 @@ export type Database = {
       bank_accounts: {
         Row: {
           account_no: string | null
+          account_type: string
           bank_name: string | null
+          card_last_four: string | null
           created_at: string
           created_by: string | null
+          credit_limit: number | null
           gl_account_code: string
           id: string
           ifsc: string | null
           name: string
           opening_balance: number
           opening_date: string | null
+          payment_due_day: number | null
           status: string
           updated_at: string | null
         }
         Insert: {
           account_no?: string | null
+          account_type?: string
           bank_name?: string | null
+          card_last_four?: string | null
           created_at?: string
           created_by?: string | null
+          credit_limit?: number | null
           gl_account_code?: string
           id?: string
           ifsc?: string | null
           name: string
           opening_balance?: number
           opening_date?: string | null
+          payment_due_day?: number | null
           status?: string
           updated_at?: string | null
         }
         Update: {
           account_no?: string | null
+          account_type?: string
           bank_name?: string | null
+          card_last_four?: string | null
           created_at?: string
           created_by?: string | null
+          credit_limit?: number | null
           gl_account_code?: string
           id?: string
           ifsc?: string | null
           name?: string
           opening_balance?: number
           opening_date?: string | null
+          payment_due_day?: number | null
           status?: string
           updated_at?: string | null
         }
@@ -648,6 +670,8 @@ export type Database = {
           id: string
           is_plant: boolean
           is_warehouse: boolean
+          lat: number | null
+          lng: number | null
           name: string
           state_code: string
           status: string
@@ -660,6 +684,8 @@ export type Database = {
           id?: string
           is_plant?: boolean
           is_warehouse?: boolean
+          lat?: number | null
+          lng?: number | null
           name: string
           state_code?: string
           status?: string
@@ -672,9 +698,38 @@ export type Database = {
           id?: string
           is_plant?: boolean
           is_warehouse?: boolean
+          lat?: number | null
+          lng?: number | null
           name?: string
           state_code?: string
           status?: string
+        }
+        Relationships: []
+      }
+      calendar_days: {
+        Row: {
+          created_at: string
+          date: string
+          holiday_name: string | null
+          id: string
+          is_working: boolean
+          notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          holiday_name?: string | null
+          id?: string
+          is_working?: boolean
+          notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          holiday_name?: string | null
+          id?: string
+          is_working?: boolean
+          notes?: string | null
         }
         Relationships: []
       }
@@ -1601,7 +1656,7 @@ export type Database = {
           receipt_no: string
           reference: string | null
           status: string
-          store_id: string | null
+          store_id: string
         }
         Insert: {
           allocated_amount?: number
@@ -1615,13 +1670,13 @@ export type Database = {
           id?: string
           journal_entry_id?: string | null
           method_id: string
-          mode: Database["public"]["Enums"]["receipt_mode"]
+          mode?: Database["public"]["Enums"]["receipt_mode"]
           notes?: string | null
           receipt_date?: string
           receipt_no: string
           reference?: string | null
           status?: string
-          store_id?: string | null
+          store_id: string
         }
         Update: {
           allocated_amount?: number
@@ -1641,7 +1696,7 @@ export type Database = {
           receipt_no?: string
           reference?: string | null
           status?: string
-          store_id?: string | null
+          store_id?: string
         }
         Relationships: [
           {
@@ -2122,6 +2177,7 @@ export type Database = {
           agent_id: string | null
           branch_id: string
           challan_no: string
+          cogs_entry_id: string | null
           created_at: string
           created_by: string | null
           delivered_at: string | null
@@ -2129,6 +2185,7 @@ export type Database = {
           eway_bill_no: string | null
           fy_id: string
           id: string
+          journal_entry_id: string | null
           notes: string | null
           order_id: string
           printed_at: string
@@ -2138,6 +2195,7 @@ export type Database = {
           agent_id?: string | null
           branch_id: string
           challan_no: string
+          cogs_entry_id?: string | null
           created_at?: string
           created_by?: string | null
           delivered_at?: string | null
@@ -2145,6 +2203,7 @@ export type Database = {
           eway_bill_no?: string | null
           fy_id: string
           id?: string
+          journal_entry_id?: string | null
           notes?: string | null
           order_id: string
           printed_at?: string
@@ -2154,6 +2213,7 @@ export type Database = {
           agent_id?: string | null
           branch_id?: string
           challan_no?: string
+          cogs_entry_id?: string | null
           created_at?: string
           created_by?: string | null
           delivered_at?: string | null
@@ -2161,6 +2221,7 @@ export type Database = {
           eway_bill_no?: string | null
           fy_id?: string
           id?: string
+          journal_entry_id?: string | null
           notes?: string | null
           order_id?: string
           printed_at?: string
@@ -2182,6 +2243,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_challans_cogs_entry_id_fkey"
+            columns: ["cogs_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "delivery_challans_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -2193,6 +2261,13 @@ export type Database = {
             columns: ["fy_id"]
             isOneToOne: false
             referencedRelation: "financial_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_challans_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -2352,6 +2427,68 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      employee_profiles: {
+        Row: {
+          aadhar_number: string | null
+          address: string | null
+          created_at: string
+          id: string
+          phone: string | null
+          photo_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aadhar_number?: string | null
+          address?: string | null
+          created_at?: string
+          id?: string
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aadhar_number?: string | null
+          address?: string | null
+          created_at?: string
+          id?: string
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_serials: {
+        Row: {
+          entity_type: string
+          next_val: number
+          pad_width: number
+          prefix: string
+        }
+        Insert: {
+          entity_type: string
+          next_val?: number
+          pad_width?: number
+          prefix: string
+        }
+        Update: {
+          entity_type?: string
+          next_val?: number
+          pad_width?: number
+          prefix?: string
+        }
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -2688,6 +2825,72 @@ export type Database = {
           },
           {
             foreignKeyName: "fuel_logs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_refill_events: {
+        Row: {
+          admin_amount: number | null
+          admin_litres: number | null
+          created_at: string
+          delta_litres: number
+          detected_at: string
+          event_type: string
+          fraud_alert: boolean
+          fuel_log_id: string | null
+          id: string
+          new_amount: number
+          prev_amount: number
+          receipt_url: string | null
+          status: string
+          vehicle_id: string
+        }
+        Insert: {
+          admin_amount?: number | null
+          admin_litres?: number | null
+          created_at?: string
+          delta_litres: number
+          detected_at?: string
+          event_type: string
+          fraud_alert?: boolean
+          fuel_log_id?: string | null
+          id?: string
+          new_amount: number
+          prev_amount: number
+          receipt_url?: string | null
+          status?: string
+          vehicle_id: string
+        }
+        Update: {
+          admin_amount?: number | null
+          admin_litres?: number | null
+          created_at?: string
+          delta_litres?: number
+          detected_at?: string
+          event_type?: string
+          fraud_alert?: boolean
+          fuel_log_id?: string | null
+          id?: string
+          new_amount?: number
+          prev_amount?: number
+          receipt_url?: string | null
+          status?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_refill_events_fuel_log_id_fkey"
+            columns: ["fuel_log_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_refill_events_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
@@ -3886,6 +4089,30 @@ export type Database = {
           },
         ]
       }
+      pay_mappings: {
+        Row: {
+          amount: number
+          created_at: string
+          hours_max: number
+          hours_min: number
+          id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          hours_max: number
+          hours_min: number
+          id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          hours_max?: number
+          hours_min?: number
+          id?: string
+        }
+        Relationships: []
+      }
       payment_allocations: {
         Row: {
           amount: number
@@ -4193,6 +4420,68 @@ export type Database = {
           },
         ]
       }
+      production_device_config: {
+        Row: {
+          created_at: string
+          device_id: string
+          device_index: number
+          id: string
+          item_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          device_index: number
+          id?: string
+          item_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          device_index?: number
+          id?: string
+          item_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_device_config_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_logs: {
+        Row: {
+          device_id: string
+          device_index: number
+          id: string
+          logged_at: string
+          quantity: number
+          synced_at: string
+        }
+        Insert: {
+          device_id: string
+          device_index: number
+          id?: string
+          logged_at: string
+          quantity?: number
+          synced_at?: string
+        }
+        Update: {
+          device_id?: string
+          device_index?: number
+          id?: string
+          logged_at?: string
+          quantity?: number
+          synced_at?: string
+        }
+        Relationships: []
+      }
       production_run_inputs: {
         Row: {
           id: string
@@ -4323,68 +4612,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      production_device_config: {
-        Row: {
-          created_at: string
-          device_id: string
-          device_index: number
-          id: string
-          item_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          device_id: string
-          device_index: number
-          id?: string
-          item_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          device_id?: string
-          device_index?: number
-          id?: string
-          item_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_device_config_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      production_logs: {
-        Row: {
-          device_id: string
-          device_index: number
-          id: string
-          logged_at: string
-          quantity: number
-          synced_at: string
-        }
-        Insert: {
-          device_id: string
-          device_index: number
-          id?: string
-          logged_at: string
-          quantity?: number
-          synced_at?: string
-        }
-        Update: {
-          device_id?: string
-          device_index?: number
-          id?: string
-          logged_at?: string
-          quantity?: number
-          synced_at?: string
-        }
-        Relationships: []
       }
       purchase_order_lines: {
         Row: {
@@ -5353,6 +5580,33 @@ export type Database = {
           },
         ]
       }
+      shift_templates: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          name: string
+          start_time: string
+          total_hours: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          name: string
+          start_time: string
+          total_hours: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          name?: string
+          start_time?: string
+          total_hours?: number
+        }
+        Relationships: []
+      }
       stock: {
         Row: {
           avg_cost: number
@@ -5987,39 +6241,75 @@ export type Database = {
       }
       trips: {
         Row: {
+          avg_speed: number | null
+          category: string | null
           created_at: string
           created_by: string | null
+          distance_km: number | null
           driver_user_id: string | null
           end_km: number | null
+          end_lat: number | null
+          end_lng: number | null
+          ended_at: string | null
           id: string
+          max_speed: number | null
           notes: string | null
           route_session_id: string | null
           start_km: number | null
+          start_lat: number | null
+          start_lng: number | null
+          started_at: string | null
+          status: string
           trip_date: string
+          type: string
           vehicle_id: string
         }
         Insert: {
+          avg_speed?: number | null
+          category?: string | null
           created_at?: string
           created_by?: string | null
+          distance_km?: number | null
           driver_user_id?: string | null
           end_km?: number | null
+          end_lat?: number | null
+          end_lng?: number | null
+          ended_at?: string | null
           id?: string
+          max_speed?: number | null
           notes?: string | null
           route_session_id?: string | null
           start_km?: number | null
+          start_lat?: number | null
+          start_lng?: number | null
+          started_at?: string | null
+          status?: string
           trip_date?: string
+          type?: string
           vehicle_id: string
         }
         Update: {
+          avg_speed?: number | null
+          category?: string | null
           created_at?: string
           created_by?: string | null
+          distance_km?: number | null
           driver_user_id?: string | null
           end_km?: number | null
+          end_lat?: number | null
+          end_lng?: number | null
+          ended_at?: string | null
           id?: string
+          max_speed?: number | null
           notes?: string | null
           route_session_id?: string | null
           start_km?: number | null
+          start_lat?: number | null
+          start_lng?: number | null
+          started_at?: string | null
+          status?: string
           trip_date?: string
+          type?: string
           vehicle_id?: string
         }
         Relationships: [
@@ -6171,36 +6461,61 @@ export type Database = {
         Row: {
           commission_basis: string | null
           commission_rate: number
+          daily_rate: number
           effective_from: string
+          exclude_from_payroll: boolean
+          id: string
           monthly_salary: number
           ot_hourly_rate: number
+          paid_leaves: number
+          pay_type: string
           standard_shift_hrs: number
-          user_id: string
+          user_id: string | null
+          worker_id: string | null
         }
         Insert: {
           commission_basis?: string | null
           commission_rate?: number
+          daily_rate?: number
           effective_from?: string
+          exclude_from_payroll?: boolean
+          id: string
           monthly_salary?: number
           ot_hourly_rate?: number
+          paid_leaves?: number
+          pay_type?: string
           standard_shift_hrs?: number
-          user_id: string
+          user_id?: string | null
+          worker_id?: string | null
         }
         Update: {
           commission_basis?: string | null
           commission_rate?: number
+          daily_rate?: number
           effective_from?: string
+          exclude_from_payroll?: boolean
+          id?: string
           monthly_salary?: number
           ot_hourly_rate?: number
+          paid_leaves?: number
+          pay_type?: string
           standard_shift_hrs?: number
-          user_id?: string
+          user_id?: string | null
+          worker_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "user_pay_config_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_pay_config_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
             referencedColumns: ["id"]
           },
         ]
@@ -6376,6 +6691,56 @@ export type Database = {
           },
         ]
       }
+      vehicle_gps_logs: {
+        Row: {
+          created_at: string
+          fuel_amount: number | null
+          fuel_pct: number | null
+          heading: number | null
+          id: number
+          ignition: boolean | null
+          lat: number | null
+          lng: number | null
+          recorded_at: string
+          speed: number | null
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          fuel_amount?: number | null
+          fuel_pct?: number | null
+          heading?: number | null
+          id?: never
+          ignition?: boolean | null
+          lat?: number | null
+          lng?: number | null
+          recorded_at: string
+          speed?: number | null
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          fuel_amount?: number | null
+          fuel_pct?: number | null
+          heading?: number | null
+          id?: never
+          ignition?: boolean | null
+          lat?: number | null
+          lng?: number | null
+          recorded_at?: string
+          speed?: number | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_gps_logs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           capacity: string | null
@@ -6531,6 +6896,287 @@ export type Database = {
           },
         ]
       }
+      whatsapp_config: {
+        Row: {
+          access_token_encrypted: string | null
+          default_template: string | null
+          dry_run: boolean
+          id: number
+          meta_app_id: string | null
+          phone_number_id: string | null
+          registered_at: string | null
+          updated_at: string | null
+          updated_by: string | null
+          verify_token: string | null
+          waba_id: string | null
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          default_template?: string | null
+          dry_run?: boolean
+          id?: number
+          meta_app_id?: string | null
+          phone_number_id?: string | null
+          registered_at?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          verify_token?: string | null
+          waba_id?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          default_template?: string | null
+          dry_run?: boolean
+          id?: number
+          meta_app_id?: string | null
+          phone_number_id?: string | null
+          registered_at?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          verify_token?: string | null
+          waba_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_conversations: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_store_id: string | null
+          id: string
+          last_message_at: string | null
+          phone: string
+          status: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_store_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          phone: string
+          status?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_store_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          phone?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_customer_store_id_fkey"
+            columns: ["customer_store_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          body: string | null
+          conversation_id: string
+          created_at: string
+          direction: string
+          error_message: string | null
+          id: string
+          media_filename: string | null
+          media_mime: string | null
+          media_url: string | null
+          msg_type: string
+          sent_by: string | null
+          status: string | null
+          template_name: string | null
+          template_params: Json | null
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          conversation_id: string
+          created_at?: string
+          direction: string
+          error_message?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime?: string | null
+          media_url?: string | null
+          msg_type?: string
+          sent_by?: string | null
+          status?: string | null
+          template_name?: string | null
+          template_params?: Json | null
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime?: string | null
+          media_url?: string | null
+          msg_type?: string
+          sent_by?: string | null
+          status?: string | null
+          template_name?: string | null
+          template_params?: Json | null
+          whatsapp_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          reference_id: string | null
+          transaction_date: string
+          type: string
+          user_id: string | null
+          worker_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          reference_id?: string | null
+          transaction_date: string
+          type?: string
+          user_id?: string | null
+          worker_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          reference_id?: string | null
+          transaction_date?: string
+          type?: string
+          user_id?: string | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transactions_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workers: {
+        Row: {
+          aadhar_number: string | null
+          address: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          photo_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          aadhar_number?: string | null
+          address?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          photo_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          aadhar_number?: string | null
+          address?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          photo_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       mv_ar_aging: {
@@ -6619,6 +7265,8 @@ export type Database = {
         }
         Returns: string
       }
+      _random_digits: { Args: { p_len: number }; Returns: string }
+      _random_token: { Args: { p_len: number }; Returns: string }
       _user_commission_base: {
         Args: {
           p_basis: Database["public"]["Enums"]["commission_basis"]
@@ -6664,6 +7312,7 @@ export type Database = {
       }
       approve_expense: { Args: { p_id: string }; Returns: string }
       approve_order: { Args: { p_order_id: string }; Returns: string }
+      archive_notifications: { Args: { p_ids?: string[] }; Returns: number }
       assert_identity_integrity: {
         Args: never
         Returns: {
@@ -6838,8 +7487,21 @@ export type Database = {
           txn_type: string
         }[]
       }
+      get_hourly_production: {
+        Args: { p_date: string }
+        Returns: {
+          device_id: string
+          device_index: number
+          hour: number
+          item_name: string
+          item_sku: string
+          item_type: string
+          total: number
+        }[]
+      }
       get_my_permissions: { Args: never; Returns: string[] }
       get_my_token_version: { Args: never; Returns: number }
+      get_person_balance: { Args: { p_entity_id: string }; Returns: number }
       get_trial_balance: {
         Args: { p_fy: string }
         Returns: {
@@ -6859,6 +7521,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_worker_balance: { Args: { p_user_id: string }; Returns: number }
       grant_user_permission: {
         Args: {
           p_code: string
@@ -6878,6 +7541,16 @@ export type Database = {
         Args: { p_filename: string; p_period: string; p_rows: Json }
         Returns: string
       }
+      insert_production_log: {
+        Args: {
+          p_device_id: string
+          p_device_index: number
+          p_logged_at?: string
+          p_quantity?: number
+        }
+        Returns: string
+      }
+      insert_production_logs_batch: { Args: { p_logs: Json }; Returns: Json }
       inventory_account_for: {
         Args: { p_type: Database["public"]["Enums"]["item_type"] }
         Returns: string
@@ -6909,6 +7582,18 @@ export type Database = {
         Args: { p_customer: string; p_store: string }
         Returns: string
       }
+      list_payroll_people: {
+        Args: never
+        Returns: {
+          aadhar_number: string
+          address: string
+          entity_id: string
+          entity_type: string
+          full_name: string
+          phone: string
+          photo_url: string
+        }[]
+      }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       match_bank_txn: {
         Args: { p_target: Json; p_txn: string }
@@ -6918,19 +7603,22 @@ export type Database = {
         Args: { p_month: string }
         Returns: Record<string, unknown>
       }
-      next_entity_code: {
-        Args: { p_entity_type: string }
-        Returns: string
-      }
+      next_device_index: { Args: { p_device_id: string }; Returns: number }
+      next_entity_code: { Args: { p_entity_type: string }; Returns: string }
       next_number: {
         Args: { p_date?: string; p_doc_type: string }
         Returns: string
       }
+      notification_daily_scan: { Args: never; Returns: Json }
       notify: {
         Args: { p_opts?: Json; p_title: string; p_user: string }
         Returns: string
       }
       notify_by_permission: {
+        Args: { p_code: string; p_opts?: Json; p_title: string }
+        Returns: number
+      }
+      notify_perm: {
         Args: { p_code: string; p_opts?: Json; p_title: string }
         Returns: number
       }
@@ -6961,16 +7649,21 @@ export type Database = {
         Args: { p_amount: number; p_complaint: string; p_opts?: Json }
         Returns: string
       }
+      post_delivery: { Args: { p_order: string }; Returns: string }
       post_fuel_log: { Args: { p_header: Json }; Returns: string }
       post_grn: { Args: { p_header: Json; p_lines: Json }; Returns: string }
       post_grn_from_po: {
         Args: { p_date?: string; p_po: string }
         Returns: string
       }
-      post_delivery: { Args: { p_order: string }; Returns: string }
       post_invoice: { Args: { p_header: Json; p_lines: Json }; Returns: string }
       post_invoice_from_order: {
-        Args: { p_date?: string; p_is_official?: boolean; p_lines?: Json; p_order: string }
+        Args: {
+          p_date?: string
+          p_is_official?: boolean
+          p_lines?: Json
+          p_order: string
+        }
         Returns: string
       }
       post_journal: { Args: { p_header: Json; p_lines: Json }; Returns: string }
@@ -7169,10 +7862,9 @@ export type Database = {
         Args: { p_role_code: string; p_user: string }
         Returns: undefined
       }
-      unlink_store_from_customer: {
-        Args: { p_new_customer: string; p_store: string }
-        Returns: string
-      }
+      unlink_store_from_customer:
+        | { Args: { p_store: string }; Returns: string }
+        | { Args: { p_new_customer: string; p_store: string }; Returns: string }
       update_order: {
         Args: { p_header: Json; p_order_id: string; p_version: number }
         Returns: string
@@ -7195,6 +7887,51 @@ export type Database = {
       void_invoice: {
         Args: { p_invoice: string; p_reason?: string }
         Returns: string
+      }
+      whatsapp_get_or_create_conversation: {
+        Args: {
+          p_customer_id?: string
+          p_customer_store_id?: string
+          p_phone: string
+        }
+        Returns: string
+      }
+      whatsapp_insert_message: {
+        Args: {
+          p_body?: string
+          p_conversation_id: string
+          p_direction: string
+          p_media_filename?: string
+          p_media_mime?: string
+          p_media_url?: string
+          p_msg_type?: string
+          p_sent_by?: string
+          p_status?: string
+          p_template_name?: string
+          p_template_params?: Json
+          p_whatsapp_message_id?: string
+        }
+        Returns: string
+      }
+      whatsapp_save_config: {
+        Args: {
+          p_access_token_encrypted: string
+          p_default_template?: string
+          p_dry_run?: boolean
+          p_meta_app_id: string
+          p_phone_number_id: string
+          p_verify_token: string
+          p_waba_id: string
+        }
+        Returns: undefined
+      }
+      whatsapp_update_message_status: {
+        Args: {
+          p_error_message?: string
+          p_status: string
+          p_whatsapp_message_id: string
+        }
+        Returns: undefined
       }
       write_audit: {
         Args: {
