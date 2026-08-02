@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { unwrap } from "./types";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -100,4 +101,41 @@ export async function getConversation(id: string): Promise<ConversationRow | nul
     "whatsapp.getConversation",
   );
   return rows[0] ?? null;
+}
+
+export interface WhatsAppRuntimeConfig {
+  wabaId: string | null;
+  phoneNumberId: string | null;
+  accessToken: string;
+  metaAppId: string | null;
+  defaultTemplate: string | null;
+  dryRun: boolean;
+}
+
+// Server-only: full config INCLUDING the decrypted token for outbound sends.
+// Uses the service client (no user context needed). Returns null if not configured.
+export async function getWhatsappRuntimeConfig(): Promise<WhatsAppRuntimeConfig | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("whatsapp_config")
+    .select("*")
+    .eq("id", 1)
+    .single();
+  if (!data?.access_token_encrypted || !data.phone_number_id) return null;
+  const { decrypt } = await import("@/lib/whatsapp/encryption");
+  let accessToken: string;
+  try {
+    accessToken = decrypt(data.access_token_encrypted);
+  } catch (err) {
+    console.error("[whatsapp] token decrypt failed", err);
+    return null;
+  }
+  return {
+    wabaId: data.waba_id,
+    phoneNumberId: data.phone_number_id,
+    accessToken,
+    metaAppId: data.meta_app_id,
+    defaultTemplate: data.default_template,
+    dryRun: data.dry_run,
+  };
 }

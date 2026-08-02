@@ -7915,13 +7915,13 @@ export type Database = {
       }
       whatsapp_save_config: {
         Args: {
-          p_access_token_encrypted: string
+          p_access_token_encrypted?: string
           p_default_template?: string
           p_dry_run?: boolean
-          p_meta_app_id: string
-          p_phone_number_id: string
-          p_verify_token: string
-          p_waba_id: string
+          p_meta_app_id?: string
+          p_phone_number_id?: string
+          p_verify_token?: string
+          p_waba_id?: string
         }
         Returns: undefined
       }

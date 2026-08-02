@@ -105,11 +105,11 @@ create policy manage_config on whatsapp_config for all to authenticated
 -- already-encrypted by the app (ENCRYPTION_KEY never leaves the server).
 -- ---------------------------------------------------------------------
 create or replace function whatsapp_save_config(
-  p_waba_id text,
-  p_phone_number_id text,
-  p_access_token_encrypted text,
-  p_meta_app_id text,
-  p_verify_token text,
+  p_waba_id text default null,
+  p_phone_number_id text default null,
+  p_access_token_encrypted text default null,
+  p_meta_app_id text default null,
+  p_verify_token text default null,
   p_default_template text default null,
   p_dry_run boolean default null
 ) returns void
@@ -225,6 +225,6 @@ comment on function whatsapp_update_message_status is 'Apply a Meta delivery sta
 -- Grants. RPCs run definer so callers just need execute (authenticated).
 -- ---------------------------------------------------------------------
 grant execute on function whatsapp_save_config(text, text, text, text, text, text, boolean) to authenticated;
-grant execute on function whatsapp_get_or_create_conversation(text, uuid, uuid) to authenticated;
-grant execute on function whatsapp_insert_message(uuid, text, text, text, text, text, text, text, jsonb, text, text, uuid) to authenticated;
-grant execute on function whatsapp_update_message_status(text, text, text) to authenticated;
+grant execute on function whatsapp_get_or_create_conversation(text, uuid, uuid) to authenticated, anon;
+grant execute on function whatsapp_insert_message(uuid, text, text, text, text, text, text, text, jsonb, text, text, uuid) to authenticated, anon;
+grant execute on function whatsapp_update_message_status(text, text, text) to authenticated, anon;
