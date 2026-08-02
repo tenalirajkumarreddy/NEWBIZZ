@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Panel, Badge, Button, Table, THead, TBody, TR, TH, TD, Field, Dialog, ConfirmDialog, Kpi, EmptyState } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { createLicense, updateLicense, deleteLicense } from "@/lib/actions/licenses";
-import { LICENSE_TYPE_LABELS, type LicenseRow, type LicenseType, type LicenseStatus } from "@/lib/data/licenses";
+import { LICENSE_TYPE_LABELS, type LicenseRow, type LicenseType, type LicenseStatus } from "@/lib/data/licenses.types";
 
 interface Props {
   licenses: LicenseRow[];

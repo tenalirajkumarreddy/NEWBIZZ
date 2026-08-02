@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Table, THead, TBody, TR, TH, TD, EmptyState, Kpi, Select, Input } from "@/components/ui";
-import { AUDIT_ACTION_LABELS, type AuditAction, type AuditRow } from "@/lib/data/audit";
+import { AUDIT_ACTION_LABELS, type AuditAction, type AuditRow } from "@/lib/data/audit.types";
 
 interface Props {
   initialRows: AuditRow[];

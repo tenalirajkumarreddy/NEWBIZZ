@@ -40,6 +40,17 @@ export async function getFleetThresholds(supabase?: SupabaseClient): Promise<Fle
   };
 }
 
+/** Raw snake_case feature_flags map (as stored), for the fleet settings form. */
+export async function getFleetThresholdsRaw(supabase?: SupabaseClient): Promise<Record<string, number>> {
+  const db = supabase ?? createClient();
+  const row = unwrap(
+    await db.from("company_settings").select("feature_flags").limit(1).maybeSingle() as any,
+    null as { feature_flags: Record<string, number> } | null,
+    "getFleetThresholdsRaw",
+  );
+  return row?.feature_flags ?? {};
+}
+
 // =====================================================================
 // Company profile
 // =====================================================================
