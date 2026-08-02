@@ -6955,6 +6955,7 @@ export type Database = {
           customer_store_id: string | null
           id: string
           last_message_at: string | null
+          last_read_at: string | null
           phone: string
           status: string
         }
@@ -6966,6 +6967,7 @@ export type Database = {
           customer_store_id?: string | null
           id?: string
           last_message_at?: string | null
+          last_read_at?: string | null
           phone: string
           status?: string
         }
@@ -6977,6 +6979,7 @@ export type Database = {
           customer_store_id?: string | null
           id?: string
           last_message_at?: string | null
+          last_read_at?: string | null
           phone?: string
           status?: string
         }
@@ -7934,6 +7937,10 @@ export type Database = {
           p_whatsapp_message_id?: string
         }
         Returns: string
+      }
+      whatsapp_mark_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
       }
       whatsapp_mark_sent: { Args: { p_id: string }; Returns: undefined }
       whatsapp_pending_notifications: {

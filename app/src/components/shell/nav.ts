@@ -41,6 +41,12 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    label: "Messaging",
+    items: [
+      { id: "whatsapp", label: "WhatsApp Inbox", href: "/whatsapp", perm: "customer.manage", badgeKey: "whatsappUnread" },
+    ],
+  },
+  {
     label: "Buy & Stock",
     items: [
       { id: "suppliers", label: "Suppliers", href: "/suppliers", perm: "supplier.view" },

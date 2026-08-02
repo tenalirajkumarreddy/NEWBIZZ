@@ -50,7 +50,15 @@ export async function getWhatsappConfig(): Promise<WhatsAppConfigView | null> {
 }
 
 // ---- conversations ----
-export async function listConversations(opts?: { status?: string }): Promise<ConversationWithCustomer[]> {
+export interface ConversationSummary extends ConversationRow {
+  store_name: string | null;
+  customer_name: string | null;
+  last_message_body: string | null;
+  last_message_direction: string | null;
+  unread_count: number;
+}
+
+export async function listConversations(opts?: { status?: string }): Promise<ConversationSummary[]> {
   const supabase = createClient();
   const rows = unwrap<ConversationWithCustomer[]>(
     await supabase
@@ -61,15 +69,55 @@ export async function listConversations(opts?: { status?: string }): Promise<Con
          customers(name)`,
       )
       .eq("status", opts?.status ?? "open")
-      .order("last_message_at", { ascending: false })
+      .order("last_message_at", { ascending: false, nullsFirst: false })
       .returns<ConversationWithCustomer[]>(),
     [],
     "whatsapp.listConversations",
   );
+
+  const convIds = rows.map((r) => r.id);
+  let lastMessages: Record<string, { body: string | null; direction: string }> = {};
+  let unreadCounts: Record<string, number> = {};
+
+  if (convIds.length > 0) {
+    const last = unwrap<{ conversation_id: string; body: string | null; direction: string }[]>(
+      await supabase
+        .from("whatsapp_messages")
+        .select("conversation_id, body, direction")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: false })
+        .returns<{ conversation_id: string; body: string | null; direction: string }[]>(),
+      [],
+      "whatsapp.lastMessages",
+    );
+    for (const m of last) {
+      if (!(m.conversation_id in lastMessages)) lastMessages[m.conversation_id] = { body: m.body, direction: m.direction };
+    }
+
+    const unread = unwrap<{ conversation_id: string; created_at: string }[]>(
+      await supabase
+        .from("whatsapp_messages")
+        .select("conversation_id, created_at")
+        .in("conversation_id", convIds)
+        .returns<{ conversation_id: string; created_at: string }[]>(),
+      [],
+      "whatsapp.unreadMessages",
+    );
+    for (const m of unread) {
+      const conv = rows.find((c) => c.id === m.conversation_id);
+      const lastRead = conv?.last_read_at ? new Date(conv.last_read_at) : null;
+      if (lastRead && new Date(m.created_at) <= lastRead) continue;
+      unreadCounts[m.conversation_id] = (unreadCounts[m.conversation_id] ?? 0) + 1;
+    }
+  }
+
   return rows.map((r) => ({
     ...r,
     store_name: (r as any).customer_stores?.name ?? null,
     customer_name: (r as any).customers?.name ?? null,
+    last_message_body: lastMessages[r.id]?.body ?? null,
+    last_message_direction: lastMessages[r.id]?.direction ?? null,
+    unread_count: unreadCounts[r.id] ?? 0,
   }));
 }
 
@@ -88,8 +136,42 @@ export async function listMessages(conversationId: string): Promise<MessageRow[]
   );
 }
 
-export async function getConversation(id: string): Promise<ConversationRow | null> {
+// Total unread inbound messages across all open conversations (sidebar badge).
+export async function getWhatsappUnreadCount(): Promise<number> {
   const supabase = createClient();
+  const convs = unwrap<ConversationRow[]>(
+    await supabase
+      .from("whatsapp_conversations")
+      .select("id, last_read_at")
+      .eq("status", "open")
+      .returns<ConversationRow[]>(),
+    [],
+    "whatsapp.unreadConvs",
+  );
+  if (convs.length === 0) return 0;
+  const msgs = unwrap<{ conversation_id: string; created_at: string }[]>(
+    await supabase
+      .from("whatsapp_messages")
+      .select("conversation_id, created_at")
+      .in(
+        "conversation_id",
+        convs.map((c) => c.id),
+      )
+      .returns<{ conversation_id: string; created_at: string }[]>(),
+    [],
+    "whatsapp.unreadMsgs",
+  );
+  let total = 0;
+  for (const m of msgs) {
+    const conv = convs.find((c) => c.id === m.conversation_id);
+    const lastRead = conv?.last_read_at ? new Date(conv.last_read_at) : null;
+    if (lastRead && new Date(m.created_at) <= lastRead) continue;
+    total += 1;
+  }
+  return total;
+}
+
+export async function getConversation(id: string): Promise<ConversationRow | null> {  const supabase = createClient();
   const rows = unwrap<ConversationRow[]>(
     await supabase
       .from("whatsapp_conversations")

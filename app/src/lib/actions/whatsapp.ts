@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { getWhatsappRuntimeConfig } from "@/lib/data/whatsapp";
+import { getWhatsappRuntimeConfig, listMessages } from "@/lib/data/whatsapp";
 import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 
 // =====================================================================
@@ -64,6 +64,35 @@ export async function saveWhatsappConfig(input: {
     });
     if (error) return { ok: false, error: error.message };
     return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "Unknown error" };
+  }
+}
+
+export async function markConversationRead(conversationId: string): Promise<WhatsappActionResult> {
+  try {
+    const supabase = createClient();
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return { ok: false, error: "Not signed in" };
+    const { error } = await supabase.rpc("whatsapp_mark_read", {
+      p_conversation_id: conversationId,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "Unknown error" };
+  }
+}
+
+export async function getConversationMessages(
+  conversationId: string,
+): Promise<{ ok: true; messages: Awaited<ReturnType<typeof listMessages>> } | { ok: false; error: string }> {
+  const supabase = createClient();
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return { ok: false, error: "Not signed in" };
+  try {
+    const messages = await listMessages(conversationId);
+    return { ok: true, messages };
   } catch (err: any) {
     return { ok: false, error: err?.message ?? "Unknown error" };
   }

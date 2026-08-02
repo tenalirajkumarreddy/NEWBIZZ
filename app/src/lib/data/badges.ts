@@ -8,23 +8,26 @@ import { createClient } from "@/lib/supabase/server";
 import { can, type AppClaims } from "@/lib/auth/claims";
 import { getUnreadCount } from "./notifications";
 import { getLicensesDue } from "./licenses";
+import { getWhatsappUnreadCount } from "./whatsapp";
 
 export type NavBadges = {
   unread: number;
   openOrders: number;
   licensesDue: number;
+  whatsappUnread: number;
 };
 
 export async function getNavBadges(claims: AppClaims): Promise<NavBadges> {
   const supabase = createClient();
 
-  const [unread, openOrders, licensesDue] = await Promise.all([
+  const [unread, openOrders, licensesDue, whatsappUnread] = await Promise.all([
     getUnreadCount(),
     can(claims, "invoice.view") ? countOpenOrders(supabase) : 0,
     can(claims, "license.view") ? (await getLicensesDue()).length : 0,
+    can(claims, "customer.manage") ? getWhatsappUnreadCount() : 0,
   ]);
 
-  return { unread, openOrders, licensesDue };
+  return { unread, openOrders, licensesDue, whatsappUnread };
 }
 
 async function countOpenOrders(supabase: ReturnType<typeof createClient>): Promise<number> {
