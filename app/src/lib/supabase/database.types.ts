@@ -7888,6 +7888,28 @@ export type Database = {
         Args: { p_invoice: string; p_reason?: string }
         Returns: string
       }
+      whatsapp_get_config: {
+        Args: never
+        Returns: {
+          access_token_encrypted: string | null
+          default_template: string | null
+          dry_run: boolean
+          id: number
+          meta_app_id: string | null
+          phone_number_id: string | null
+          registered_at: string | null
+          updated_at: string | null
+          updated_by: string | null
+          verify_token: string | null
+          waba_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_config"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       whatsapp_get_or_create_conversation: {
         Args: {
           p_customer_id?: string
@@ -7911,6 +7933,38 @@ export type Database = {
           p_template_params?: Json
           p_whatsapp_message_id?: string
         }
+        Returns: string
+      }
+      whatsapp_mark_sent: { Args: { p_id: string }; Returns: undefined }
+      whatsapp_pending_notifications: {
+        Args: { p_limit?: number }
+        Returns: {
+          action_url: string | null
+          body: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          delivery_channel: Database["public"]["Enums"]["notification_channel"]
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          read_at: string | null
+          sent_at: string | null
+          sent_external: boolean
+          severity: Database["public"]["Enums"]["notification_severity"]
+          status: Database["public"]["Enums"]["notification_status"]
+          title: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      whatsapp_resolve_recipient_phone: {
+        Args: { p_entity_id: string; p_entity_type: string }
         Returns: string
       }
       whatsapp_save_config: {

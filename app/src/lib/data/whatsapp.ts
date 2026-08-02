@@ -113,14 +113,14 @@ export interface WhatsAppRuntimeConfig {
 }
 
 // Server-only: full config INCLUDING the decrypted token for outbound sends.
-// Uses the service client (no user context needed). Returns null if not configured.
+// Runs under the anon-key service client, so reads go through the definer
+// RPC whatsapp_get_config (whatsapp_config RLS is authenticated-only).
+// Returns null if not configured.
 export async function getWhatsappRuntimeConfig(): Promise<WhatsAppRuntimeConfig | null> {
   const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("whatsapp_config")
-    .select("*")
-    .eq("id", 1)
-    .single();
+  const { data } = await (supabase as any)
+    .rpc("whatsapp_get_config")
+    .single() as { data: WhatsAppConfigRow | null; error: { message: string } | null };
   if (!data?.access_token_encrypted || !data.phone_number_id) return null;
   const { decrypt } = await import("@/lib/whatsapp/encryption");
   let accessToken: string;

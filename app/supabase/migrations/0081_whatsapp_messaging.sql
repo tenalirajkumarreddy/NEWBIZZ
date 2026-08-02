@@ -228,3 +228,64 @@ grant execute on function whatsapp_save_config(text, text, text, text, text, tex
 grant execute on function whatsapp_get_or_create_conversation(text, uuid, uuid) to authenticated, anon;
 grant execute on function whatsapp_insert_message(uuid, text, text, text, text, text, text, text, jsonb, text, text, uuid) to authenticated, anon;
 grant execute on function whatsapp_update_message_status(text, text, text) to authenticated, anon;
+
+-- ---------------------------------------------------------------------
+-- Worker RPCs (SECURITY DEFINER). The dispatch worker runs under the
+-- anon-key service client (repo convention), but notifications RLS is
+-- own-only and whatsapp_config/customer_stores are authenticated-read.
+-- Mirroring the notification_daily_scan pattern, the worker's DB access
+-- goes through these definer RPCs granted to anon + authenticated.
+-- ---------------------------------------------------------------------
+create or replace function whatsapp_get_config()
+returns whatsapp_config
+language sql stable security definer set search_path = public as $$
+  select * from whatsapp_config where id = 1 limit 1;
+$$;
+comment on function whatsapp_get_config is 'Definer config read (whatsapp_config RLS is authenticated-only).';
+
+create or replace function whatsapp_pending_notifications(p_limit int default 20)
+returns setof notifications
+language sql stable security definer set search_path = public as $$
+  select *
+    from notifications
+   where delivery_channel = 'whatsapp'
+     and not sent_external
+   order by created_at asc
+   limit p_limit;
+$$;
+comment on function whatsapp_pending_notifications is 'Pending WhatsApp notifications for the dispatch worker. Definer-only.';
+
+create or replace function whatsapp_resolve_recipient_phone(p_entity_type text, p_entity_id uuid)
+returns text
+language plpgsql stable security definer set search_path = public as $$
+declare v_phone text;
+begin
+  if p_entity_type = 'customer_stores' and p_entity_id is not null then
+    select phone into v_phone from customer_stores where id = p_entity_id limit 1;
+  elsif p_entity_type = 'customers' and p_entity_id is not null then
+    select phone into v_phone from customer_stores
+     where customer_id = p_entity_id and is_primary and phone is not null
+     order by is_primary desc nulls last limit 1;
+    if v_phone is null then
+      select phone into v_phone from customer_stores
+       where customer_id = p_entity_id and phone is not null limit 1;
+    end if;
+  elsif p_entity_type = 'whatsapp_conversations' and p_entity_id is not null then
+    select phone into v_phone from whatsapp_conversations where id = p_entity_id limit 1;
+  end if;
+  return v_phone;
+end $$;
+comment on function whatsapp_resolve_recipient_phone is 'Resolve the recipient E.164 phone for a notification entity. Definer-only.';
+
+create or replace function whatsapp_mark_sent(p_id uuid)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  update notifications set sent_external = true, sent_at = now() where id = p_id;
+end $$;
+comment on function whatsapp_mark_sent is 'Mark a notification as externally sent (worker). Definer-only.';
+
+grant execute on function whatsapp_get_config() to anon, authenticated;
+grant execute on function whatsapp_pending_notifications(int) to anon, authenticated;
+grant execute on function whatsapp_resolve_recipient_phone(text, uuid) to anon, authenticated;
+grant execute on function whatsapp_mark_sent(uuid) to anon, authenticated;
