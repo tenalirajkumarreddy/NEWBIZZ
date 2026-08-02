@@ -6,9 +6,10 @@ import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount, money } from "@/lib/format";
 import { JournalTable } from "./JournalTable";
+import { TallyExportButton } from "./TallyExportButton";
 
-// Day Book / Journal register (§5.1) — every posted journal entry, newest first,
-// across all sources (sales, purchases, payments, vouchers, opening…). This is
+// Day Book / Journal register (5.1) - every posted journal entry, newest first,
+// across all sources (sales, purchases, payments, vouchers, opening.). This is
 // the audit spine: click through to an entry's lines, or drill an account's
 // ledger from the trial balance. Read-only; entries post from their own flows.
 export default async function JournalPage() {
@@ -30,12 +31,15 @@ export default async function JournalPage() {
             {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(entries.length)} entries
           </p>
         </div>
-        <Link
-          href="/vouchers/new"
-          className="self-start rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d"
-        >
-          + Manual voucher
-        </Link>
+        <div className="flex items-center gap-2 self-start">
+          {fy && <TallyExportButton from={fy.start_date} to={fy.end_date} />}
+          <Link
+            href="/vouchers/new"
+            className="rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d"
+          >
+            + Manual voucher
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

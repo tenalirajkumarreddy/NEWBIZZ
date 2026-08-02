@@ -36,6 +36,7 @@ export const NAV: NavGroup[] = [
       { id: "challans", label: "Delivery Challans", href: "/challans", perm: "order.view" },
       { id: "receipts", label: "Collections", href: "/receipts", perm: "receipt.record" },
       { id: "customers", label: "Customers & Stores", href: "/customers", perm: "customer.manage" },
+      { id: "credit", label: "Credit Management", href: "/credit", perm: "customer.manage" },
       { id: "creditnotes", label: "Credit Notes & Schemes", href: "/credit-notes", perm: "creditnote.view" },
     ],
   },

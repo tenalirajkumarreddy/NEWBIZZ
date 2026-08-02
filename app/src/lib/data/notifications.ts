@@ -48,3 +48,44 @@ export async function getUnreadCount(): Promise<number> {
     .eq("status", "unread");
   return res.error ? 0 : res.count ?? 0;
 }
+
+export const NOTIFICATION_PAGE_SIZE = 30;
+
+/**
+ * A full page of the user's notifications, newest first, with optional status
+ * filter. Keyset pagination on created_at is not practical (timestamps can tie),
+ * so we paginate with offset via a head count — this inbox is per-user and small.
+ */
+export async function listNotifications(
+  opts: { status?: "unread" | "read" | "archived"; offset?: number; limit?: number } = {},
+): Promise<{ rows: NotificationRow[]; total: number }> {
+  const supabase = createClient();
+  const { status, offset = 0, limit = NOTIFICATION_PAGE_SIZE } = opts;
+
+  let q = supabase.from("notifications").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+  if (status) q = q.eq("status", status);
+
+  const res = await q;
+  return {
+    rows: unwrap(res, [] as NotificationRow[], "listNotifications"),
+    total: res.error ? 0 : res.count ?? 0,
+  };
+}
+
+// =====================================================================
+// Notification preferences — RLS restricts notification_preferences to the
+// signed-in user, so a plain select returns exactly the caller's rows.
+// =====================================================================
+
+export interface NotificationPrefRow {
+  category: string;
+  channel: "whatsapp" | "sms" | "email";
+  enabled: boolean;
+}
+
+export async function getNotificationPrefs(): Promise<NotificationPrefRow[]> {
+  const supabase = createClient();
+  const res = await supabase.from("notification_preferences").select("category, channel, enabled");
+  if (res.error) return [];
+  return (res.data ?? []) as NotificationPrefRow[];
+}

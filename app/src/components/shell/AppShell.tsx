@@ -29,8 +29,6 @@ export function AppShell({
   badges?: Record<string, number | undefined>;
   children: ReactNode;
 }) {
-  const hasUnread = (badges?.unread ?? 0) > 0;
-
   return (
     <div
       className="grid h-[100dvh] overflow-hidden bg-bg"
@@ -47,7 +45,6 @@ export function AppShell({
           displayName={displayName}
           phone={phone}
           roleLabel={roleLabel}
-          hasUnread={hasUnread}
         />
       </div>
 

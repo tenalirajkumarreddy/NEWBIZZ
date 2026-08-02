@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { isActive } from "@/lib/auth/claims";
 import { formatDisplay } from "@/lib/auth/phone";
+import { getNavBadges } from "@/lib/data/badges";
 import { AppShell } from "@/components/shell/AppShell";
 
 // Protected group layout. Middleware already gates routing, but we re-check here
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const displayName = deriveDisplayName(user, user.phone);
   const phone = user.phone ? formatDisplay(user.phone) : (user.email ?? "");
   const roleLabel = deriveRoleLabel(claims.roles, claims.is_admin);
+  const badges = await getNavBadges(claims);
 
   return (
     <AppShell
@@ -24,6 +26,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       displayName={displayName}
       phone={phone}
       roleLabel={roleLabel}
+      badges={badges}
     >
       {children}
     </AppShell>
