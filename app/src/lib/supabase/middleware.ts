@@ -25,8 +25,18 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 const PUBLIC_PREFIXES = ["/login", "/auth"];
 const HOLDING_ROUTE = "/pending";
 
+// API routes are self-guarded at the handler (CRON_SECRET for the cron/poller
+// routes, Meta signature for the WhatsApp webhook) and are invoked WITHOUT a
+// browser session cookie (external schedulers, Meta's servers). The session
+// gate below would otherwise redirect them to /login and they'd never run.
+const API_PREFIX = "/api";
+
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+function isSelfGuardedApi(pathname: string): boolean {
+  return pathname === API_PREFIX || pathname.startsWith(API_PREFIX + "/");
 }
 
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
@@ -67,6 +77,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   const { pathname } = request.nextUrl;
   const claims = readClaimsFromAccessToken(session?.access_token);
+
+  // Self-guarded API routes (CRON_SECRET / Meta webhook signature) always pass
+  // through to their handler — they are invoked without a browser session and
+  // authenticate in-handler. Skip the whole session gate for them.
+  if (isSelfGuardedApi(pathname)) return response;
 
   // Signed out: force to /login for anything non-public.
   if (!user) {
