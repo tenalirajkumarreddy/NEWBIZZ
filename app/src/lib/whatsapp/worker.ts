@@ -8,7 +8,8 @@ import { normalizePhone } from "@/lib/whatsapp/phone-utils";
 // Drains `notifications` rows marked `delivery_channel='whatsapp'` that
 // have not yet been sent externally. For each row it:
 //   1. resolves the recipient phone from the notification's entity,
-//   2. honours pref_allows(user, category, 'whatsapp'),
+//   2. honours whatsapp_pref_allows(user, category) (definer wrapper over
+//      pref_allows, which is revoked from clients),
 //   3. sends via the Meta API (or dry-run logs), and
 //   4. marks sent_external=true + sent_at on success.
 //
@@ -60,10 +61,9 @@ export async function drainWhatsappNotifications(limit = 20): Promise<DrainResul
   for (const n of notifications) {
     try {
       // Honour the user's per-category WhatsApp preference.
-      const { data: allows } = await supabase.rpc("pref_allows", {
+      const { data: allows } = await supabase.rpc("whatsapp_pref_allows", {
         p_user: n.user_id,
         p_category: n.category as string,
-        p_channel: "whatsapp",
       });
       if (allows === false) {
         // Muted -> consume the notification so it isn't retried forever.

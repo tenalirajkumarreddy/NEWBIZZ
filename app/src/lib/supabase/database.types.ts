@@ -7891,6 +7891,19 @@ export type Database = {
         Args: { p_invoice: string; p_reason?: string }
         Returns: string
       }
+      whatsapp_customer_owner: {
+        Args: { p_customer_id: string; p_store_id: string }
+        Returns: string
+      }
+      whatsapp_enqueue_value_notify: {
+        Args: {
+          p_customer_id: string
+          p_opts: Json
+          p_store_id: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       whatsapp_get_config: {
         Args: never
         Returns: {
@@ -7969,6 +7982,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      whatsapp_pref_allows: {
+        Args: { p_category: string; p_user: string }
+        Returns: boolean
       }
       whatsapp_resolve_recipient_phone: {
         Args: { p_entity_id: string; p_entity_type: string }
