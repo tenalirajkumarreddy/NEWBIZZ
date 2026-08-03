@@ -7895,6 +7895,10 @@ export type Database = {
         Args: { p_customer_id: string; p_store_id: string }
         Returns: string
       }
+      whatsapp_delete_conversation: {
+        Args: { p_phone: string }
+        Returns: undefined
+      }
       whatsapp_enqueue_value_notify: {
         Args: {
           p_customer_id: string

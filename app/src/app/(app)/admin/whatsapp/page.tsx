@@ -1,5 +1,6 @@
 import { getWhatsappConfig } from "@/lib/data/whatsapp";
 import { WhatsAppSettingsForm } from "./WhatsAppSettingsForm";
+import { WebhookSelfTestForm } from "./WebhookSelfTestForm";
 
 export const metadata = { title: "WhatsApp Settings — NEWBIZZ" };
 export const dynamic = "force-dynamic";
@@ -43,6 +44,8 @@ export default async function AdminWhatsappPage() {
           in Meta for the initial GET handshake.
         </p>
       </div>
+
+      <WebhookSelfTestForm appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"} />
     </div>
   );
 }

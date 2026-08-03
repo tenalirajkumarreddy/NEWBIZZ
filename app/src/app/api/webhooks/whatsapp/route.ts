@@ -40,11 +40,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServiceClient();
-  const { data: cfg } = await supabase
-    .from("whatsapp_config")
-    .select("verify_token")
-    .eq("id", 1)
-    .single();
+  const { data: cfg } = await (supabase as any).rpc("whatsapp_get_config").single();
 
   if (!cfg?.verify_token || verifyToken !== cfg.verify_token) {
     return NextResponse.json({ error: "invalid verify token" }, { status: 403 });
@@ -76,11 +72,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient();
-  const { data: cfg } = await supabase
-    .from("whatsapp_config")
-    .select("phone_number_id, dry_run")
-    .eq("id", 1)
-    .single();
+  const { data: cfg } = await (supabase as any).rpc("whatsapp_get_config").single();
 
   const entries = payload?.entry ?? [];
   for (const entry of entries) {
