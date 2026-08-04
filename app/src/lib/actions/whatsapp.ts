@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getWhatsappRuntimeConfig, listMessages } from "@/lib/data/whatsapp";
 import { normalizePhone } from "@/lib/whatsapp/phone-utils";
+import type { DrainResult } from "@/lib/whatsapp/worker";
 
 // =====================================================================
 // WhatsApp server actions (Phase 1).
@@ -293,6 +294,100 @@ export async function sendWhatsAppMessageService(input: {
     });
     if (insErr) return { ok: false, error: insErr.message };
     return { ok: true, messageId: msgId };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "Unknown error" };
+  }
+}
+
+// =====================================================================
+// Local template catalogue + worker operations (Phase 1, admin-gated).
+// Testable end-to-end in dry-run while Meta credentials are pending.
+// =====================================================================
+
+export type TemplateSaveInput = {
+  name: string;
+  bodyText: string;
+  category?: string;
+  language?: string;
+  status?: string;
+};
+
+export async function saveWhatsappTemplate(input: TemplateSaveInput): Promise<WhatsappActionResult> {
+  try {
+    const supabase = createClient();
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return { ok: false, error: "Not signed in" };
+
+    const { data: canManage } = await supabase.rpc("has_permission", { p_code: "admin" });
+    if (!canManage) return { ok: false, error: "Admin permission required" };
+
+    const { data, error } = await supabase.rpc("whatsapp_template_save", {
+      p_name: input.name,
+      p_body_text: input.bodyText,
+      p_category: input.category ?? "Utility",
+      p_language: input.language ?? "en_US",
+      p_status: input.status ?? "APPROVED",
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, messageId: (data as any)?.id };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "Unknown error" };
+  }
+}
+
+export async function deleteWhatsappTemplate(id: string): Promise<WhatsappActionResult> {
+  try {
+    const supabase = createClient();
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return { ok: false, error: "Not signed in" };
+    const { data: canManage } = await supabase.rpc("has_permission", { p_code: "admin" });
+    if (!canManage) return { ok: false, error: "Admin permission required" };
+
+    const { error } = await supabase.rpc("whatsapp_template_delete", { p_id: id });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "Unknown error" };
+  }
+}
+
+export type EnqueueTestNotifyInput = {
+  phone: string;
+  title?: string;
+  body?: string;
+};
+
+// Enqueue a whatsapp-channel test notification addressed to a conversation
+// phone (via the definer RPC), then optionally run the worker drain so the
+// settings page can show the full pipeline result. Testable in dry-run.
+export async function enqueueWhatsappTestNotification(input: EnqueueTestNotifyInput): Promise<
+  | { ok: true; conversationId: string; drain?: DrainResult }
+  | { ok: false; error: string }
+> {
+  try {
+    const supabase = createClient();
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return { ok: false, error: "Not signed in" };
+    const { data: canManage } = await supabase.rpc("has_permission", { p_code: "admin" });
+    if (!canManage) return { ok: false, error: "Admin permission required" };
+
+    const phone = normalizePhone(input.phone);
+    if (!phone) return { ok: false, error: "Invalid phone" };
+
+    const { data: conversationId, error } = await (supabase as any).rpc(
+      "whatsapp_enqueue_test_notify",
+      {
+        p_phone: phone,
+        p_title: input.title ?? "",
+        p_body: input.body ?? "",
+      },
+    );
+    if (error) return { ok: false, error: error.message };
+
+    const { drainWhatsappNotifications } = await import("@/lib/whatsapp/worker");
+    const drain = await drainWhatsappNotifications(20);
+
+    return { ok: true, conversationId: String(conversationId ?? ""), drain };
   } catch (err: any) {
     return { ok: false, error: err?.message ?? "Unknown error" };
   }

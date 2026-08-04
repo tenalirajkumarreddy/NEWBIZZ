@@ -7014,6 +7014,47 @@ export type Database = {
           },
         ]
       }
+      whatsapp_message_templates: {
+        Row: {
+          body_text: string
+          category: string
+          created_at: string
+          id: string
+          language: string
+          name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          body_text: string
+          category?: string
+          created_at?: string
+          id?: string
+          language?: string
+          name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          body_text?: string
+          category?: string
+          created_at?: string
+          id?: string
+          language?: string
+          name?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_templates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           body: string | null
@@ -7899,6 +7940,10 @@ export type Database = {
         Args: { p_phone: string }
         Returns: undefined
       }
+      whatsapp_enqueue_test_notify: {
+        Args: { p_body: string; p_phone: string; p_title: string }
+        Returns: string
+      }
       whatsapp_enqueue_value_notify: {
         Args: {
           p_customer_id: string
@@ -7991,6 +8036,33 @@ export type Database = {
         Args: { p_category: string; p_user: string }
         Returns: boolean
       }
+      whatsapp_recent_notifications: {
+        Args: { p_limit?: number }
+        Returns: {
+          action_url: string | null
+          body: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          delivery_channel: Database["public"]["Enums"]["notification_channel"]
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          read_at: string | null
+          sent_at: string | null
+          sent_external: boolean
+          severity: Database["public"]["Enums"]["notification_severity"]
+          status: Database["public"]["Enums"]["notification_status"]
+          title: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       whatsapp_resolve_recipient_phone: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: string
@@ -8007,6 +8079,51 @@ export type Database = {
         }
         Returns: undefined
       }
+      whatsapp_template_delete: { Args: { p_id: string }; Returns: undefined }
+      whatsapp_template_list: {
+        Args: { p_status?: string }
+        Returns: {
+          body_text: string
+          category: string
+          created_at: string
+          id: string
+          language: string
+          name: string
+          status: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_message_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      whatsapp_template_save: {
+        Args: {
+          p_body_text: string
+          p_category?: string
+          p_language?: string
+          p_name: string
+          p_status?: string
+        }
+        Returns: {
+          body_text: string
+          category: string
+          created_at: string
+          id: string
+          language: string
+          name: string
+          status: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_message_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       whatsapp_update_message_status: {
         Args: {
           p_error_message?: string
@@ -8015,6 +8132,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      whatsapp_worker_stats: { Args: never; Returns: Json }
       write_audit: {
         Args: {
           p_action: Database["public"]["Enums"]["audit_action"]

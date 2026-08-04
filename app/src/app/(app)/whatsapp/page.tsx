@@ -1,5 +1,6 @@
 import { listConversations } from "@/lib/data/whatsapp";
 import { getWhatsappConfig } from "@/lib/data/whatsapp";
+import { listTemplates } from "@/lib/data/whatsapp-worker";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui";
 import { WhatsAppInbox } from "./WhatsAppInbox";
@@ -7,7 +8,11 @@ import { WhatsAppInbox } from "./WhatsAppInbox";
 export const dynamic = "force-dynamic";
 
 export default async function WhatsappPage() {
-  const [conversations, config] = await Promise.all([listConversations(), getWhatsappConfig()]);
+  const [conversations, config, templates] = await Promise.all([
+    listConversations(),
+    getWhatsappConfig(),
+    listTemplates("APPROVED"),
+  ]);
 
   const unreadTotal = conversations.reduce((s, c) => s + c.unread_count, 0);
 
@@ -29,7 +34,7 @@ export default async function WhatsappPage() {
           description="Add the Meta Business Cloud API connection details in settings before using the inbox."
         />
       ) : (
-        <WhatsAppInbox conversations={conversations} dryRun={config.dryRun} />
+        <WhatsAppInbox conversations={conversations} dryRun={config.dryRun} templates={templates} />
       )}
     </div>
   );

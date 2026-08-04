@@ -1,12 +1,16 @@
 import { getWhatsappConfig } from "@/lib/data/whatsapp";
+import { listTemplates } from "@/lib/data/whatsapp-worker";
 import { WhatsAppSettingsForm } from "./WhatsAppSettingsForm";
 import { WebhookSelfTestForm } from "./WebhookSelfTestForm";
+import { WhatsAppTestPanel } from "./WhatsAppTestPanel";
+import { WhatsAppTemplatesManager } from "./WhatsAppTemplatesManager";
 
 export const metadata = { title: "WhatsApp Settings — NEWBIZZ" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminWhatsappPage() {
   const config = await getWhatsappConfig();
+  const templates = await listTemplates();
 
   return (
     <div className="mx-auto flex max-w-[900px] flex-col gap-4 px-6 py-6 lg:px-8">
@@ -46,6 +50,10 @@ export default async function AdminWhatsappPage() {
       </div>
 
       <WebhookSelfTestForm appUrl={process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"} />
+
+      <WhatsAppTestPanel dryRun={config?.dryRun ?? true} />
+
+      <WhatsAppTemplatesManager templates={templates} />
     </div>
   );
 }

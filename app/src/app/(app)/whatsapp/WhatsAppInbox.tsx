@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Input, Badge, EmptyState } from "@/components/ui";
+import { Input, Badge, EmptyState, Select } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { dateTimeIST } from "@/lib/format";
@@ -15,13 +15,27 @@ import {
 } from "@/lib/actions/whatsapp";
 
 type MessageRow = Database["public"]["Tables"]["whatsapp_messages"]["Row"];
+type TemplateRow = Database["public"]["Tables"]["whatsapp_message_templates"]["Row"];
+
+interface TemplateWithVarCount extends TemplateRow {
+  varCount: number;
+}
+
+function templateVariableCount(bodyText: string): number {
+  const matches = bodyText.match(/\{\{(\d+)\}\}/g);
+  if (!matches) return 0;
+  const max = matches.reduce((m, s) => Math.max(m, parseInt(s.replace(/\D/g, ""), 10) || 0), 0);
+  return max;
+}
 
 export function WhatsAppInbox({
   conversations,
   dryRun,
+  templates,
 }: {
   conversations: ConversationSummary[];
   dryRun: boolean;
+  templates: TemplateRow[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -29,10 +43,19 @@ export function WhatsAppInbox({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [draft, setDraft] = useState("");
+  const [composeMode, setComposeMode] = useState<"text" | "template">("text");
+  const [templateId, setTemplateId] = useState<string>("");
+  const [templateParams, setTemplateParams] = useState<string[]>([]);
   const [loadingThread, startLoad] = useTransition();
   const [sending, startSend] = useTransition();
   const threadEndRef = useRef<HTMLDivElement>(null);
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
+
+  const templateOptions: TemplateWithVarCount[] = templates.map((t) => ({
+    ...t,
+    varCount: templateVariableCount(t.body_text),
+  }));
+  const activeTemplate = templateOptions.find((t) => t.id === templateId) ?? null;
 
   const filtered = conversations.filter((c) => {
     if (!query.trim()) return true;
@@ -70,25 +93,65 @@ export function WhatsAppInbox({
 
   function handleSend() {
     const text = draft.trim();
-    if (!text || !selectedId) return;
-    setDraft("");
-    startSend(async () => {
-      const res = await sendWhatsAppMessage({ conversationId: selectedId, type: "text", text });
-      if (res.ok) {
-        toast.success("Message sent", dryRun ? "(dry-run — no Meta call)" : undefined);
-        const reload = await getConversationMessages(selectedId);
-        if (!reload.ok) {
-          toast.error("Could not reload thread", reload.error);
-        } else if (reload.messages) {
-          setMessages(reload.messages);
+    if (!selectedId) return;
+    if (composeMode === "text") {
+      if (!text) return;
+      setDraft("");
+      startSend(async () => {
+        const res = await sendWhatsAppMessage({ conversationId: selectedId, type: "text", text });
+        if (!res.ok) {
+          toast.error("Could not send", res.error);
+          setDraft(text);
+          return;
         }
-        await markConversationRead(selectedId);
-        router.refresh();
-      } else {
+        toast.success("Message sent", dryRun ? "(dry-run — no Meta call)" : undefined);
+        await reloadThread(selectedId);
+      });
+      return;
+    }
+
+    // template mode
+    if (!activeTemplate) {
+      toast.error("Select a template", "No template chosen.");
+      return;
+    }
+    const params = templateParams.map((p) => p.trim()).filter((p) => p.length > 0);
+    if (params.length < activeTemplate.varCount) {
+      toast.error("Missing variables", `Template needs ${activeTemplate.varCount} value(s).`);
+      return;
+    }
+    startSend(async () => {
+      const res = await sendWhatsAppMessage({
+        conversationId: selectedId,
+        type: "template",
+        templateName: activeTemplate.name,
+        templateParams: params,
+      });
+      if (!res.ok) {
         toast.error("Could not send", res.error);
-        setDraft(text);
+        return;
       }
+      toast.success("Template sent", dryRun ? "(dry-run — no Meta call)" : undefined);
+      setTemplateParams([]);
+      await reloadThread(selectedId);
     });
+  }
+
+  async function reloadThread(conversationId: string) {
+    const reload = await getConversationMessages(conversationId);
+    if (!reload.ok) {
+      toast.error("Could not reload thread", reload.error);
+    } else if (reload.messages) {
+      setMessages(reload.messages);
+    }
+    await markConversationRead(conversationId);
+    router.refresh();
+  }
+
+  function onSelectTemplate(id: string) {
+    setTemplateId(id);
+    const t = templateOptions.find((x) => x.id === id);
+    setTemplateParams(t ? Array(t.varCount).fill("") : []);
   }
 
   return (
@@ -204,6 +267,7 @@ export function WhatsAppInbox({
               ) : (
                 messages.map((m) => {
                   const inbound = m.direction === "inbound";
+                  const hasMedia = Boolean(m.media_url);
                   return (
                     <div key={m.id} className={`flex ${inbound ? "justify-start" : "justify-end"}`}>
                       <div
@@ -218,9 +282,29 @@ export function WhatsAppInbox({
                             Template · {m.template_name}
                           </p>
                         )}
+                        {hasMedia && (
+                          <div className={`mb-1 flex items-center gap-1.5 text-[11px] ${inbound ? "text-ink-3" : "text-white/80"}`}>
+                            <span>📎</span>
+                            <span className="truncate font-medium">
+                              {m.media_filename ?? `${m.media_mime ?? m.msg_type} attachment`}
+                            </span>
+                          </div>
+                        )}
                         {m.body ?? (
                           <span className="italic opacity-70">
-                            {m.msg_type === "image" ? "📷 Image" : m.msg_type}
+                            {hasMedia
+                              ? m.msg_type === "image"
+                                ? "Image"
+                                : m.msg_type === "video"
+                                  ? "Video"
+                                  : m.msg_type === "audio"
+                                    ? "Voice note"
+                                    : m.msg_type === "document"
+                                      ? "Document"
+                                      : m.msg_type
+                              : m.msg_type === "image"
+                                ? "📷 Image"
+                                : m.msg_type}
                           </span>
                         )}
                         <p
@@ -241,23 +325,87 @@ export function WhatsAppInbox({
               <div ref={threadEndRef} />
             </div>
 
-            <div className="flex items-end gap-2 border-t border-line p-3">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                rows={2}
-                placeholder="Type a message… (Enter to send)"
-                className="min-h-[44px] flex-1 resize-none rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
-              <Button variant="primary" size="sm" loading={sending} onClick={handleSend}>
-                Send
-              </Button>
+            <div className="flex flex-col gap-2 border-t border-line p-3">
+              <div className="flex items-center gap-1 rounded-lg bg-fill p-1">
+                <button
+                  onClick={() => setComposeMode("text")}
+                  className={`flex-1 rounded-md px-2 py-1 text-[12px] font-semibold transition-colors ${
+                    composeMode === "text" ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+                  }`}
+                >
+                  Text
+                </button>
+                <button
+                  onClick={() => setComposeMode("template")}
+                  className={`flex-1 rounded-md px-2 py-1 text-[12px] font-semibold transition-colors ${
+                    composeMode === "template" ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+                  }`}
+                >
+                  Template
+                </button>
+              </div>
+
+              {composeMode === "text" ? (
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    rows={2}
+                    placeholder="Type a message… (Enter to send)"
+                    className="min-h-[44px] flex-1 resize-none rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  />
+                  <Button variant="primary" size="sm" loading={sending} onClick={handleSend}>
+                    Send
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <Select value={templateId} onChange={(e) => onSelectTemplate(e.target.value)}>
+                    <option value="">Select a template…</option>
+                    {templateOptions.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                        {t.varCount > 0 ? ` · ${t.varCount} variable(s)` : ""}
+                      </option>
+                    ))}
+                  </Select>
+                  {activeTemplate && (
+                    <p className="rounded border border-line bg-fill/40 px-2 py-1 text-[11px] text-ink-3">
+                      {activeTemplate.body_text}
+                    </p>
+                  )}
+                  {activeTemplate && activeTemplate.varCount > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      {templateParams.map((val, i) => (
+                        <Input
+                          key={i}
+                          value={val}
+                          onChange={(e) =>
+                            setTemplateParams((prev) => {
+                              const next = [...prev];
+                              next[i] = e.target.value;
+                              return next;
+                            })
+                          }
+                          placeholder={`Value for {{${i + 1}}}`}
+                          mono
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-end">
+                    <Button variant="primary" size="sm" loading={sending} onClick={handleSend}>
+                      Send template
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
