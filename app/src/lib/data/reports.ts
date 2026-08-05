@@ -5,8 +5,18 @@
 // sign of the balance, so a supplier advance stays under Liabilities.
 // =====================================================================
 import "server-only";
-import { getTrialBalance } from "./accounting";
-import type { TrialBalanceRow, AccountType } from "./types";
+import { createClient } from "@/lib/supabase/server";
+import { getTrialBalance, getArAging, summariseArAging } from "./accounting";
+import { getCurrentFy } from "./fy";
+import { unwrap } from "./types";
+import type { TrialBalanceRow, AccountType, ArAgingRow } from "./types";
+
+interface RawTrendLine {
+  debit: number | string | null;
+  credit: number | string | null;
+  entry?: { entry_date: string } | null;
+  account?: { type: AccountType | null } | null;
+}
 
 export interface StatementLine {
   accountId: string;
@@ -182,5 +192,138 @@ export async function getCashFlow(fyId?: string): Promise<CashFlow> {
     netChange: operating.total + investing.total + financing.total,
     hasActivity: operating.lines.length + investing.lines.length + financing.lines.length > 0,
     approximate: true,
+  };
+}
+
+// =====================================================================
+// Analytics (§5.2) — monthly P&L trend, key ratios, and AR aging, all
+// computed live from journal_lines (Invariant 1) + the AR aging view.
+// =====================================================================
+
+export interface MonthlyPnlPoint {
+  /** YYYY-MM civil month (entry_date, already IST-civil from the ledger). */
+  month: string;
+  income: number;
+  expense: number;
+  net: number;
+}
+
+/**
+ * Monthly income/expense/net trend for a FY, bucketed by entry month. Income
+ * accounts contribute credit − debit; expense accounts debit − credit, so both
+ * read as positive in their natural direction. Months with no activity are
+ * omitted. Returns [] when the FY can't be resolved or reads are blocked.
+ */
+export async function getMonthlyPnlTrend(fyId?: string): Promise<MonthlyPnlPoint[]> {
+  const fy = fyId ?? (await getCurrentFy())?.id;
+  if (!fy) return [];
+  const supabase = createClient();
+
+  const res = await supabase
+    .from("journal_lines")
+    .select(
+      "debit, credit, " +
+        "account:chart_of_accounts!journal_lines_account_id_fkey(type), " +
+        "entry:journal_entries!journal_lines_entry_id_fkey(entry_date)",
+    )
+    .eq("entry.fy_id", fy)
+    .returns<RawTrendLine[]>();
+  const rows = unwrap(res, [] as RawTrendLine[], "getMonthlyPnlTrend");
+
+  const byMonth = new Map<string, { income: number; expense: number }>();
+  for (const r of rows) {
+    const date = r.entry?.entry_date;
+    const type = r.account?.type;
+    if (!date || (type !== "income" && type !== "expense")) continue;
+    const month = date.slice(0, 7);
+    const bucket = byMonth.get(month) ?? { income: 0, expense: 0 };
+    const debit = Number(r.debit ?? 0);
+    const credit = Number(r.credit ?? 0);
+    if (type === "income") bucket.income += credit - debit;
+    else bucket.expense += debit - credit;
+    byMonth.set(month, bucket);
+  }
+
+  return [...byMonth.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([month, b]) => ({
+      month,
+      income: b.income,
+      expense: b.expense,
+      net: b.income - b.expense,
+    }));
+}
+
+export interface AnalyticsRatios {
+  /** netProfit / income, null when there is no income. */
+  netMargin: number | null;
+  /** expense / income, null when there is no income. */
+  expenseRatio: number | null;
+  /** income / receivables-outstanding (period collection intensity), null if no AR. */
+  receivableTurnover: number | null;
+  /** 365 / turnover (days), null when turnover can't be computed. */
+  daysSalesOutstanding: number | null;
+  /** share of AR that sits 90+ days old, null when there is no AR. */
+  overdueShare: number | null;
+}
+
+/**
+ * Key operating ratios for a FY, derived from the P&L trend + AR aging.
+ * All figures are computed live; a ratio is null when its inputs don't exist.
+ */
+export async function getAnalyticsRatios(
+  fyId?: string,
+  arAging?: ArAgingRow[],
+): Promise<AnalyticsRatios> {
+  const [pnl, aging] = await Promise.all([
+    getProfitAndLoss(fyId),
+    arAging ? Promise.resolve(arAging) : getArAging(),
+  ]);
+  const income = pnl.income.total;
+
+  const ratios: AnalyticsRatios = {
+    netMargin: income !== 0 ? pnl.netProfit / income : null,
+    expenseRatio: income !== 0 ? pnl.expense.total / income : null,
+    receivableTurnover: null,
+    daysSalesOutstanding: null,
+    overdueShare: null,
+  };
+
+  const summary = summariseArAging(aging);
+  const totalAr = summary.totalOutstanding;
+  if (totalAr > 0 && income > 0) {
+    ratios.receivableTurnover = income / totalAr;
+    ratios.daysSalesOutstanding = 365 / ratios.receivableTurnover;
+  }
+  const overdue = summary.buckets["90+"] ?? 0;
+  if (totalAr > 0) ratios.overdueShare = overdue / totalAr;
+
+  return ratios;
+}
+
+export interface ArAgingView {
+  totalOutstanding: number;
+  invoiceCount: number;
+  partyCount: number;
+  buckets: { label: string; amount: number }[];
+}
+
+const AGING_LABELS = ["0-30", "31-60", "61-90", "90+"];
+
+/**
+ * AR aging arranged as an ordered bucket list for the analytics panel. Uses the
+ * same reader + summariser as the dashboard, so labels always match the RPC.
+ */
+export async function getArAgingView(branchId?: string | null): Promise<ArAgingView> {
+  const rows = await getArAging(branchId);
+  const summary = summariseArAging(rows);
+  return {
+    totalOutstanding: summary.totalOutstanding,
+    invoiceCount: summary.invoiceCount,
+    partyCount: summary.partyCount,
+    buckets: AGING_LABELS.map((label) => ({
+      label,
+      amount: summary.buckets[label] ?? 0,
+    })),
   };
 }
