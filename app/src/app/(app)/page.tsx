@@ -7,6 +7,7 @@ import { getLicensesDue, partitionLicenses } from "@/lib/data/licenses";
 import { getSalesTodayKpis, listOrders } from "@/lib/data/sales";
 import { listReorderAlerts } from "@/lib/data/stock";
 import { listCashHoldings, listStockHoldings, listTransfers } from "@/lib/data/holdings";
+import { getProductionMonitor } from "@/lib/data/production";
 import { Panel } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
   const branchId = session?.claims.branch_id ?? null;
 
   // Fetch the independent widgets concurrently.
-  const [fy, aging, inbox, licenses, kpis, openOrders, reorderAlerts, cashHoldings, stockHoldings, transfers] =
+  const [fy, aging, inbox, licenses, kpis, openOrders, reorderAlerts, cashHoldings, stockHoldings, transfers, production] =
     await Promise.all([
       getCurrentFy(),
       getArAging(branchId),
@@ -42,6 +43,7 @@ export default async function DashboardPage() {
       listCashHoldings(),
       listStockHoldings(),
       listTransfers({ limit: 50 }),
+      getProductionMonitor(),
     ]);
 
   const ar = summariseArAging(aging);
@@ -128,13 +130,77 @@ export default async function DashboardPage() {
                 Production <span className="font-normal text-ink-4">// Stage 1 → Stage 2</span>
               </span>
             }
-            actions={<Badge tone="slate" size="sm">Pending module</Badge>}
+            actions={
+              <Link href="/production" className="text-[12px] font-medium text-brand hover:underline">
+                Production Runs →
+              </Link>
+            }
             flush
           >
-            <EmptyState
-              title="Production monitor not wired yet"
-              description="Stage-1 blowing and Stage-2 filling throughput will stream here once the production module lands."
-            />
+            {production.runCount === 0 ? (
+              <EmptyState
+                title="No production recorded today"
+                description="Today's posted runs appear here — output units, input value and abnormal wastage rolled up from the ledger."
+              />
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-fill p-3">
+                    <div className="eyebrow text-ink-4">Output today</div>
+                    <div className="mt-1 font-mono text-[15px] font-bold text-ink tnum">
+                      {fmtQty(production.outputUnits)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-fill p-3">
+                    <div className="eyebrow text-ink-4">Output value</div>
+                    <div className="mt-1 font-mono text-[15px] font-bold text-ink tnum">
+                      <Money value={production.outputValue} />
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-fill p-3">
+                    <div className="eyebrow text-ink-4">Input value</div>
+                    <div className="mt-1 font-mono text-[15px] font-bold text-ink tnum">
+                      <Money value={production.inputValue} />
+                    </div>
+                  </div>
+                </div>
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Run</TH>
+                      <TH>Stage</TH>
+                      <TH numeric>Qty</TH>
+                      <TH numeric>Unit Cost</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {production.recent.map((r) => (
+                      <TR key={r.id} interactive>
+                        <TD className="p-0">
+                          <Link
+                            href={`/production/${r.id}`}
+                            className="block px-3 py-2.5 font-mono text-[12px] font-semibold text-brand"
+                          >
+                            {r.runNo}
+                          </Link>
+                        </TD>
+                        <TD>
+                          <Badge tone={r.stage === 1 ? "brand" : "grn"} size="sm">
+                            Stage {r.stage}
+                          </Badge>
+                        </TD>
+                        <TD numeric className="tnum">
+                          {fmtQty(r.outputQty)}
+                        </TD>
+                        <TD numeric className="tnum">
+                          <Money value={r.outputUnitCost} />
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+            )}
           </Panel>
 
           <Panel

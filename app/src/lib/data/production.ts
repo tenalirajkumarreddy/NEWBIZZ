@@ -7,6 +7,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { unwrap } from "./types";
+import { todayIST } from "./fy";
 
 // --------------------------------------------------------- Run list
 
@@ -169,5 +170,45 @@ export async function getRun(id: string): Promise<ProductionRunDetail | null> {
       value: Number(l.value),
       lineNo: l.line_no,
     })),
+  };
+}
+
+// --------------------------------------------------------- Dashboard monitor
+
+export interface ProductionMonitor {
+  runCount: number;
+  outputUnits: number;
+  outputValue: number;
+  inputValue: number;
+  wastageValue: number;
+  /** Count of distinct output items produced today. */
+  productCount: number;
+  recent: ProductionRunRow[];
+}
+
+/**
+ * Aggregate for the dashboard Production monitor: today's posted runs rolled up
+ * into totals, plus the most recent runs. Returns an all-zero shape when there
+ * is no activity so the widget renders an honest empty state.
+ */
+export async function getProductionMonitor(limit = 6): Promise<ProductionMonitor> {
+  const today = todayIST();
+  const runs = await listRuns({ status: "posted", limit: 50 });
+  const todays = runs.filter((r) => r.runDate === today);
+
+  const outputUnits = todays.reduce((s, r) => s + r.outputQty, 0);
+  const outputValue = todays.reduce((s, r) => s + r.outputQty * r.outputUnitCost, 0);
+  const inputValue = todays.reduce((s, r) => s + r.inputValue, 0);
+  const wastageValue = todays.reduce((s, r) => s + r.abnormalWastage, 0);
+  const products = new Set(todays.map((r) => r.outputItemId));
+
+  return {
+    runCount: todays.length,
+    outputUnits,
+    outputValue,
+    inputValue,
+    wastageValue,
+    productCount: products.size,
+    recent: runs.slice(0, limit),
   };
 }
