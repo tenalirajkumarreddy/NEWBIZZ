@@ -168,3 +168,45 @@ export async function getDocumentSignedUrl(id: string, expiresIn = 3600): Promis
   }
   return sres.data.signedUrl;
 }
+
+/**
+ * Documents attached to a single entity (e.g. all files for one invoice or
+ * licence). Used by the inline attach panel on detail pages. Returns a flat
+ * list ordered newest-first.
+ */
+export async function getDocumentsForEntity(
+  entityType: string,
+  entityId: string,
+): Promise<DocumentListItem[]> {
+  const supabase = createClient();
+  const q = (supabase as any)
+    .from("documents")
+    .select("id, title, mime_type, size_bytes, entity_type, entity_id, tags, visibility, uploaded_by, created_at")
+    .eq("entity_type", entityType)
+    .eq("entity_id", entityId)
+    .order("created_at", { ascending: false });
+
+  const rows: any[] = unwrap(await q, [], "getDocumentsForEntity");
+
+  const uploaderIds = [...new Set(rows.map((r) => r.uploaded_by).filter(Boolean))];
+  const uploaderNames: Record<string, string> = {};
+  if (uploaderIds.length) {
+    const ures = await (supabase as any).from("users").select("id, full_name").in("id", uploaderIds);
+    const us: any[] = unwrap(ures, [], "getDocumentsForEntity.users");
+    for (const u of us) uploaderNames[u.id] = u.full_name ?? "";
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    mimeType: r.mime_type,
+    sizeBytes: r.size_bytes,
+    entityType: r.entity_type,
+    entityId: r.entity_id,
+    entityLabel: `${entityType}`,
+    tags: r.tags ?? [],
+    visibility: r.visibility,
+    uploadedByName: r.uploaded_by ? uploaderNames[r.uploaded_by] ?? null : null,
+    createdAt: r.created_at,
+  }));
+}

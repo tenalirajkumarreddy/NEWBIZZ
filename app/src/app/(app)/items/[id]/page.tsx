@@ -5,6 +5,7 @@ import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { dateIST, percent } from "@/lib/format";
+import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
 const TYPE_LABEL: Record<string, string> = {
   raw_material: "Raw material",
@@ -68,6 +69,8 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
         <div className="eyebrow text-ink-4">Added</div>
         <div className="mt-1 text-[13px] text-ink-2">{dateIST(item.createdAt)}</div>
       </Card>
+
+      <DocumentAttachPanel entityType="item" entityId={item.id} entityLabel={item.sku} />
     </div>
   );
 }

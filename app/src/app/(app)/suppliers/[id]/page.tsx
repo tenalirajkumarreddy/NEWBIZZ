@@ -7,6 +7,7 @@ import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { SupplierAvlPanel } from "./SupplierAvlPanel";
 import { SupplierOpeningBalance } from "./SupplierOpeningBalance";
+import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 import { SUPPLIER_KINDS } from "@/lib/constants";
 
 const KIND_LABEL: Record<string, string> = Object.fromEntries(SUPPLIER_KINDS.map((k) => [k.value, k.label]));
@@ -53,6 +54,9 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
 
       {/* Opening balance */}
       <SupplierOpeningBalance supplierId={supplier.id} hasOutstanding={supplier.outstanding > 0} />
+
+      {/* Documents */}
+      <DocumentAttachPanel entityType="supplier" entityId={supplier.id} entityLabel={supplier.code} />
 
       {(supplier.addressLine || supplier.email) && (
         <Card className="p-4">

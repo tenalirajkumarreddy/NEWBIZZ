@@ -6,6 +6,7 @@ import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { money } from "@/lib/format";
 import { ReverseRunDialog } from "./ReverseRunDialog";
+import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
 export const metadata = { title: "Production Run — NEWBIZZ" };
 
@@ -122,6 +123,8 @@ export default async function RunDetailPage(props: { params: Promise<{ id: strin
           <span>{new Date(run.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</span>
         </div>
       </Card>
+
+      <DocumentAttachPanel entityType="production_run" entityId={run.id} entityLabel={run.runNo} />
     </div>
   );
 }

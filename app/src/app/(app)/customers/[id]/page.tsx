@@ -11,6 +11,7 @@ import { PartyLedger } from "@/components/shared/PartyLedger";
 import { count as fmtCount, money, percent } from "@/lib/format";
 import { CustomerProfileActions } from "./CustomerProfileActions";
 import { StoresPanel } from "./StoresPanel";
+import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
 const BUCKET_LABEL: Record<string, string> = {
   current: "Not due",
@@ -145,6 +146,8 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
           outstanding: customer.outstanding,
         }}
       />
+
+      <DocumentAttachPanel entityType="customer" entityId={customer.id} entityLabel={customer.code} />
     </div>
   );
 }

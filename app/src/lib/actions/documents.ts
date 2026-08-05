@@ -3,9 +3,9 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getDocuments, getDocumentSignedUrl } from "@/lib/data/documents";
+import { getDocuments, getDocumentSignedUrl, getDocumentsForEntity } from "@/lib/data/documents";
 import { ALLOWED_MIME_PREFIXES, MAX_FILE_BYTES } from "@/lib/data/documents";
-import type { DocumentsPage } from "@/lib/data/documents";
+import type { DocumentsPage, DocumentListItem } from "@/lib/data/documents";
 
 export type UploadError = { field?: string; message: string };
 export type UploadResult =
@@ -147,4 +147,33 @@ export async function searchDocuments(opts: {
 }): Promise<{ ok: boolean; page?: DocumentsPage; error?: string }> {
   const page = await getDocuments(opts);
   return { ok: true, page };
+}
+
+/** Attachments for a single entity (inline panel on detail pages). */
+export async function listEntityDocuments(
+  entityType: string,
+  entityId: string,
+): Promise<{ ok: boolean; items?: DocumentListItem[]; error?: string }> {
+  if (!entityType || !entityId) return { ok: false, error: "Missing entity reference." };
+  const items = await getDocumentsForEntity(entityType, entityId);
+  return { ok: true, items };
+}
+
+/**
+ * Upload a document bound to a specific entity (inline panel flow). Identity
+ * is locked to the passed entityType/entityId rather than client-supplied.
+ */
+export async function uploadEntityDocument(
+  formData: FormData,
+  entityType: string,
+  entityId: string,
+): Promise<UploadResult> {
+  if (!entityType || !entityId) {
+    return { ok: false, errors: [{ message: "This document must belong to a record." }] };
+  }
+  // Bind the fixed entity reference so the client can't spoof the attachment.
+  formData.set("entityType", entityType);
+  formData.set("entityId", entityId);
+  const res = await uploadDocument(formData);
+  return res;
 }

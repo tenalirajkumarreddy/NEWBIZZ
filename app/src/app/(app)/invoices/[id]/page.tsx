@@ -9,6 +9,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty, percent } from "@/lib/format";
 import { SalesReturnPanel } from "./SalesReturnPanel";
 import { InvoiceCorrectionPanel } from "./InvoiceCorrectionPanel";
+import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
 // Invoice detail — the value document. Header facts, GST-broken-out lines, and
 // the tax summary (CGST/SGST or IGST by place of supply, plus round-off). Money
@@ -150,6 +151,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           amountPaid={inv.amountPaid}
         />
       )}
+
+      <DocumentAttachPanel entityType="invoice" entityId={inv.id} entityLabel={inv.invoice_no} />
 
       <p className="text-[11px] text-ink-4">
         {inv.isOfficial

@@ -13,6 +13,7 @@ import { FleetActions } from "./FleetActions";
 import { createClient } from "@/lib/supabase/server";
 import PendingRefillsSection from "./PendingRefillsSection";
 import VehicleDetailClient from "./VehicleDetailClient";
+import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
 export const metadata = { title: "Vehicle Detail — NEWBIZZ" };
 export const dynamic = "force-dynamic";
@@ -204,6 +205,8 @@ export default async function VehicleDetailPage(props: { params: Promise<{ id: s
           </Table>
         )}
       </Panel>
+
+      <DocumentAttachPanel entityType="vehicle" entityId={vehicle.id} entityLabel={vehicle.regNo} />
     </div>
   );
 }
