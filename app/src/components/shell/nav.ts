@@ -77,6 +77,7 @@ export const NAV: NavGroup[] = [
       { id: "trialbalance", label: "Trial Balance", href: "/trial-balance", perm: "report.view_all" },
       { id: "reports", label: "P&L / Balance Sheet", href: "/reports", perm: "report.view_all" },
       { id: "bank", label: "Bank Reconciliation", href: "/bank", perm: "bank.reconcile" },
+      { id: "documents", label: "Documents", href: "/documents" },
     ],
   },
   {
