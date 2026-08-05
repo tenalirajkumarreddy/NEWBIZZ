@@ -216,3 +216,15 @@ begin
             jsonb_build_object('run_no', v_run.run_no, 'reason', p_reason), v_actor);
   return v_new;
 end $$;
+
+-- ---------------------------------------------------------------------
+-- Lock the definer RPCs to authenticated (the app's cookie JWT). Functions
+-- default to PUBLIC (anon) EXECUTE; revoke that and re-grant authenticated so
+-- the RPCs are not callable by unauthenticated callers (security-hardening).
+-- ---------------------------------------------------------------------
+revoke execute on function upsert_job_card(jsonb)            from public;
+revoke execute on function set_job_card_status(uuid, text, uuid) from public;
+revoke execute on function reverse_production_run(uuid, text) from public;
+grant  execute on function upsert_job_card(jsonb)            to authenticated;
+grant  execute on function set_job_card_status(uuid, text, uuid) to authenticated;
+grant  execute on function reverse_production_run(uuid, text) to authenticated;
