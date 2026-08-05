@@ -4455,6 +4455,112 @@ export type Database = {
           },
         ]
       }
+      production_job_cards: {
+        Row: {
+          assigned_to: string | null
+          branch_id: string
+          card_date: string
+          created_at: string
+          created_by: string
+          device_id: string | null
+          fy_id: string
+          id: string
+          instructions: string | null
+          job_no: string
+          output_item_id: string
+          planned_end_at: string | null
+          planned_start_at: string | null
+          run_id: string | null
+          stage: number
+          status: Database["public"]["Enums"]["job_card_status"]
+          target_qty: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          branch_id: string
+          card_date: string
+          created_at?: string
+          created_by: string
+          device_id?: string | null
+          fy_id: string
+          id?: string
+          instructions?: string | null
+          job_no: string
+          output_item_id: string
+          planned_end_at?: string | null
+          planned_start_at?: string | null
+          run_id?: string | null
+          stage: number
+          status?: Database["public"]["Enums"]["job_card_status"]
+          target_qty: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          branch_id?: string
+          card_date?: string
+          created_at?: string
+          created_by?: string
+          device_id?: string | null
+          fy_id?: string
+          id?: string
+          instructions?: string | null
+          job_no?: string
+          output_item_id?: string
+          planned_end_at?: string | null
+          planned_start_at?: string | null
+          run_id?: string | null
+          stage?: number
+          status?: Database["public"]["Enums"]["job_card_status"]
+          target_qty?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_job_cards_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_job_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_job_cards_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "production_device_config"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_job_cards_fy_id_fkey"
+            columns: ["fy_id"]
+            isOneToOne: false
+            referencedRelation: "financial_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_job_cards_output_item_id_fkey"
+            columns: ["output_item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_job_cards_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "production_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_logs: {
         Row: {
           device_id: string
@@ -7814,6 +7920,10 @@ export type Database = {
         Args: { p_entry_id: string; p_reason?: string }
         Returns: string
       }
+      reverse_production_run: {
+        Args: { p_reason: string; p_run_id: string }
+        Returns: string
+      }
       revoke_user_permission: {
         Args: { p_code: string; p_user: string }
         Returns: undefined
@@ -7865,6 +7975,10 @@ export type Database = {
           p_class: Database["public"]["Enums"]["costing_class"]
           p_code: string
         }
+        Returns: undefined
+      }
+      set_job_card_status: {
+        Args: { p_id: string; p_run_id?: string; p_status: string }
         Returns: undefined
       }
       set_notification_preference: {
@@ -7924,6 +8038,7 @@ export type Database = {
         Returns: string
       }
       upsert_bom: { Args: { p_header: Json; p_lines: Json }; Returns: string }
+      upsert_job_card: { Args: { p_card: Json }; Returns: string }
       vehicle_running_cost: {
         Args: { p_from?: string; p_to?: string; p_vehicle: string }
         Returns: number
@@ -8233,6 +8348,7 @@ export type Database = {
         | "finished_good"
         | "consumable"
         | "service"
+      job_card_status: "planned" | "in_progress" | "completed" | "cancelled"
       lead_status: "new" | "contacted" | "qualified" | "converted" | "lost"
       license_status: "active" | "expired" | "renewal_in_progress"
       license_type:
@@ -8519,6 +8635,7 @@ export const Constants = {
         "consumable",
         "service",
       ],
+      job_card_status: ["planned", "in_progress", "completed", "cancelled"],
       lead_status: ["new", "contacted", "qualified", "converted", "lost"],
       license_status: ["active", "expired", "renewal_in_progress"],
       license_type: [

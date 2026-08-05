@@ -8,6 +8,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { unwrap } from "./types";
 import { todayIST } from "./fy";
+import type { Database } from "@/lib/supabase/database.types";
 
 // --------------------------------------------------------- Run list
 
@@ -171,6 +172,115 @@ export async function getRun(id: string): Promise<ProductionRunDetail | null> {
       lineNo: l.line_no,
     })),
   };
+}
+
+// --------------------------------------------------------- Job cards
+
+export type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
+
+export interface JobCardRow {
+  id: string;
+  jobNo: string;
+  cardDate: string;
+  stage: number;
+  outputItemId: string;
+  outputSku: string;
+  outputName: string;
+  targetQty: number;
+  deviceId: string | null;
+  deviceLabel: string | null;
+  assignedToId: string | null;
+  assignedToName: string | null;
+  plannedStartAt: string | null;
+  plannedEndAt: string | null;
+  instructions: string | null;
+  status: JobCardStatus;
+  runId: string | null;
+  runNo: string | null;
+  createdAt: string;
+}
+
+type RawJobCard = {
+  id: string;
+  job_no: string;
+  card_date: string;
+  stage: number;
+  output_item_id: string;
+  target_qty: number;
+  device_id: string | null;
+  assigned_to: string | null;
+  planned_start_at: string | null;
+  planned_end_at: string | null;
+  instructions: string | null;
+  status: JobCardStatus;
+  run_id: string | null;
+  created_at: string;
+  output_item: { sku: string; name: string } | null;
+  device: { device_id: string } | null;
+  assignee: { full_name: string } | null;
+  run: { run_no: string } | null;
+};
+
+const JOB_CARD_SELECT =
+  "id, job_no, card_date, stage, output_item_id, target_qty, device_id, assigned_to, planned_start_at, planned_end_at, instructions, status, run_id, created_at, " +
+  "output_item:items!production_job_cards_output_item_id_fkey(sku, name), " +
+  "device:production_device_config!production_job_cards_device_id_fkey(device_id), " +
+  "assignee:users!production_job_cards_assigned_to_fkey(full_name), " +
+  "run:production_runs!production_job_cards_run_id_fkey(run_no)";
+
+function mapJobCard(r: RawJobCard): JobCardRow {
+  return {
+    id: r.id,
+    jobNo: r.job_no,
+    cardDate: r.card_date,
+    stage: r.stage,
+    outputItemId: r.output_item_id,
+    outputSku: r.output_item?.sku ?? "—",
+    outputName: r.output_item?.name ?? "—",
+    targetQty: Number(r.target_qty),
+    deviceId: r.device_id,
+    deviceLabel: r.device?.device_id ?? null,
+    assignedToId: r.assigned_to,
+    assignedToName: r.assignee?.full_name ?? null,
+    plannedStartAt: r.planned_start_at,
+    plannedEndAt: r.planned_end_at,
+    instructions: r.instructions,
+    status: r.status,
+    runId: r.run_id,
+    runNo: r.run?.run_no ?? null,
+    createdAt: r.created_at,
+  };
+}
+
+export async function listJobCards(opts: {
+  from?: string;
+  to?: string;
+  status?: JobCardStatus;
+} = {}): Promise<JobCardRow[]> {
+  const supabase = createClient();
+  let q = supabase
+    .from("production_job_cards")
+    .select(JOB_CARD_SELECT)
+    .order("card_date", { ascending: true })
+    .order("job_no", { ascending: true });
+  if (opts.from) q = q.gte("card_date", opts.from);
+  if (opts.to) q = q.lte("card_date", opts.to);
+  if (opts.status) q = q.eq("status", opts.status);
+
+  const rows = unwrap(await q.returns<RawJobCard[]>(), [] as RawJobCard[], "listJobCards");
+  return rows.map(mapJobCard);
+}
+
+export async function getJobCard(id: string): Promise<JobCardRow | null> {
+  const supabase = createClient();
+  const res = await supabase
+    .from("production_job_cards")
+    .select(JOB_CARD_SELECT)
+    .eq("id", id)
+    .maybeSingle()
+    .returns<RawJobCard | null>();
+  const row = unwrap(res, null as RawJobCard | null, "getJobCard");
+  return row ? mapJobCard(row) : null;
 }
 
 // --------------------------------------------------------- Dashboard monitor

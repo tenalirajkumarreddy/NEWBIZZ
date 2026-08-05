@@ -104,6 +104,10 @@ const STATUS_TONE: Record<string, Tone> = {
   missing_in_2b: "amb",
   pending_approval: "amb",
   rejected: "red",
+  // job_card_status
+  planned: "brand",
+  in_progress: "amb",
+  completed: "grn",
   // notification_severity
   info: "brand",
   success: "grn",

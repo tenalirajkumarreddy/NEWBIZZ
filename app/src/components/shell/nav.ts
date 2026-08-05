@@ -62,6 +62,7 @@ export const NAV: NavGroup[] = [
     items: [
       { id: "bom", label: "BOM / Recipes", href: "/bom", perm: "bom.view" },
       { id: "production", label: "Production Runs", href: "/production", perm: "production.run" },
+      { id: "production-jobs", label: "Jobs", href: "/production/jobs", perm: "production.run" },
       { id: "costing", label: "Process Costing", href: "/costing", perm: "report.view_all" },
     ],
   },

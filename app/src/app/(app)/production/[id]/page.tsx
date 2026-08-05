@@ -5,6 +5,7 @@ import { Panel, Card, SectionHeading } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { money } from "@/lib/format";
+import { ReverseRunDialog } from "./ReverseRunDialog";
 
 export const metadata = { title: "Production Run — NEWBIZZ" };
 
@@ -35,6 +36,16 @@ export default async function RunDetailPage(props: { params: Promise<{ id: strin
           {" "}· <StatusBadge status={run.status} size="sm" />
         </p>
       </div>
+
+      {run.status === "posted" && (
+        <Card className="flex items-center justify-between gap-3 p-4">
+          <p className="text-[12px] leading-relaxed text-ink-4">
+            This run is <strong>posted</strong> and its stock + journal are live. Reverse it to
+            restore inputs and remove the output with a compensating journal entry.
+          </p>
+          <ReverseRunDialog runId={run.id} runNo={run.runNo} />
+        </Card>
+      )}
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-4">
