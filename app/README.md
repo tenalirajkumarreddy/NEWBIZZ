@@ -9,6 +9,50 @@ is built before any commerce, because every sale, stock move, and production ent
 
 ---
 
+## Live status & production runbook
+
+**Live project:** `wmpxwpubfxpexybqnynz` (ap-southeast-1). All migrations `0001` → `0093` are
+applied. Build + typecheck are green. The app is deployed to Vercel from `main`.
+
+### Shipped modules (beyond the README table below, which is historical)
+
+Orders + delivery challans, sales/invoicing (official + unofficial, GST + e-invoice/e-way fields),
+sales returns, collections & **payment intents** (portal), credit notes + schemes, customer
+portal (`/portal`, migration 0091), pricing/rate master, credit limits, reorder alerts,
+purchasing (PO → GRN → bills, AVL/debit notes, 3-way), supplier payments, GSTR-2B ITC,
+BOM/alternate groups, production runs + **job cards** + reversal, process costing,
+bank reconciliation + cheques + credit-card accounts, **Documents Vault** (private Storage),
+licenses, assets/depreciation, loans/EMI, expenses/petty cash, fleet (vehicles/trips/fuel + GPS),
+CRM, targets & commissions, payroll, notifications (+ preferences), WhatsApp Phase 1/2
+(receiver, inbox, templates, value-event dispatch worker), admin (users/roles/overrides/audit/
+settings/production devices), global search, and the production counter (ESP32) integration.
+
+### Manual dashboard steps still required before go-live
+
+These cannot be done from the repo — they are Supabase Auth settings:
+
+1. **Enable the Send SMS Hook** (Auth → Hooks → Send SMS) pointing at the deployed
+   `send-sms-hook` Edge Function — required for phone-OTP login.
+2. **Enable the Custom Access Token Hook** (Auth → Hooks → Customize Access Token) — injects
+   `roles`/`perms`/`user_status`/`token_version`/`portal_customer_id` claims. Without it, the
+   portal and permission gating will not work.
+3. Enable **compromised-password check** (Auth → Security) and enforce **MFA** for admin/manager.
+4. WhatsApp: dry-run is on by default; flip it off in Admin → WhatsApp once Meta approves
+   templates. Set `META_APP_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` in Vercel.
+
+### Scheduled jobs (Vercel cron, `vercel.json`)
+
+| Path | Schedule | Purpose |
+|---|---|---|
+| `/api/cron/notifications` | daily 02:15 UTC | license expiry / stale transfers / EMIs due |
+| `/api/cron/whatsapp` | every 10 min | WhatsApp dispatch worker (drains the queue) |
+| `/api/intangles/poll` | every 5 min | Intangles telemetry poll → `vehicle_gps_logs` + auto trips/fuel refills |
+
+> Note: sub-daily cron intervals require a Vercel **Pro** plan (Hobby is daily-only). Both routes
+> are guarded by `Authorization: Bearer $CRON_SECRET`.
+
+---
+
 ## The Nine Invariants (never violate these)
 
 1. `journal_lines` is the **only** source of truth for money and stock *value*.
@@ -42,6 +86,12 @@ app/
 ```
 
 ## Migration order (Phases 0–4)
+
+> The table below is the **historical** Phase 0–4 build record (0001–0035 + the smoke set).
+> Migrations `0036` → `0093` (purchasing refinements, opening-stock, holdings, GSTR-2B, manual
+> vouchers, assets/loans, expenses, notifications, WhatsApp, Documents, job cards, customer
+> portal, payment intents, perf/security hardening) are not individually listed here — apply them
+> in filename order; each carries its own header comment.
 
 | File | Contents |
 |---|---|

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCustomer, getCustomerActivity } from "@/lib/data/customers";
 import { listPriceLists } from "@/lib/data/catalog";
+import { getCustomerPortalStatus } from "@/lib/data/portal";
+import { listPaymentIntents, listAllStores, listPaymentMethods } from "@/lib/data/collections";
 import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Kpi } from "@/components/ui";
@@ -11,7 +13,9 @@ import { PartyLedger } from "@/components/shared/PartyLedger";
 import { count as fmtCount, money, percent } from "@/lib/format";
 import { CustomerProfileActions } from "./CustomerProfileActions";
 import { StoresPanel } from "./StoresPanel";
+import { PortalAccessPanel } from "@/components/portal/PortalAccessPanel";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
+import { PaymentIntentsPanel } from "@/app/(app)/receipts/PaymentIntentsPanel";
 
 const BUCKET_LABEL: Record<string, string> = {
   current: "Not due",
@@ -24,9 +28,13 @@ const BUCKET_LABEL: Record<string, string> = {
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const customer = await getCustomer(params.id);
   if (!customer) notFound();
-  const [activity, priceLists] = await Promise.all([
+  const [activity, priceLists, portal, intents, stores, paymentMethods] = await Promise.all([
     getCustomerActivity(customer.id),
     listPriceLists(),
+    getCustomerPortalStatus(customer.id),
+    listPaymentIntents({ customerId: customer.id }),
+    listAllStores(),
+    listPaymentMethods(),
   ]);
 
   return (
@@ -113,9 +121,17 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         </div>
 
-        {/* Right column — stores with card/table toggle */}
+        {/* Right column — portal access + stores with card/table toggle */}
         <div>
-          <StoresPanel customerId={customer.id} stores={customer.stores} priceLists={priceLists} />
+          <PortalAccessPanel
+            customerId={customer.id}
+            defaultPhone={customer.phone}
+            status={portal?.status ?? null}
+            contactPhone={portal?.contactPhone ?? null}
+          />
+          <div className="mt-5">
+            <StoresPanel customerId={customer.id} stores={customer.stores} priceLists={priceLists} />
+          </div>
         </div>
 
       </div>
@@ -148,6 +164,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
       />
 
       <DocumentAttachPanel entityType="customer" entityId={customer.id} entityLabel={customer.code} />
+
+      {intents.length > 0 && (
+        <PaymentIntentsPanel intents={intents} stores={stores} paymentMethods={paymentMethods} />
+      )}
     </div>
   );
 }

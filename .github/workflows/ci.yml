@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Typecheck · Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      # Publishable values (RLS-scoped, safe to ship). Local dev copies them from
+      # .env.local.example; CI just needs a valid Supabase config to build the
+      # App Router. Never put service-role / CRON_SECRET / META secrets here.
+      NEXT_PUBLIC_SUPABASE_URL: https://wmpxwpubfxpexybqnynz.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_dhKtU7rftb0tw0z10g7BBg_IXDq6n_4
+      NEXT_PUBLIC_DEFAULT_COUNTRY_CODE: "91"
+      APP_TIMEZONE: Asia/Kolkata
+      APP_DEFAULT_LOCALE: en
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

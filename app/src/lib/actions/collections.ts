@@ -64,3 +64,60 @@ export async function recordReceipt(
   revalidatePath("/");
   return { ok: true, receiptId: res.data };
 }
+
+export interface ReconcileIntentInput {
+  intent_id: string;
+  store_id: string;
+  method_id: string;
+  receipt_date?: string;
+  deposit_account?: string;
+}
+
+/**
+ * Convert a customer's portal "I paid" suggestion into a posted receipt.
+ * The RPC pulls customer/amount from the intent row; the caller only picks
+ * where it was collected and the instrument.
+ */
+export async function reconcilePaymentIntent(
+  input: ReconcileIntentInput,
+): Promise<ActionResult<{ receiptId: string }>> {
+  if (!input.intent_id) return { ok: false, error: "Intent missing." };
+  if (!input.store_id) return { ok: false, error: "Select the store receiving payment." };
+  if (!input.method_id) return { ok: false, error: "Pick how the money came in." };
+
+  const supabase = createClient();
+  const res = await supabase.rpc("reconcile_payment_intent", {
+    p_intent_id: input.intent_id,
+    p_store_id: input.store_id,
+    p_method_id: input.method_id,
+    ...(input.receipt_date?.trim() ? { p_receipt_date: input.receipt_date.trim() } : {}),
+    ...(input.deposit_account?.trim() ? { p_deposit_account: input.deposit_account.trim() } : {}),
+  });
+
+  if (res.error || !res.data) return fail("reconcilePaymentIntent", res.error?.message);
+
+  revalidatePath("/receipts");
+  revalidatePath("/invoices");
+  revalidatePath("/sales");
+  revalidatePath("/");
+  return { ok: true, receiptId: res.data };
+}
+
+/** Void a customer's pending "I paid" suggestion (no ledger impact). */
+export async function voidPaymentIntent(
+  intentId: string,
+  reason?: string,
+): Promise<ActionResult> {
+  if (!intentId) return { ok: false, error: "Intent missing." };
+
+  const supabase = createClient();
+  const res = await supabase.rpc("void_payment_intent", {
+    p_intent_id: intentId,
+    ...(reason?.trim() ? { p_reason: reason.trim() } : {}),
+  });
+
+  if (res.error) return fail("voidPaymentIntent", res.error?.message);
+
+  revalidatePath("/receipts");
+  return { ok: true };
+}

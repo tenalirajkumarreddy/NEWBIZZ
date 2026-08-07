@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listReceipts, listAllStores, listPaymentMethods } from "@/lib/data/collections";
+import { listReceipts, listAllStores, listPaymentMethods, listPaymentIntents } from "@/lib/data/collections";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -9,16 +9,18 @@ import { Money } from "@/components/ui/Money";
 import { count as fmtCount } from "@/lib/format";
 import { ReceiptsTable } from "./ReceiptsTable";
 import { RecordPaymentAction } from "./RecordPaymentAction";
+import { PaymentIntentsPanel } from "./PaymentIntentsPanel";
 
 // Collections — the receipts register (§4.6). Every rupee in lands here:
 // Dr cash/bank/custody, Cr AR. Allocated = knocked down to invoices;
 // the remainder sits on-account against the customer.
 export default async function ReceiptsPage() {
-  const [receipts, fy, stores, paymentMethods] = await Promise.all([
+  const [receipts, fy, stores, paymentMethods, intents] = await Promise.all([
     listReceipts({ limit: 200 }),
     getCurrentFy(),
     listAllStores(),
     listPaymentMethods(),
+    listPaymentIntents(),
   ]);
 
   const posted = receipts.filter((r) => r.status === "posted");
@@ -28,6 +30,8 @@ export default async function ReceiptsPage() {
   const cashCustody = posted
     .filter((r) => r.depositAccount === "1110" || r.depositAccount === "2140")
     .reduce((s, r) => s + r.amount, 0);
+  const pendingIntents = intents.filter((i) => i.status === "pending");
+  const pendingIntentAmount = pendingIntents.reduce((s, i) => s + i.amount, 0);
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
@@ -64,6 +68,10 @@ export default async function ReceiptsPage() {
           sub="Not yet in the bank"
         />
       </div>
+
+      {intents.length > 0 && (
+        <PaymentIntentsPanel intents={intents} stores={stores} paymentMethods={paymentMethods} />
+      )}
 
       <Panel flush>
         {receipts.length === 0 ? (

@@ -15,7 +15,12 @@
 // =====================================================================
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { readClaimsFromAccessToken, isActive } from "@/lib/auth/claims";
+import {
+  readClaimsFromAccessToken,
+  isActive,
+  isPortalPrincipal,
+  type AppClaims,
+} from "@/lib/auth/claims";
 import type { Database } from "./database.types";
 
 // Shape of a single cookie the ssr client asks us to persist.
@@ -24,6 +29,11 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 // Routes reachable without an active session.
 const PUBLIC_PREFIXES = ["/login", "/auth"];
 const HOLDING_ROUTE = "/pending";
+
+// Portal surface. Reachable signed-out (login) and by signed-in portal principals
+// only; internal users are bounced away. `/portal` itself and `/portal/login` are
+// the entry points shown before auth.
+const PORTAL_PREFIX = "/portal";
 
 // API routes are self-guarded at the handler (CRON_SECRET for the cron/poller
 // routes, Meta signature for the WhatsApp webhook) and are invoked WITHOUT a
@@ -35,8 +45,18 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
+function isPortal(pathname: string): boolean {
+  return pathname === PORTAL_PREFIX || pathname.startsWith(PORTAL_PREFIX + "/");
+}
+
 function isSelfGuardedApi(pathname: string): boolean {
   return pathname === API_PREFIX || pathname.startsWith(API_PREFIX + "/");
+}
+
+// Pick where a signed-in principal lands. Internal (active) users go to the main
+// app; portal principals go to the portal.
+function homeFor(claims: AppClaims): string {
+  return isPortalPrincipal(claims) ? PORTAL_PREFIX : "/";
 }
 
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
@@ -83,16 +103,38 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // authenticate in-handler. Skip the whole session gate for them.
   if (isSelfGuardedApi(pathname)) return response;
 
-  // Signed out: force to /login for anything non-public.
+  // Signed out: force to /login for anything non-public. Portal surface is
+  // public (renders its own login), so a signed-out visitor may see it.
   if (!user) {
-    if (isPublic(pathname)) return response;
+    if (isPublic(pathname) || isPortal(pathname)) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Signed in but already on an auth page: bounce to the right home.
+  // A portal principal must never enter the internal app, and an internal user
+  // must never open the portal. Both get redirected to their own home.
+  if (isPortalPrincipal(claims)) {
+    if (!isPortal(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = PORTAL_PREFIX;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    return response;
+  }
+
+  // Not a portal principal.
+  if (isPortal(pathname)) {
+    // Signed-in internal user on the portal surface: send to the main app.
+    const url = request.nextUrl.clone();
+    url.pathname = isActive(claims) ? "/" : HOLDING_ROUTE;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // Signed in but already on an internal auth page: bounce to the right home.
   if (isPublic(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = isActive(claims) ? "/" : HOLDING_ROUTE;

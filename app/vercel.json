@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/notifications",
       "schedule": "15 2 * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/intangles/poll",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

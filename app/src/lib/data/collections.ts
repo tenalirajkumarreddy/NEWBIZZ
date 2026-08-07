@@ -208,6 +208,66 @@ export async function listOpenInvoices(customerId: string): Promise<OpenInvoiceR
   }));
 }
 
+// ---- payment intents (portal "I paid" suggestions) ----
+
+export interface PaymentIntentRow {
+  id: string;
+  amount: number;
+  mode: string;
+  reference: string | null;
+  note: string | null;
+  status: "pending" | "matched" | "void";
+  createdAt: string;
+  customerId: string | null;
+  customerName: string | null;
+  matchedReceiptId: string | null;
+  matchedReceiptNo: string | null;
+}
+
+const INTENT_SELECT =
+  "id, amount, mode, reference, note, status, created_at, customer_id, matched_receipt_id, " +
+  "customer:customers(name), receipt:customer_receipts!matched_receipt_id(receipt_no)";
+
+type RawIntent = {
+  id: string;
+  amount: number;
+  mode: string;
+  reference: string | null;
+  note: string | null;
+  status: "pending" | "matched" | "void";
+  created_at: string;
+  customer_id: string | null;
+  matched_receipt_id: string | null;
+  customer: { name: string } | null;
+  receipt: { receipt_no: string } | null;
+};
+
+/**
+ * Payment intents visible to staff (RLS: receipt.record/accounting.manage only).
+ * Newest first. Use opts.status to filter to a single status.
+ */
+export async function listPaymentIntents(opts: { status?: string; customerId?: string } = {}): Promise<PaymentIntentRow[]> {
+  const supabase = createClient();
+  let q = supabase.from("payment_intents").select(INTENT_SELECT);
+  if (opts.status) q = q.eq("status", opts.status);
+  if (opts.customerId) q = q.eq("customer_id", opts.customerId);
+  const res = await q.order("created_at", { ascending: false }).returns<RawIntent[]>();
+  const rows = unwrap(res, [] as RawIntent[], "listPaymentIntents");
+  return rows.map((r) => ({
+    id: r.id,
+    amount: Number(r.amount),
+    mode: r.mode,
+    reference: r.reference,
+    note: r.note,
+    status: r.status,
+    createdAt: r.created_at,
+    customerId: r.customer_id,
+    customerName: r.customer?.name ?? null,
+    matchedReceiptId: r.matched_receipt_id,
+    matchedReceiptNo: r.receipt?.receipt_no ?? null,
+  }));
+}
+
 /**
  * Resolve an invoice to its paying customer — used by the ?invoice= deep link
  * from the Sales Desk "Payment" button to preselect customer + allocation.

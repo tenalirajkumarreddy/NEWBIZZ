@@ -1637,6 +1637,51 @@ export type Database = {
           },
         ]
       }
+      customer_portal: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_portal_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_portal_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_receipts: {
         Row: {
           allocated_amount: number
@@ -4148,6 +4193,60 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_intents: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          matched_receipt_id: string | null
+          mode: string
+          note: string | null
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          matched_receipt_id?: string | null
+          mode: string
+          note?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          matched_receipt_id?: string | null
+          mode?: string
+          note?: string | null
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_intents_matched_receipt_id_fkey"
+            columns: ["matched_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "customer_receipts"
             referencedColumns: ["id"]
           },
         ]
@@ -7452,6 +7551,14 @@ export type Database = {
         }
         Returns: string
       }
+      admin_enable_customer_portal: {
+        Args: {
+          p_active?: boolean
+          p_contact_phone?: string
+          p_customer_id: string
+        }
+        Returns: string
+      }
       admin_revoke_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -7706,6 +7813,7 @@ export type Database = {
         Returns: string
       }
       invoice_outstanding: { Args: { p_invoice: string }; Returns: number }
+      is_portal_principal: { Args: never; Returns: boolean }
       license_expiry_scan: {
         Args: never
         Returns: {
@@ -7788,6 +7896,124 @@ export type Database = {
       place_order: { Args: { p_header: Json; p_lines: Json }; Returns: string }
       place_purchase_order: {
         Args: { p_header: Json; p_lines: Json }
+        Returns: string
+      }
+      portal_catalog: {
+        Args: never
+        Returns: {
+          default_price: number
+          gst_rate: number
+          id: string
+          name: string
+          qty_on_hand: number
+          sku: string
+        }[]
+      }
+      portal_create_order: {
+        Args: { p_lines: Json; p_notes?: string; p_store_id: string }
+        Returns: string
+      }
+      portal_customer_id: { Args: never; Returns: string }
+      portal_my_documents: {
+        Args: never
+        Returns: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          mime_type: string
+          size_bytes: number
+          title: string
+          uploaded_by: string
+          visibility: string
+        }[]
+      }
+      portal_my_invoices: {
+        Args: { p_status?: string }
+        Returns: {
+          amount_paid: number
+          due: number
+          grand_total: number
+          id: string
+          invoice_date: string
+          invoice_no: string
+          status: string
+          store_code: string
+          store_name: string
+          tax_total: number
+          taxable_amount: number
+        }[]
+      }
+      portal_my_orders: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          notes: string
+          order_date: string
+          order_no: string
+          status: string
+          store_code: string
+          store_name: string
+        }[]
+      }
+      portal_my_pay_intents: {
+        Args: never
+        Returns: {
+          amount: number
+          created_at: string
+          id: string
+          mode: string
+          reference: string
+          status: string
+        }[]
+      }
+      portal_my_profile: {
+        Args: never
+        Returns: {
+          code: string
+          customer_id: string
+          email: string
+          gstin: string
+          name: string
+          outstanding: number
+          phone: string
+          store_count: number
+        }[]
+      }
+      portal_my_statement: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          invoice_no: string
+          receipt_no: string
+          reference_id: string
+          reference_type: string
+          store_name: string
+          txn_type: string
+        }[]
+      }
+      portal_my_stores: {
+        Args: never
+        Returns: {
+          city: string
+          code: string
+          id: string
+          is_primary: boolean
+          kind: Database["public"]["Enums"]["customer_kind"]
+          name: string
+        }[]
+      }
+      portal_submit_pay_intent: {
+        Args: {
+          p_amount: number
+          p_mode: string
+          p_note?: string
+          p_reference?: string
+        }
         Returns: string
       }
       post_bill_from_grn: {
@@ -7887,6 +8113,16 @@ export type Database = {
         Returns: number
       }
       reconcile_gstr2b: { Args: { p_import: string }; Returns: number }
+      reconcile_payment_intent: {
+        Args: {
+          p_deposit_account?: string
+          p_intent_id: string
+          p_method_id: string
+          p_receipt_date?: string
+          p_store_id: string
+        }
+        Returns: string
+      }
       record_expense: { Args: { p_header: Json }; Returns: string }
       record_purchase_return: {
         Args: { p_lines: Json; p_opts?: Json; p_supplier: string }
@@ -7911,6 +8147,7 @@ export type Database = {
         Returns: string
       }
       resolve_price_list: { Args: { p_store: string }; Returns: string }
+      resolve_price_list_for_portal: { Args: never; Returns: string }
       resolve_recipients: { Args: { p_code: string }; Returns: string[] }
       respond_transfer: {
         Args: { p_accept: boolean; p_id: string }
@@ -7993,6 +8230,7 @@ export type Database = {
         Args: { p_code: string; p_role_code: string; p_scope?: string }
         Returns: undefined
       }
+      stock_qty_for_portal: { Args: { p_item: string }; Returns: number }
       store_outstanding: { Args: { p_store: string }; Returns: number }
       supplier_opening_balance: {
         Args: {
@@ -8012,6 +8250,7 @@ export type Database = {
           target_amount: number
         }[]
       }
+      to_e164_storage: { Args: { p_phone: string }; Returns: string }
       topup_petty_cash: {
         Args: { p_amount: number; p_date?: string; p_note?: string }
         Returns: string
@@ -8046,6 +8285,10 @@ export type Database = {
       void_invoice: {
         Args: { p_invoice: string; p_reason?: string }
         Returns: string
+      }
+      void_payment_intent: {
+        Args: { p_intent_id: string; p_reason?: string }
+        Returns: undefined
       }
       whatsapp_customer_owner: {
         Args: { p_customer_id: string; p_store_id: string }

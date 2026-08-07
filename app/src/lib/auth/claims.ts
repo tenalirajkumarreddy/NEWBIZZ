@@ -26,6 +26,8 @@ export interface AppClaims {
   user_status: UserStatus;
   token_version: number;
   is_admin: boolean;
+  /** UUID of the customer this principal maps to in the portal, else null. */
+  portal_customer_id: string | null;
 }
 
 const EMPTY_CLAIMS: AppClaims = {
@@ -35,6 +37,7 @@ const EMPTY_CLAIMS: AppClaims = {
   user_status: "unknown",
   token_version: 0,
   is_admin: false,
+  portal_customer_id: null,
 };
 
 /**
@@ -66,6 +69,7 @@ export function readClaimsFromMetadata(meta: unknown): AppClaims {
     user_status: asStatus(m.user_status),
     token_version: typeof m.token_version === "number" ? m.token_version : 0,
     is_admin: m.is_admin === true,
+    portal_customer_id: typeof m.portal_customer_id === "string" ? m.portal_customer_id : null,
   };
 }
 
@@ -113,6 +117,11 @@ export function can(claims: AppClaims, permission: string): boolean {
 /** True when the user may actually use the app (as opposed to a holding state). */
 export function isActive(claims: AppClaims): boolean {
   return claims.user_status === "active";
+}
+
+/** True when the caller is a portal principal (has a portal customer mapping). */
+export function isPortalPrincipal(claims: AppClaims): boolean {
+  return typeof claims.portal_customer_id === "string" && claims.portal_customer_id.length > 0;
 }
 
 function asStringArray(v: unknown): string[] {
