@@ -33,6 +33,10 @@ begin
     from public.users u
    where u.id = v_uid;
 
+  if not found then
+    return false;
+  end if;
+
   if v_phone is not null then
     return false;
   end if;
