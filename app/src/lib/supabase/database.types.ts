@@ -7615,6 +7615,7 @@ export type Database = {
         Args: { p_customer_id: string; p_order_value: number }
         Returns: Json
       }
+      cleanup_orphan_google_user: { Args: never; Returns: boolean }
       close_partial_order: {
         Args: { p_order: string; p_reason?: string }
         Returns: string
@@ -7812,6 +7813,7 @@ export type Database = {
         Args: { p_type: Database["public"]["Enums"]["item_type"] }
         Returns: string
       }
+      invitation_for_phone: { Args: { p_phone: string }; Returns: boolean }
       invoice_outstanding: { Args: { p_invoice: string }; Returns: number }
       is_portal_principal: { Args: never; Returns: boolean }
       license_expiry_scan: {
