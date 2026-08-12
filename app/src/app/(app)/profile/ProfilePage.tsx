@@ -11,7 +11,7 @@ type GoogleState =
   | { status: "linked"; email: string };
 
 export function ProfilePage({ profile }: { profile: UserRow | null }) {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [google, setGoogle] = useState<GoogleState>({ status: "loading" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,17 +50,22 @@ export function ProfilePage({ profile }: { profile: UserRow | null }) {
     if (!window.confirm("Unlink Google from this account?")) return;
     setBusy(true);
     setError(null);
-    const { data } = await supabase.auth.getUserIdentities();
+    const { data, error } = await supabase.auth.getUserIdentities();
+    if (error) {
+      setBusy(false);
+      setError(error.message);
+      return;
+    }
     const g = (data?.identities ?? []).find((i) => i.provider === "google");
     if (!g) {
       setBusy(false);
       setGoogle({ status: "unlinked" });
       return;
     }
-    const { error } = await supabase.auth.unlinkIdentity(g);
+    const { error: unlinkError } = await supabase.auth.unlinkIdentity(g);
     setBusy(false);
-    if (error) {
-      setError(error.message);
+    if (unlinkError) {
+      setError(unlinkError.message);
       return;
     }
     setGoogle({ status: "unlinked" });
