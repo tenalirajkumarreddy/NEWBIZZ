@@ -9,6 +9,7 @@ export interface UserRow {
   email: string | null;
   status: string;
   roles: { code: string; name: string }[];
+  branchName: string | null;
   createdAt: string;
 }
 
@@ -34,6 +35,16 @@ export interface UserOverride {
   createdAt: string;
 }
 
+export interface InvitationRow {
+  id: string;
+  phone: string;
+  fullName: string;
+  email: string | null;
+  roleCodes: string[];
+  createdAt: string;
+  expiresAt: string;
+}
+
 type RawUser = {
   id: string;
   full_name: string;
@@ -41,26 +52,56 @@ type RawUser = {
   email: string | null;
   status: string;
   created_at: string;
+  branch: { name: string } | null;
   user_roles: { role: { code: string; name: string } }[];
 };
 
-export async function listUsers(): Promise<UserRow[]> {
-  const supabase = createClient();
-  const res = await supabase
-    .from("users")
-    .select("id, full_name, phone, email, status, created_at, user_roles!inner(role:roles(code, name))")
-    .order("created_at", { ascending: false });
-
-  const rows = unwrap(res, [] as RawUser[], "users:listUsers");
-  return rows.map((r) => ({
+function mapUser(r: RawUser): UserRow {
+  return {
     id: r.id,
     fullName: r.full_name,
     phone: r.phone,
     email: r.email,
     status: r.status,
     roles: r.user_roles.map((ur) => ({ code: ur.role.code, name: ur.role.name })),
+    branchName: r.branch?.name ?? null,
     createdAt: r.created_at,
-  }));
+  };
+}
+
+const USER_SELECT =
+  "id, full_name, phone, email, status, created_at, branch:branches(name), " +
+  "user_roles(role:roles(code, name))";
+
+export async function listUsers(): Promise<UserRow[]> {
+  const supabase = createClient();
+  const res = await supabase
+    .from("users")
+    .select(USER_SELECT)
+    .order("created_at", { ascending: false })
+    .returns<RawUser[]>();
+
+  const rows = unwrap(res, [] as RawUser[], "users:listUsers");
+  return rows.map(mapUser);
+}
+
+/** A single user for the profile page, or null when the id doesn't resolve. */
+export async function getUser(id: string): Promise<UserRow | null> {
+  const supabase = createClient();
+  const res = await supabase
+    .from("users")
+    .select(USER_SELECT)
+    .eq("id", id)
+    .maybeSingle()
+    .returns<RawUser | null>();
+
+  const row = unwrap(res, null as RawUser | null, "users:getUser");
+  return row ? mapUser(row) : null;
+}
+
+/** The signed-in user's own profile row, or null. Thin wrapper over getUser. */
+export async function getMyProfile(userId: string): Promise<UserRow | null> {
+  return getUser(userId);
 }
 
 export async function listPermissions(): Promise<PermissionRow[]> {
@@ -119,5 +160,36 @@ export async function listUserOverrides(userId: string): Promise<UserOverride[]>
     grantedBy: r.granted_by,
     expiresAt: r.expires_at,
     createdAt: r.created_at,
+  }));
+}
+
+type RawInvitation = {
+  id: string;
+  phone: string;
+  full_name: string;
+  email: string | null;
+  role_codes: string[];
+  created_at: string;
+  expires_at: string;
+};
+
+// Invites that are still awaiting their first login (status='pending').
+export async function listInvitations(): Promise<InvitationRow[]> {
+  const supabase = createClient();
+  const res = await supabase
+    .from("user_invitations")
+    .select("id, phone, full_name, email, role_codes, created_at, expires_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  const rows = unwrap(res, [] as RawInvitation[], "users:listInvitations");
+  return rows.map((r) => ({
+    id: r.id,
+    phone: r.phone,
+    fullName: r.full_name,
+    email: r.email,
+    roleCodes: r.role_codes ?? [],
+    createdAt: r.created_at,
+    expiresAt: r.expires_at,
   }));
 }
