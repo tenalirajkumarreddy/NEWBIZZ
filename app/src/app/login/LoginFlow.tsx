@@ -7,6 +7,7 @@ import {
   digitsOnly,
   isValidNationalMobile,
   toE164Plus,
+  toE164Digits,
   formatDisplay,
 } from "@/lib/auth/phone";
 
@@ -19,6 +20,7 @@ export function LoginFlow() {
   const router = useRouter();
   const search = useSearchParams();
   const nextPath = search.get("next") || "/";
+  const googleUnlinked = search.get("google") === "unlinked";
   const supabase = createClient();
 
   const [screen, setScreen] = useState<Screen>("phone");
@@ -46,12 +48,20 @@ export function LoginFlow() {
     setBusy(true);
     // signInWithOtp wants E.164 WITH '+'. Supabase stores it without '+' — the
     // invitation/trigger matching handles that side (see lib/auth/phone.ts).
-    // Normally invitation-only: login never self-creates an auth user
-    // (admins provision people). The one exception is first-run bootstrap:
-    // set NEXT_PUBLIC_ALLOW_SELF_SIGNUP=true in .env.local, log in once to
-    // become the bootstrap admin (first user → admin), then remove the flag.
-    const allowSelfSignup =
-      process.env.NEXT_PUBLIC_ALLOW_SELF_SIGNUP === "true";
+    // Invitation-only is the default: login never self-creates an account
+    // (admins provision people). But an invited person has no auth identity yet
+    // (the invite is staged in user_invitations), so their first login MUST
+    // auto-create — only the OTP flow can. We allow auto-create when a live
+    // pending invite exists for that phone (check via invitation_for_phone()).
+    // A fully-open self-signup escape hatch stays available via
+    // NEXT_PUBLIC_ALLOW_SELF_SIGNUP=true for first-run bootstrap.
+    let allowSelfSignup = process.env.NEXT_PUBLIC_ALLOW_SELF_SIGNUP === "true";
+    if (!allowSelfSignup) {
+      const { data: invited } = await supabase.rpc("invitation_for_phone", {
+        p_phone: toE164Digits(national, CC),
+      });
+      allowSelfSignup = invited === true;
+    }
     const { error } = await supabase.auth.signInWithOtp({
       phone: toE164Plus(national, CC),
       options: { shouldCreateUser: allowSelfSignup },
@@ -159,6 +169,16 @@ export function LoginFlow() {
               Only registered numbers can sign in. Ask an admin for an invite.
             </p>
 
+            {googleUnlinked && (
+              <div
+                role="alert"
+                className="mt-4 rounded-lg border border-amb/25 bg-amber-wash px-3 py-2.5 text-[12px] leading-relaxed text-amb"
+              >
+                This Google email isn&apos;t linked to any account. Log in with
+                your phone number, then link Google from your profile.
+              </div>
+            )}
+
             {error && <p className="mt-3 text-[13px] text-red">{error}</p>}
 
             <button
@@ -188,7 +208,7 @@ export function LoginFlow() {
               <GoogleGlyph /> Continue with Google
             </button>
             <p className="mt-3 text-[12px] text-ink-4">
-              Google works only after you link it from Settings.
+              Google works only after you link it from your profile.
             </p>
           </>
         ) : (
