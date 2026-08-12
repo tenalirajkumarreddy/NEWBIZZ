@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     if (!error && user) {
       // Real identities sign up by phone; a Google-only auth has no phone.
       if (user.phone == null) {
-        await supabase.rpc("cleanup_orphan_google_user");
+        const { data: cleaned } = await supabase.rpc("cleanup_orphan_google_user");
+        if (cleaned !== true) return NextResponse.redirect(`${origin}/login?error=oauth`);
         return NextResponse.redirect(`${origin}/login?google=unlinked`);
       }
       return NextResponse.redirect(`${origin}${next}`);
