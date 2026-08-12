@@ -309,6 +309,7 @@ function UserMenu({
             <Link
               href="/profile"
               role="menuitem"
+              onClick={() => setOpen(false)}
               className="block w-full rounded-[7px] px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:bg-fill"
             >
               Profile
