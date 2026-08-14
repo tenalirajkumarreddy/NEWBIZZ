@@ -1,7 +1,7 @@
 # Fine-Grained Access Control — Design
 
 Date: 2026-08-12
-Status: Approved (catalog + migration approach confirmed section-by-section with the user)
+Status: Approved (catalog + migration approach + operating model confirmed with the user)
 
 ## Problem
 
@@ -17,11 +17,33 @@ Business need: different operators are entitled to different slices — e.g. age
 4. Preserve the security invariant: the DB (`has_permission`) is the boundary; JWT claims, route-guard, and nav are UI-speed caches of the same codes.
 5. Immutable financial documents are never literally edited or deleted — void/reverse RPCs are their modify/delete axis, audited and mapped honestly to toggles.
 
+## Operating Model (confirmed)
+
+Three tiers of users drive the whole design:
+
+- **Field users (agent / sales)** — record sales/transactions. Every sale they record books as a **cash memo** (auto `is_official=false`). They get an **acknowledgment receipt** for each transaction — a printable, read-only receipt (items/qty/total, no register browsing). They have NO register access: no `invoice.view`, no `cashmemo.view`, no `/sales` desk. Collections (`receipt.record`) is a separate duty and stays available to them.
+- **Accountant — read-only.** Sees ONLY **released** documents (invoices, cash memos, expenses, bills, vouchers, credit notes — anything the admin/manager released), bounded by their view codes and the release gate. Does nothing: no `invoice.create`, no `expense.manage`, no `purchase.pay`, no void/pay/reverse codes. All their codes are view/read codes (`invoice.view`, `report.pnl`, `report.gst`, `report.trial_balance`, `report.costing`, `expense.view`, etc.).
+- **Admin / manager — full control.** Record official invoices (`invoice.create`) or memos, **convert** memos → invoices (`convert_invoice_type`), **release** documents to accounting (the Release Center), void/reverse, see everything.
+
+### Acknowledgment receipt
+
+A field user's "receipt" is a **printable read-only view** of the cash memo they just recorded (items, qty, unit price, total, date, their name). It is generated from the memo row at record time; it is NOT a collection record and NOT a register. The `/receipts` page (Collections) stays the collections register and is separate from this acknowledgment receipt. The field-facing receipt view shows only the user's OWN transactions.
+
+### Document release (new gate, accounting handoff)
+
+- New table `document_releases (entity_type, entity_id, released_at, released_by)` — one row per released document; PK `(entity_type, entity_id)`. No schema change to the document tables.
+- New RPC `release_documents(p_types text[], p_from date, p_to date)` — admin/manager only. Marks every currently-unreleased document of the given entity types within the date range as released (inserts rows + audit). Append-only; nothing un-releases.
+- **Accountant read RLS**: every releasable document table's select policy becomes `admin OR (accountant holds the view code AND exists(document_releases …))`. Admin/manager always see everything regardless of release.
+- **Release is a visibility gate only — NOT a lock.** A released document remains editable/voidable by those with the relevant codes; edits flow through and the accountant sees the current state. (User decision 1 = B.)
+- Release Center UI (`/admin/releases`, admin+manager): shows released/unreleased counts per type, per-type toggles (slider style), a date range, "select all types", and a Release button → calls `release_documents`. Typical flow: month-end, select types + range, release, accountant sees the batch.
+- Per-type release, not whole-sheet: admin can release invoices but hold back memos/expenses.
+
+
 ## Non-Goals
 
 - No change to the enforcement machinery: `has_permission()`, `role_permissions`, `user_permission_overrides`, RLS policy model, token hook (0032), route-guard, nav, or admin toggle UI all stay as-is structurally. This is a catalog + checks change.
-- No per-record row-level splits (branch-scope stays as today).
-- No new UI primitives.
+- No per-record row-level splits (branch-scope stays as today) — EXCEPT the `document_releases` visibility gate, which is a per-document release flag by design (this is the one intentional per-record mechanism, and it gates only accountant read).
+- New UI: the Release Center page and the acknowledgment-receipt print view are the two new screens; they use existing primitives (`Panel`, `Toggle`, `Table`, `Button`, `PageContainer`) — no new UI primitive library.
 
 ## Catalog — Proposed Fine-Grained Toggles
 
@@ -125,7 +147,7 @@ Today: WhatsApp inbox gated by `customer.manage`, config by `settings.manage`; `
 
 ## Summary counts
 
-- New codes: 37 (cashmemo.view, cashmemo.create, cashmemo.edit, invoice.create, invoice.payment, invoice.void, order.approve, order.cancel, order.edit, challan.view, challan.record, purchase.create, purchase.record_bill, purchase.pay, stock.custody, cash.deposit, bom.manage, production.jobs, production.reverse, costing.manage, journal.reverse, expense.manage, asset.manage, loan.manage, documents.manage, report.pnl, report.gst, report.trial_balance, report.costing, bank.cheque, field.routes, field.fleet, field.transfer, crm.manage, commission.manage, whatsapp.inbox, whatsapp.manage).
+- New codes: 39 (cashmemo.view, cashmemo.create, cashmemo.edit, invoice.create, invoice.payment, invoice.void, order.approve, order.cancel, order.edit, challan.view, challan.record, purchase.create, purchase.record_bill, purchase.pay, stock.custody, cash.deposit, bom.manage, production.jobs, production.reverse, costing.manage, journal.reverse, expense.manage, expense.view, asset.manage, loan.manage, documents.manage, report.pnl, report.gst, report.trial_balance, report.costing, bank.cheque, field.routes, field.fleet, field.transfer, crm.manage, commission.manage, whatsapp.inbox, whatsapp.manage, release.manage).
 - Kept atomic: 15 existing codes (supplier.view, item.view, pricing.manage, stock.view, stock.transfer, credit.override, journal.view, journal.post, hr.view, hr.manage, roles.manage, audit.view, license.view, settings.manage, bank.reconcile).
 - Retired (replaced by fine sets): `invoice.view` (into invoice.view + cashmemo.view), `purchase.manage`, `accounting.manage`, `report.view_all`, `field.view`, `orders.approve` (into order.approve).
 
@@ -142,6 +164,28 @@ Today: WhatsApp inbox gated by `customer.manage`, config by `settings.manage`; `
 9. `cash.deposit` — bank deposits split from `cash.transfer`
 10. `stock.custody` — holdings/handover view (previously open to all)
 11. `documents.manage` — decoupled from `accounting.manage`
+12. `expense.view` — accountant read-only view of released expenses (new)
+13. `release.manage` — operate the Document Release Center (new, admin+manager)
+
+## Critical Finding: Money RPCs Have No DB Gate Today
+
+During inventory (verified against the live DB and the latest migration versions):
+
+- `post_invoice`, `place_order`, `record_receipt` have NO standing `has_permission()`
+  check in their bodies — enforcement is UI-only (route-guard/nav). `place_order` and
+  `post_invoice` contain only a *conditional* `credit.override` branch for the
+  credit-limit check; `record_receipt` has none at all.
+- `record_sales_return` gates on `accounting.manage`; `post_voucher` on `journal.post`
+  (correct); several RPCs gate on codes we split (`purchase.manage`, `accounting.manage`,
+  `report.view_all`).
+- All these RPCs are `SECURITY DEFINER` and executable by any authenticated user
+  (`has_function_privilege(...)=true`), so the DB accepts the call; the UI is the only
+  soft barrier.
+
+Consequence for the plan: the fine-grain migration must ADD real DB gates to the
+previously-ungated money RPCs using the new fine codes (e.g. `post_invoice` ->
+`invoice.create` or `cashmemo.create` by `is_official`), not merely rename existing
+checks. This is a security hardening as much as a granularity change.
 
 ## Migration & Cutover (single migration)
 
@@ -160,6 +204,13 @@ Principle: old effective access maps 1:1 onto the fine sets via an expansion map
 3. Rewire enforcement per code, in place: swap `has_permission('old')` -> `has_permission('new')` inside RPC bodies, RLS policies, route-guard rules, and nav. Done module-by-module (Sales first).
 4. Validation before commit: recompute every user's effective access pre/post and diff — expect supersets only, zero regressions. Security advisors re-run afterward.
 5. Retirement: old coarse codes remain as dormant catalog entries for one release (zero references), then a follow-up cleanup removes unreferenced codes.
+
+### Document release — schema, RPC, RLS, UI
+
+- New migration step: `document_releases` table + `release_documents(p_types text[], p_from date, p_to date)` RPC (admin/manager via `release.manage`; audited; append-only inserts).
+- Accountant read RLS on every releasable table (invoices, cash memos/register source, expenses, supplier bills, vouchers, credit notes): `admin OR (view code AND released)`. Admin/manager bypass release via `has_permission` union.
+- UI: `/admin/releases` Release Center (admin+manager): per-type tiles with counts, toggles, date range, select-all, Release action.
+- Field acknowledgment receipt: printable read-only view of the user's own cash memo (no register).
 
 ## Toggle Sync (derived, not duplicated)
 
@@ -184,12 +235,14 @@ Caveats (honest):
 
 - A. Migration + expansion (DB) with pre/post validation
 - B. RPC + RLS rewiring module-by-module: Sales, then Buy & Stock, then Manufacturing, then Accounting, then Field & People, then Messaging & Admin
-- C. route-guard + nav + permission-groups labels
-- D. Admin UI (structural no-op; verify rendering)
-- E. Post-deploy audit + per-module smoke + advisor rerun
+- C. Document release: table + RPC + accountant read-RLS rewires + Release Center page
+- D. Acknowledgment receipt print view (field users)
+- E. route-guard + nav + permission-groups labels + Sales Desk split (office-only register)
+- F. Role grant map for the new codes (agent/sales memo-only + receipt; accountant read-only + released; manager/admin full)
+- G. Post-deploy audit + per-module smoke + advisor rerun
 
 ## Verification
 
 - `npm run typecheck` + `npm run build` (from `app/`) after every app-facing task.
-- DB: pre/post effective-access diff (zero regressions), advisor rerun, and a per-module smoke (a role with only `cashmemo.create` cannot post an official invoice).
+- DB: pre/post effective-access diff (zero regressions), advisor rerun, and a per-module smoke (a role with only `cashmemo.create` cannot post an official invoice; an accountant without `release.manage` cannot release; an accountant sees a released doc and not an unreleased one).
 - Lint is not runnable in this repo (no ESLint config) — pre-existing.
