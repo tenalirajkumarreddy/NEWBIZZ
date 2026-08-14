@@ -22,16 +22,19 @@
 --     • register_cheque           → bank.cheque       (gate ADDED — had none)
 --     • set_cheque_status         → bank.cheque       (gate ADDED — had none)
 --     • reverse_journal           → journal.reverse   (gate ADDED — had none)
---     • refresh_read_models       → report.pnl        (replaces report.view_all)
---     • get_trial_balance         → report.trial_balance (replaces report.view_all)
---     • get_ar_aging              → report.pnl        (replaces report.view_all)
+--    • refresh_read_models       → report.pnl        (replaces report.view_all)
+--    • get_trial_balance         → report.trial_balance (replaces report.view_all)
+--    • get_ar_aging              → report.pnl        (replaces report.view_all)
+--    • reconcile_payment_intent  → receipt.record or invoice.payment (replaces accounting.manage)
+--    • void_payment_intent       → receipt.record or invoice.payment (replaces accounting.manage)
 --
--- The 16 functions whose live bodies drifted from repo (live uses
+-- The 18 functions whose live bodies drifted from repo (live uses
 -- current_app_user()) are sourced from live pg_get_functiondef captures:
 -- record_expense, approve_expense, reject_expense, topup_petty_cash,
 -- create_fixed_asset, dispose_fixed_asset, run_depreciation, create_loan,
 -- pay_emi, post_complaint_credit_note, import_gstr2b, reconcile_gstr2b,
--- bounce_cheque, register_cheque, set_cheque_status, reverse_journal.
+-- bounce_cheque, register_cheque, set_cheque_status, reverse_journal,
+-- reconcile_payment_intent, void_payment_intent.
 -- The 3 report functions match repo 0035 and are sourced from it verbatim
 -- (only the gate permission string changes).
 --
@@ -786,7 +789,112 @@ begin
 end $function$;
 
 -- ---------------------------------------------------------------------
--- 17. refresh_read_models — report.pnl (REPLACES report.view_all)
+-- 17. reconcile_payment_intent — receipt.record OR invoice.payment
+--    Source: live capture. REPLACES the `receipt.record OR accounting.manage`
+--    gate (Task 5 Step 3, 0092_reconcile_payment_intents).
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reconcile_payment_intent(p_intent_id uuid, p_store_id uuid, p_method_id uuid, p_receipt_date date DEFAULT NULL::date, p_deposit_account text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_intent payment_intents%rowtype;
+  v_receipt uuid;
+  v_header jsonb;
+begin
+  if not (public.has_permission('receipt.record') or public.has_permission('invoice.payment')) then
+    raise exception 'reconcile_payment_intent: not authorized (receipt.record or invoice.payment required)';
+  end if;
+
+  if p_store_id is null then raise exception 'reconcile_payment_intent: store_id required'; end if;
+  if p_method_id is null then raise exception 'reconcile_payment_intent: method_id required'; end if;
+
+  select * into v_intent
+    from public.payment_intents
+   where id = p_intent_id
+   for update;
+  if v_intent.id is null then
+    raise exception 'reconcile_payment_intent: intent % not found', p_intent_id;
+  end if;
+  if v_intent.status <> 'pending' then
+    raise exception 'reconcile_payment_intent: intent % is already %', p_intent_id, v_intent.status;
+  end if;
+
+  v_header := jsonb_build_object(
+    'customer_id',  v_intent.customer_id,
+    'store_id',     p_store_id,
+    'method_id',    p_method_id,
+    'amount',       v_intent.amount,
+    'reference',    v_intent.reference,
+    'notes',        v_intent.note
+  );
+  if p_receipt_date is not null then
+    v_header := v_header || jsonb_build_object('receipt_date', p_receipt_date::text);
+  end if;
+  if p_deposit_account is not null then
+    v_header := v_header || jsonb_build_object('deposit_account', p_deposit_account);
+  end if;
+
+  v_receipt := public.record_receipt(v_header);
+
+  update public.payment_intents
+     set status = 'matched',
+         matched_receipt_id = v_receipt
+   where id = p_intent_id;
+
+  perform public.write_audit(
+    'update', 'payment_intents', p_intent_id::text,
+    format('Reconciled intent %s into receipt %s', p_intent_id, v_receipt),
+    jsonb_build_object('receipt_id', v_receipt,
+                       'store_id', p_store_id, 'method_id', p_method_id));
+
+  return v_receipt;
+end $function$;
+
+-- ---------------------------------------------------------------------
+-- 18. void_payment_intent — receipt.record OR invoice.payment
+--    Source: live capture. REPLACES the `receipt.record OR accounting.manage`
+--    gate (Task 5 Step 3, 0092_reconcile_payment_intents).
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.void_payment_intent(p_intent_id uuid, p_reason text DEFAULT NULL::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_intent payment_intents%rowtype;
+begin
+  if not (public.has_permission('receipt.record') or public.has_permission('invoice.payment')) then
+    raise exception 'void_payment_intent: not authorized (receipt.record or invoice.payment required)';
+  end if;
+
+  select * into v_intent
+    from public.payment_intents
+   where id = p_intent_id
+   for update;
+  if v_intent.id is null then
+    raise exception 'void_payment_intent: intent % not found', p_intent_id;
+  end if;
+  if v_intent.status <> 'pending' then
+    raise exception 'void_payment_intent: intent % is already %', p_intent_id, v_intent.status;
+  end if;
+
+  update public.payment_intents
+     set status = 'void'
+   where id = p_intent_id;
+
+  perform public.write_audit(
+    'void', 'payment_intents', p_intent_id::text,
+    coalesce(nullif(p_reason,''), 'Voided pending payment intent'),
+    null);
+
+end $function$;
+
+-- ---------------------------------------------------------------------
+-- 19. refresh_read_models — report.pnl (REPLACES report.view_all)
 --    Source: repo 0035 verbatim (matches live), gate string swapped.
 -- ---------------------------------------------------------------------
 create or replace function public.refresh_read_models()
@@ -900,18 +1008,12 @@ drop policy if exists read_bank on public.reconciliation_adjustments;
 create policy read_bank on public.reconciliation_adjustments
   for select to authenticated using (has_permission('journal.view') OR has_permission('bank.reconcile'));
 
--- reconciliation_adjustments — NEW write policies (none existed). bank.reconcile.
--- PostgreSQL forbids a USING expression on INSERT policies, so the INSERT
--- policy carries only WITH CHECK; UPDATE carries USING + WITH CHECK; DELETE
--- carries USING only.
+-- reconciliation_adjustments — NEW write policy (none existed). bank.reconcile.
+-- A single FOR ALL policy (using covers SELECT/UPDATE/DELETE, with check covers
+-- INSERT/UPDATE) so the policy name stays unique per table.
+drop policy if exists manage_adjustments on public.reconciliation_adjustments;
 create policy manage_adjustments on public.reconciliation_adjustments
-  for insert to authenticated with check (has_permission('bank.reconcile'));
-
-create policy manage_adjustments on public.reconciliation_adjustments
-  for update to authenticated using (has_permission('bank.reconcile')) with check (has_permission('bank.reconcile'));
-
-create policy manage_adjustments on public.reconciliation_adjustments
-  for delete to authenticated using (has_permission('bank.reconcile'));
+  for all to authenticated using (has_permission('bank.reconcile')) with check (has_permission('bank.reconcile'));
 
 -- ------------------------- DOCUMENTS ----------------------------------
 -- accounting.manage → documents.manage (insert/portal_deny_all untouched)
@@ -1018,3 +1120,9 @@ grant execute on function get_trial_balance(uuid) to authenticated;
 
 revoke all on function get_ar_aging(uuid) from public, anon;
 grant execute on function get_ar_aging(uuid) to authenticated;
+
+revoke all on function reconcile_payment_intent(uuid, uuid, uuid, date, text) from public, anon;
+grant execute on function reconcile_payment_intent(uuid, uuid, uuid, date, text) to authenticated;
+
+revoke all on function void_payment_intent(uuid, text) from public, anon;
+grant execute on function void_payment_intent(uuid, text) to authenticated;
