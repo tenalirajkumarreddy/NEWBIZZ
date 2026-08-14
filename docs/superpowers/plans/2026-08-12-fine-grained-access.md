@@ -355,10 +355,14 @@ Add policy rewrites for any Sales-related `has_permission('invoice.view')` RLS c
 drop policy if exists read_invoices on public.invoices;
 create policy read_invoices on public.invoices
   for select to authenticated
-  using (has_permission('invoice.view') or has_permission('cashmemo.view'));
+  using (
+    has_permission('invoice.view')
+    or has_permission('cashmemo.view')
+    or created_by = public.current_app_user()
+  );
 ```
 
-(Match the actual existing policy name/table from the register's data source; apply the same union where a single table serves both doc types.)
+The `created_by = current_app_user()` term is REQUIRED by the operating model: a field user has no `invoice.view`/`cashmemo.view` but must read the memo they just recorded to render their acknowledgment receipt (Task 9). Without it, the receipt would be unreadable to its owner. (Match the actual existing policy name/table from the register's data source; apply the same union + owner term where a single table serves both doc types.)
 
 - [ ] **Step 6: Apply + validate**
 
@@ -613,6 +617,8 @@ export function canAccessAny(claims: AppClaims, perms: string[]): boolean {
 }
 ```
 and use `canAccessAny(claims, ["invoice.view", "cashmemo.view"])` for `/sales`. Field users (agent/sales) hold neither code, so the register is office-only — matching the operating model (field users get receipts, not the desk).
+
+Add a LONGER-prefix rule so the field user's own-memo receipt route (/sales/receipt/…) stays reachable even though the `/sales` register is blocked: `{ prefix: "/sales/receipt", perm: "cashmemo.create" }` (longest-prefix matching gives the receipt route precedence over `/sales`; the page additionally enforces the `created_by` owner check).
 
 - [ ] **Step 2: nav.ts — fine perms + `anyOf`**
 
@@ -879,7 +885,7 @@ export async function runRelease(
 
 - [ ] **Step 3: Acknowledgment receipt view**
 
-`ReceiptSheet.tsx` — a printable, read-only receipt for a single cash memo the field user just recorded: business name/address, receipt no (memo no), date, the user's name, line items (item, qty, unit price, amount), grand total. Server data comes from `getInvoice(id)`/`listInvoices` (the memo row is in the same table with `is_official=false`); render with `@media print` CSS (hide nav/buttons on print) and a "Print" button. The field flow: after recording a sale, the action returns the invoice id; the user is shown a "View receipt" button linking to this view (route e.g. `/sales/receipt/[id]`). No register — only the single own-memo view.
+`ReceiptSheet.tsx` — a printable, read-only receipt for a single cash memo the field user just recorded: business name/address, receipt no (memo no), date, the user's name, line items (item, qty, unit price, amount), grand total. Server data comes from `getInvoice(id)`/`listInvoices` (the memo row is in the same table with `is_official=false`); the read succeeds because the field user is `created_by` on that row (RLS owner read from Task 2 Step 5). Guard the page: 404/no-access if the caller is not `created_by` and lacks register access. Render with `@media print` CSS (hide nav/buttons on print) and a "Print" button. The field flow: after recording a sale, the action returns the invoice id; the user is shown a "View receipt" button linking to this view (route e.g. `/sales/receipt/[id]`). No register — only the single own-memo view.
 
 - [ ] **Step 4: Typecheck + build + commit**
 
