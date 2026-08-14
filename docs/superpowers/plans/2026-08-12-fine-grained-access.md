@@ -196,16 +196,17 @@ declare
 begin
   -- agent / sales / field: record sales -> auto CASH MEMO, receipts, challans,
   -- field ops. NO invoice.view / cashmemo.view register access, NO invoice.create.
-  select id into v_role from roles where code in ('agent','sales');
-  if v_role is not null then
+  for r in
+    select id from roles where code in ('agent','sales')
+  loop
     v_perms := array['cashmemo.create','receipt.record','challan.view','challan.record',
                      'field.routes','field.fleet','field.transfer','stock.view'];
     foreach v_perm in array v_perms loop
       insert into public.role_permissions (role_id, permission, scope)
-      values (v_role, v_perm, 'all')
+      values (r.id, v_perm, 'all')
       on conflict on constraint role_permissions_pkey do nothing;
     end loop;
-  end if;
+  end loop;
 
   -- accountant: READ-ONLY + released. View codes only (no create/pay/void/reverse),
   -- plus the release-bounded reads. Release gate is enforced by RLS (Task 8).
