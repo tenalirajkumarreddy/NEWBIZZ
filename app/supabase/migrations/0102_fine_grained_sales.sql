@@ -1082,7 +1082,384 @@ begin
 end $$;
 
 -- =====================================================================
--- 11. Sales register RLS rewrite
+-- 11. Live-captured Sales RPC gates (bodies from pg_get_functiondef)
+--
+-- These five functions exist only in the live DB (no repo migration
+-- defines them). The controller captured each body on 2026-08-14.
+-- Bodies are used verbatim; ONLY the existing coarse gate immediately
+-- after `begin` is replaced with the plan's fine gate (no second gate).
+-- =====================================================================
+
+-- 11a. void_invoice — void gate
+CREATE OR REPLACE FUNCTION public.void_invoice(p_invoice uuid, p_reason text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_inv     invoices%rowtype;
+  v_line    record;
+  v_type    item_type;
+  v_actor   uuid := current_app_user();
+  v_prev    numeric(14,2);
+begin
+  if not has_permission('invoice.void') then
+    raise exception 'void_invoice: not authorized (invoice.void required)';
+  end if;
+
+  select * into v_inv from invoices where id = p_invoice for update;
+  if not found then raise exception 'void_invoice: invoice % not found', p_invoice; end if;
+  if v_inv.status = 'void' then
+    raise exception 'void_invoice: invoice % is already void', v_inv.invoice_no;
+  end if;
+  if coalesce(v_inv.amount_paid, 0) <> 0 then
+    raise exception 'void_invoice: % has payments allocated (paid %). Un-allocate receipts before voiding.',
+      v_inv.invoice_no, v_inv.amount_paid;
+  end if;
+
+  -- 1) Reverse the sale journal (AR / Sales / GST)
+  if v_inv.journal_entry_id is not null then
+    perform reverse_journal(v_inv.journal_entry_id,
+      coalesce('Void ' || v_inv.invoice_no || ': ' || p_reason, 'Void of ' || v_inv.invoice_no));
+  end if;
+
+  -- 2) Restore stock for each stocked line. adjust_in at the original unit_cogs
+  --    re-adds qty AND posts Dr Inventory / Cr COGS(5100), reversing the sale COGS.
+  for v_line in
+    select il.item_id, il.qty, il.unit_cogs
+      from invoice_lines il where il.invoice_id = p_invoice
+  loop
+    select type into v_type from items where id = v_line.item_id;
+    if v_type is distinct from 'service' and v_line.qty > 0 then
+      perform post_stock_move(v_line.item_id, v_inv.branch_id, 'adjust_in',
+                              v_line.qty, coalesce(v_line.unit_cogs, 0),
+                              '5100', 'invoice_void', p_invoice, current_date);
+    end if;
+  end loop;
+
+  -- 3) Reverse the customer ledger running balance
+  v_prev := coalesce(previous_customer_balance(v_inv.customer_id), 0);
+  insert into customer_ledger (customer_store_id, customer_id, txn_type, reference_id,
+                               reference_type, amount, balance_after)
+    values (v_inv.store_id, v_inv.customer_id, 'sale_void', p_invoice, 'invoices',
+            -1 * v_inv.grand_total, v_prev - v_inv.grand_total);
+
+  -- 4) Mark the invoice void
+  update invoices set status = 'void' where id = p_invoice;
+
+  -- 5) Release a linked order back to approved so it can be re-invoiced
+  if v_inv.order_id is not null then
+    update sales_orders set status = 'approved', updated_at = now(), version = version + 1
+      where id = v_inv.order_id and status = 'invoiced';
+  end if;
+
+  perform write_audit('void', 'invoices', p_invoice::text,
+            format('Voided %s (total %s)%s', v_inv.invoice_no, v_inv.grand_total,
+                   case when p_reason is null then '' else ': ' || p_reason end),
+            jsonb_build_object('invoice_no', v_inv.invoice_no, 'grand_total', v_inv.grand_total,
+                               'is_official', v_inv.is_official, 'reason', p_reason),
+            v_actor);
+  return p_invoice;
+end $function$;
+
+-- 11b. convert_invoice_type — cashmemo.edit gate
+CREATE OR REPLACE FUNCTION public.convert_invoice_type(p_invoice uuid, p_reason text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_inv    invoices%rowtype;
+  v_lines  jsonb;
+  v_header jsonb;
+  v_new    uuid;
+  v_reason text;
+begin
+  if not has_permission('cashmemo.edit') then
+    raise exception 'convert_invoice_type: not authorized (cashmemo.edit required)';
+  end if;
+
+  select * into v_inv from invoices where id = p_invoice for update;
+  if not found then raise exception 'convert_invoice_type: invoice % not found', p_invoice; end if;
+  if v_inv.status = 'void' then
+    raise exception 'convert_invoice_type: % is already void', v_inv.invoice_no;
+  end if;
+
+  v_reason := coalesce(p_reason,
+    format('Re-issued as %s', case when v_inv.is_official then 'cash memo' else 'tax invoice' end));
+
+  -- Snapshot the lines before the void (item_id, qty, and the exact unit_price)
+  select jsonb_agg(jsonb_build_object(
+           'item_id', il.item_id::text,
+           'qty', il.qty,
+           'unit_price', il.unit_price) order by il.line_no)
+    into v_lines
+    from invoice_lines il where il.invoice_id = p_invoice;
+
+  if v_lines is null then
+    raise exception 'convert_invoice_type: % has no lines', v_inv.invoice_no;
+  end if;
+
+  -- Void the wrong-type document (reverses journals, restocks, ledger)
+  perform void_invoice(p_invoice, v_reason);
+
+  -- Re-issue with the opposite is_official, preserving store/date/order/pos/prices
+  v_header := jsonb_build_object(
+    'store_id', v_inv.store_id::text,
+    'invoice_date', v_inv.invoice_date::text,
+    'place_of_supply', v_inv.place_of_supply,
+    'is_official', (not v_inv.is_official),
+    'branch_id', v_inv.branch_id::text);
+  if v_inv.order_id is not null then
+    v_header := v_header || jsonb_build_object('order_id', v_inv.order_id::text);
+  end if;
+
+  v_new := post_invoice(v_header, v_lines);
+
+  perform write_audit('update', 'invoices', p_invoice::text,
+            format('Converted %s -> %s (new doc)',
+                   v_inv.invoice_no,
+                   case when v_inv.is_official then 'cash memo' else 'tax invoice' end),
+            jsonb_build_object('old_invoice', v_inv.invoice_no,
+                               'old_is_official', v_inv.is_official,
+                               'new_invoice_id', v_new, 'reason', p_reason),
+            current_app_user());
+  return v_new;
+end $function$;
+
+-- 11c. create_challan — challan.record gate (replaces the first check after
+--      `begin`; the `if v_order is null ...` check below stays untouched)
+CREATE OR REPLACE FUNCTION public.create_challan(p_header jsonb, p_lines jsonb DEFAULT '[]'::jsonb)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_order    uuid := nullif(p_header->>'order_id','')::uuid;
+  v_status   order_status;
+  v_branch   uuid;
+  v_ord_branch uuid;
+  v_fy       uuid;
+  v_date     date := coalesce((p_header->>'challan_date')::date, current_date);
+  v_ch       uuid;
+  v_no       text;
+  v_line     jsonb;
+  v_oline    uuid; v_qty numeric(14,3); v_item uuid;
+  v_ordered  numeric(14,3); v_fulfilled numeric(14,3); v_remaining numeric(14,3);
+  v_ln       int := 0;
+  v_actor    uuid := current_app_user();
+begin
+  if not has_permission('challan.record') then
+    raise exception 'create_challan: not authorized (challan.record required)';
+  end if;
+  if v_order is null then raise exception 'create_challan: order_id required'; end if;
+
+  select status, branch_id, fy_id into v_status, v_ord_branch, v_fy
+    from sales_orders where id = v_order for update;
+  if v_status is null then raise exception 'create_challan: unknown order %', v_order; end if;
+  if v_status not in ('confirmed','partially_fulfilled') then
+    raise exception 'create_challan: order is % — only confirmed/partially_fulfilled orders can be dispatched', v_status;
+  end if;
+
+  v_branch := coalesce(nullif(p_header->>'branch_id','')::uuid, v_ord_branch);
+  v_no     := next_number('challan', v_date);
+
+  insert into delivery_challans (challan_no, fy_id, order_id, branch_id, agent_id,
+                                 status, eway_bill_no, notes, created_by)
+  values (v_no, v_fy, v_order, v_branch,
+          nullif(p_header->>'agent_id','')::uuid, 'printed',
+          nullif(p_header->>'eway_bill_no',''), nullif(p_header->>'notes',''), v_actor)
+  returning id into v_ch;
+
+  for v_line in select * from jsonb_array_elements(p_lines) loop
+    v_oline := (v_line->>'order_line_id')::uuid;
+    v_qty   := (v_line->>'qty')::numeric;
+    if v_qty is null or v_qty <= 0 then raise exception 'create_challan: qty must be > 0'; end if;
+
+    select qty, qty_fulfilled, item_id into v_ordered, v_fulfilled, v_item
+      from sales_order_lines where id = v_oline and order_id = v_order for update;
+    if v_ordered is null then
+      raise exception 'create_challan: line % does not belong to order %', v_oline, v_order;
+    end if;
+    -- remaining also nets any qty already scheduled on other non-cancelled challans
+    v_remaining := v_ordered - v_fulfilled - coalesce((
+        select sum(dcl.qty) from delivery_challan_lines dcl
+          join delivery_challans dc on dc.id = dcl.challan_id
+         where dcl.order_line_id = v_oline and dc.status <> 'cancelled'), 0);
+    if v_qty > v_remaining + 1e-6 then
+      raise exception 'create_challan: line % delivers % but only % remain', v_oline, v_qty, v_remaining;
+    end if;
+
+    v_ln := v_ln + 1;
+    insert into delivery_challan_lines (challan_id, order_line_id, item_id, qty, line_no)
+      values (v_ch, v_oline, v_item, v_qty, v_ln);
+  end loop;
+
+  if v_ln = 0 then raise exception 'create_challan: at least one line required'; end if;
+
+  perform write_audit('insert','delivery_challans', v_ch::text,
+            format('Challan %s for order (%s lines)', v_no, v_ln),
+            jsonb_build_object('challan_no', v_no, 'order_id', v_order), v_actor);
+  return v_ch;
+end $function$;
+
+-- 11d. set_challan_status — challan.record gate
+CREATE OR REPLACE FUNCTION public.set_challan_status(p_id uuid, p_status text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_cur     challan_status;
+  v_new     challan_status := p_status::challan_status;
+  v_order   uuid;
+  v_no      text;
+  v_line    record;
+  v_remaining numeric(14,3);
+  v_actor   uuid := current_app_user();
+begin
+  if not has_permission('challan.record') then
+    raise exception 'set_challan_status: not authorized (challan.record required)';
+  end if;
+
+  select status, order_id, challan_no into v_cur, v_order, v_no
+    from delivery_challans where id = p_id for update;
+  if v_cur is null then raise exception 'set_challan_status: unknown challan %', p_id; end if;
+  if v_cur in ('delivered','cancelled') then
+    raise exception 'set_challan_status: challan % is % (terminal)', v_no, v_cur;
+  end if;
+
+  -- allowed transitions
+  if not (
+       (v_cur = 'printed'    and v_new in ('in_transit','delivered','cancelled'))
+    or (v_cur = 'in_transit' and v_new in ('delivered','cancelled'))
+  ) then
+    raise exception 'set_challan_status: cannot move % from % to %', v_no, v_cur, v_new;
+  end if;
+
+  if v_new = 'delivered' then
+    -- guard: the parent order must still be live
+    perform 1 from sales_orders
+      where id = v_order and status in ('confirmed','partially_fulfilled') for update;
+    if not found then
+      raise exception 'set_challan_status: order for challan % is not open for delivery', v_no;
+    end if;
+
+    for v_line in
+      select order_line_id, qty from delivery_challan_lines where challan_id = p_id
+    loop
+      update sales_order_lines
+         set qty_fulfilled = qty_fulfilled + v_line.qty
+       where id = v_line.order_line_id;
+    end loop;
+
+    update delivery_challans
+       set status = 'delivered',
+           delivered_at = now(),
+           dispatched_at = coalesce(dispatched_at, now())
+     where id = p_id;
+
+    -- roll the order up: fully fulfilled on every line => 'fulfilled'
+    select coalesce(sum(greatest(qty - qty_fulfilled, 0)), 0)
+      into v_remaining from sales_order_lines where order_id = v_order;
+    if v_remaining <= 1e-6 then
+      update sales_orders set status = 'fulfilled', updated_at = now() where id = v_order;
+    end if;
+
+  elsif v_new = 'cancelled' then
+    update delivery_challans set status = 'cancelled' where id = p_id;
+  else
+    update delivery_challans
+       set status = v_new,
+           dispatched_at = case when v_new = 'in_transit' then now() else dispatched_at end
+     where id = p_id;
+  end if;
+
+  perform write_audit('update','delivery_challans', p_id::text,
+            format('Challan %s → %s', v_no, v_new),
+            jsonb_build_object('from', v_cur, 'to', v_new), v_actor);
+  return p_id;
+end $function$;
+
+-- 11e. close_partial_order — order.cancel gate
+CREATE OR REPLACE FUNCTION public.close_partial_order(p_order uuid, p_reason text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_o        sales_orders%rowtype;
+  v_new      uuid;
+  v_no       text;
+  v_delivered numeric(14,3);
+  v_remaining numeric(14,3);
+  v_line     record;
+  v_ln       int := 0;
+  v_actor    uuid := current_app_user();
+begin
+  if not has_permission('order.cancel') then
+    raise exception 'close_partial_order: not authorized (order.cancel required)';
+  end if;
+
+  select * into v_o from sales_orders where id = p_order for update;
+  if v_o.id is null then raise exception 'close_partial_order: unknown order %', p_order; end if;
+  if v_o.status <> 'confirmed' then
+    raise exception 'close_partial_order: order % is % — only a confirmed order can be closed', v_o.order_no, v_o.status;
+  end if;
+
+  select coalesce(sum(qty_fulfilled),0), coalesce(sum(greatest(qty - qty_fulfilled,0)),0)
+    into v_delivered, v_remaining
+    from sales_order_lines where order_id = p_order;
+
+  if v_delivered <= 1e-6 then
+    raise exception 'close_partial_order: nothing delivered yet on order %', v_o.order_no;
+  end if;
+
+  if v_remaining <= 1e-6 then
+    update sales_orders set status = 'fulfilled', updated_at = now() where id = p_order;
+    perform write_audit('update','sales_orders', p_order::text,
+              format('Order %s fully delivered — marked fulfilled', v_o.order_no), null, v_actor);
+    return null;
+  end if;
+
+  -- spawn a follow-up for the undelivered remainder
+  v_no := next_number('order', current_date);
+  insert into sales_orders (order_no, fy_id, store_id, customer_id, order_date,
+                            price_list_id, branch_id, status, notes, created_by, parent_order_id)
+  values (v_no, fy_for_date(current_date), v_o.store_id, v_o.customer_id, current_date,
+          v_o.price_list_id, v_o.branch_id, 'confirmed',
+          format('Follow-up for %s (undelivered balance)%s', v_o.order_no,
+                 case when nullif(trim(coalesce(p_reason,'')),'') is null then '' else ': '||trim(p_reason) end),
+          v_actor, p_order)
+  returning id into v_new;
+
+  for v_line in
+    select item_id, (qty - qty_fulfilled) as bal, unit_price, gst_rate
+      from sales_order_lines
+     where order_id = p_order and (qty - qty_fulfilled) > 1e-6
+     order by line_no
+  loop
+    v_ln := v_ln + 1;
+    insert into sales_order_lines (order_id, item_id, qty, unit_price, gst_rate, line_no)
+      values (v_new, v_line.item_id, round(v_line.bal,3), v_line.unit_price, v_line.gst_rate, v_ln);
+  end loop;
+
+  update sales_orders set status = 'partially_fulfilled', followup_order_id = v_new, updated_at = now()
+    where id = p_order;
+
+  perform write_audit('update','sales_orders', p_order::text,
+            format('Order %s partially fulfilled — follow-up %s created for balance', v_o.order_no, v_no),
+            jsonb_build_object('delivered', v_delivered, 'remaining', v_remaining, 'followup', v_new), v_actor);
+  return v_new;
+end $function$;
+
+-- =====================================================================
+-- 12. Sales register RLS rewrite
 --
 -- The invoices register serves BOTH doc types (tax invoices + cash memos).
 -- A cash-memo-only user (agent/sales) has NO invoice.view / cashmemo.view
@@ -1100,7 +1477,7 @@ create policy read_invoices on public.invoices
   );
 
 -- =====================================================================
--- 12. Revoke/grant — authenticated only, exactly once per function
+-- 13. Revoke/grant — authenticated only, exactly once per function
 -- =====================================================================
 revoke all on function post_invoice(jsonb, jsonb) from public, anon;
 grant execute on function post_invoice(jsonb, jsonb) to authenticated;
@@ -1131,3 +1508,18 @@ grant execute on function post_delivery(uuid) to authenticated;
 
 revoke all on function generate_gst_invoice(uuid, date) from public, anon;
 grant execute on function generate_gst_invoice(uuid, date) to authenticated;
+
+revoke all on function void_invoice(uuid, text) from public, anon;
+grant execute on function void_invoice(uuid, text) to authenticated;
+
+revoke all on function convert_invoice_type(uuid, text) from public, anon;
+grant execute on function convert_invoice_type(uuid, text) to authenticated;
+
+revoke all on function create_challan(jsonb, jsonb) from public, anon;
+grant execute on function create_challan(jsonb, jsonb) to authenticated;
+
+revoke all on function set_challan_status(uuid, text) from public, anon;
+grant execute on function set_challan_status(uuid, text) to authenticated;
+
+revoke all on function close_partial_order(uuid, text) from public, anon;
+grant execute on function close_partial_order(uuid, text) to authenticated;
