@@ -18,10 +18,10 @@
 -- permission gate is added after `begin`). The existing `credit.override`
 -- soft-limit branches in post_invoice / place_order are preserved.
 --
--- NOTE (not sourced): void_invoice, convert_invoice_type, create_challan,
--- set_challan_status, close_partial_order have NO definition in repo
--- migrations (live-only RPCs). Their gates must be added in a follow-up
--- once their live bodies are captured with pg_get_functiondef.
+-- NOTE (included): void_invoice, convert_invoice_type, create_challan,
+-- set_challan_status, close_partial_order are also gated in this file
+-- (sections 11a-11e), sourced from live pg_get_functiondef captures
+-- since they have NO definition in repo migrations (live-only RPCs).
 -- =====================================================================
 
 -- 1. post_invoice — official sale vs cash memo gate
