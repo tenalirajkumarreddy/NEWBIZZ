@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Input } from "@/components/ui/Field";
 import { saveTargets } from "@/lib/actions/commissions";
+import { useToast } from "@/components/ui/Toast";
 import type { SalesTargetRow, UserOption } from "@/lib/data/commissions";
 
 export function TargetEditorSection({
@@ -21,6 +22,7 @@ export function TargetEditorSection({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
   const month = searchParams.get("month") || currentMonth();
 
   const [edits, setEdits] = useState<Record<string, { amount: string; cases: string }>>({});
@@ -63,8 +65,13 @@ export function TargetEditorSection({
       targetAmount: Number(vals.amount) || 0,
       targetCases: Number(vals.cases) || 0,
     }));
-    await saveTargets(month, entries);
+    const result = await saveTargets(month, entries);
     setSaving(false);
+    if (result.ok) {
+      toast.success("Targets saved");
+    } else {
+      toast.error(result.error);
+    }
   }
 
   const entries = Object.entries(edits);

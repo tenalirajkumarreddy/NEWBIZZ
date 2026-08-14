@@ -23,7 +23,11 @@ export function Sidebar({
 
   const groups = NAV.map((group) => ({
     ...group,
-    items: group.items.filter((it) => !it.perm || can(claims, it.perm)),
+    items: group.items.filter((it) => {
+      if (it.roles) return claims.is_admin || claims.roles.some((r) => it.roles!.includes(r));
+      if (it.perm) return can(claims, it.perm);
+      return true;
+    }),
   })).filter((group) => group.items.length > 0);
 
   return (

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { postProductionRun } from "@/lib/actions/production";
 import type { ItemListRow } from "@/lib/data/catalog";
 
@@ -13,6 +14,8 @@ export function NewRunForm({ items }: { items: ItemListRow[] }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [stage, setStage] = useState("1");
   const [outputItemId, setOutputItemId] = useState("");
@@ -45,6 +48,7 @@ export function NewRunForm({ items }: { items: ItemListRow[] }) {
         notes: notes.trim() || undefined,
       });
       if (res.ok) {
+        reset();
         toast.success("Run posted", `Production run created — inputs auto-resolved from BOM.`);
         router.push(`/production/${res.runId}`);
         router.refresh();
@@ -55,7 +59,8 @@ export function NewRunForm({ items }: { items: ItemListRow[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this production run. They'll be lost if you leave this page." />
       <Panel title="Run Details">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Stage" required htmlFor="stage">

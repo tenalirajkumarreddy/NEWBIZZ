@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getVehicle } from "@/lib/data/fleet";
 import { TripForm } from "./TripForm";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Start Trip — NEWBIZZ" };
 
@@ -11,12 +11,9 @@ export default async function NewTripPage(props: { params: Promise<{ id: string 
   if (!vehicle) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[600px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <Link href={`/fleet/${id}`} className="text-[13px] text-link hover:underline">
-        ← {vehicle.regNo}
-      </Link>
-      <h1 className="text-[22px] font-bold tracking-tight text-ink">Start Trip</h1>
+    <PageContainer width="narrow">
+      <PageHeader title="Start Trip" backHref={`/fleet/${id}`} backLabel={vehicle.regNo} />
       <TripForm vehicleId={id} />
-    </div>
+    </PageContainer>
   );
 }

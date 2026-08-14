@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listJournalEntries } from "@/lib/data/journal";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount, money } from "@/lib/format";
 import { JournalTable } from "./JournalTable";
@@ -12,6 +12,7 @@ import { TallyExportButton } from "./TallyExportButton";
 // across all sources (sales, purchases, payments, vouchers, opening.). This is
 // the audit spine: click through to an entry's lines, or drill an account's
 // ledger from the trial balance. Read-only; entries post from their own flows.
+export const metadata = { title: "Journal — NEWBIZZ" };
 export default async function JournalPage() {
   const [entries, fy] = await Promise.all([
     listJournalEntries({ limit: 300 }),
@@ -23,24 +24,22 @@ export default async function JournalPage() {
   const totalDebits = posted.reduce((s, e) => s + e.debitTotal, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Day Book</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(entries.length)} entries
-          </p>
-        </div>
-        <div className="flex items-center gap-2 self-start">
-          {fy && <TallyExportButton from={fy.start_date} to={fy.end_date} />}
-          <Link
-            href="/vouchers/new"
-            className="rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d"
-          >
-            + Manual voucher
-          </Link>
-        </div>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Day Book"
+        subtitle={`${fy ? `FY ${fy.code}` : "FY —"} · ${fmtCount(entries.length)} entries`}
+        actions={
+          <>
+            {fy && <TallyExportButton from={fy.start_date} to={fy.end_date} />}
+            <Link
+              href="/vouchers/new"
+              className="rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d"
+            >
+              + Manual voucher
+            </Link>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Posted entries" value={fmtCount(posted.length)} sub="This financial year" />
@@ -58,6 +57,6 @@ export default async function JournalPage() {
           <JournalTable entries={entries} />
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

@@ -5,6 +5,7 @@ import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, qty as fmtQty, percent } from "@/lib/format";
 import { PoReceiveAction } from "./PoReceiveAction";
 
@@ -18,21 +19,19 @@ export default async function PoDetailPage({ params }: { params: { id: string } 
   const canReceive = po.status === "draft" || po.status === "confirmed";
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing/po" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Purchase Orders</Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{po.poNo}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{po.poNo}</span>
             <StatusBadge status={po.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(po.poDate)} · {po.supplierName ?? "—"}
-            {po.expectedDate ? ` · expected ${dateIST(po.expectedDate)}` : ""}
-          </p>
-        </div>
-        {canReceive && <PoReceiveAction poId={po.id} poNo={po.poNo} />}
-      </div>
+          </span>
+        }
+        subtitle={`${dateIST(po.poDate)} · ${po.supplierName ?? "—"}${po.expectedDate ? ` · expected ${dateIST(po.expectedDate)}` : ""}`}
+        backHref="/purchasing/po"
+        backLabel="Purchase Orders"
+        actions={canReceive && <PoReceiveAction poId={po.id} poNo={po.poNo} />}
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fact label="Supplier" value={po.supplierName ?? "—"} />
@@ -65,7 +64,7 @@ export default async function PoDetailPage({ params }: { params: { id: string } 
           <p className="mt-1 text-[13px] text-ink-2">{po.notes}</p>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

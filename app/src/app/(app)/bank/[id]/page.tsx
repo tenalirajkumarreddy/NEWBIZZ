@@ -1,5 +1,10 @@
 import { getBankAccount, listTransactions, getReconReport, listImports, listAdjustments } from "@/lib/data/bank";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Money } from "@/components/ui/Money";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { AccountDetail } from "./AccountDetail";
 
 export const metadata = { title: "Account Detail — Bank Reconciliation — NEWBIZZ" };
@@ -17,8 +22,39 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
   if (!account) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <a href="/bank" className="text-[13px] text-brand hover:underline">&larr; Back to Bank &amp; Credit Cards</a>
+    <PageContainer>
+      <PageHeader
+        backHref="/bank"
+        backLabel="Bank & Credit Cards"
+        title={
+          <span className="flex items-center gap-2.5">
+            {account.name}
+            <Badge tone={account.status === "active" ? "grn" : "slate"}>{account.status}</Badge>
+            <Badge tone="brand">{account.accountType === "credit_card" ? "Credit Card" : "Bank"}</Badge>
+          </span>
+        }
+        subtitle={
+          account.accountType === "credit_card"
+            ? (account.cardLastFour ? `•••• ${account.cardLastFour}` : "Credit Card")
+            : [account.bankName, account.accountNo].filter(Boolean).join(" | ") ||
+              (account.ifsc ? `IFSC: ${account.ifsc}` : "")
+        }
+        actions={
+          <>
+            {recon && (
+              <div className="rounded-lg border border-line bg-fill px-3 py-1.5 text-right">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-ink-3">Book Balance</p>
+                <p className="font-mono text-[15px] font-bold tabular-nums text-ink">
+                  <Money value={recon.bookBalance ?? 0} />
+                </p>
+              </div>
+            )}
+            <Link href={`/bank/${account.id}/import`}>
+              <Button variant="primary" size="sm">Import statement</Button>
+            </Link>
+          </>
+        }
+      />
       <AccountDetail
         account={account}
         transactions={transactions}
@@ -26,6 +62,6 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
         imports={imports}
         adjustments={adjustments}
       />
-    </div>
+    </PageContainer>
   );
 }

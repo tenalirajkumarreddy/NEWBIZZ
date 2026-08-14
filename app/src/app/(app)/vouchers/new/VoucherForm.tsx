@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { money } from "@/lib/format";
 import { postVoucher } from "@/lib/actions/accounting";
 import type { PostableAccount } from "@/lib/data/accounting";
@@ -25,6 +26,8 @@ export function VoucherForm({ accounts, today }: { accounts: PostableAccount[]; 
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [entryDate, setEntryDate] = useState(today);
   const [voucherType, setVoucherType] = useState<string>("journal");

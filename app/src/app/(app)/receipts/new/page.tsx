@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { listAllStores, listPaymentMethods } from "@/lib/data/collections";
 import { getCurrentFy } from "@/lib/data/fy";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { RecordReceiptForm } from "./RecordReceiptForm";
 
 export default async function NewReceiptPage({
@@ -18,16 +18,17 @@ export default async function NewReceiptPage({
   const initialStoreId = searchParams.store ?? "";
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/receipts" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← Collections
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Record payment</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          {fy ? `FY ${fy.code}` : "FY —"} · Payment auto-allocated against open invoices (oldest first)
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        title="Record payment"
+        subtitle={
+          <>
+            {fy ? `FY ${fy.code}` : "FY —"} · Payment auto-allocated against open invoices (oldest first)
+          </>
+        }
+        backHref="/receipts"
+        backLabel="Collections"
+      />
 
       {stores.length === 0 ? (
         <EmptyState
@@ -42,6 +43,6 @@ export default async function NewReceiptPage({
           initialStoreId={initialStoreId}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

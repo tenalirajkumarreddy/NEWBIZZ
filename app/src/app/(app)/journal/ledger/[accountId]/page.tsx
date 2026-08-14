@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLedger } from "@/lib/data/journal";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, money } from "@/lib/format";
@@ -22,7 +22,7 @@ export default async function LedgerPage({ params }: { params: { accountId: stri
   const closing = ledger.closing;
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="report">
       <div>
         <Link href="/trial-balance" className="text-[12px] font-medium text-ink-4 hover:text-brand">
           ← Trial Balance
@@ -81,6 +81,6 @@ export default async function LedgerPage({ params }: { params: { accountId: stri
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

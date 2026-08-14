@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Panel, Badge, Kpi } from "@/components/ui";
+import { Panel, Badge, Button, Kpi, Money } from "@/components/ui";
 import type { BankAccountRow } from "@/lib/data/bank";
 
 interface ReconSnapshot {
@@ -11,10 +11,6 @@ interface ReconSnapshot {
   unmatched_stmt_count: number;
   unmatched_stmt_value: number;
   difference: number;
-}
-
-function fmtr(n: number) {
-  return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 }
 
 export function BankDashboard({
@@ -33,10 +29,14 @@ export function BankDashboard({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-3 gap-4">
-        <Kpi label="Bank Balance" value={fmtr(totalBank)} />
-        <Kpi label="Credit Card Outstanding" value={fmtr(totalCard)} />
-        <Kpi label="Unmatched Items" value={String(unmatchedCount)} />
+      <div className="grid grid-cols-3 gap-3">
+        <Kpi label="Bank Balance" value={<Money value={totalBank} />} />
+        <Kpi label="Credit Card Outstanding" value={<Money value={totalCard} />} />
+        <Kpi
+          label="Unmatched Items"
+          value={String(unmatchedCount)}
+          tone={unmatchedCount > 0 ? "amb" : "grn"}
+        />
       </div>
 
       {banks.length > 0 && (
@@ -61,7 +61,9 @@ export function BankDashboard({
         <Panel>
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-[15px] text-ink-3">No bank or credit card accounts yet.</p>
-            <Link href="/bank/new" className="rounded-lg bg-brand px-4 py-2 text-[13px] font-semibold text-white">Add Account</Link>
+            <Link href="/bank/new">
+              <Button variant="primary" size="sm">Add Account</Button>
+            </Link>
           </div>
         </Panel>
       )}
@@ -93,19 +95,21 @@ function renderAccountCard(reconMap: Record<string, ReconSnapshot | null>) {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[18px] font-bold tabular-nums text-ink">{fmtr(bal)}</p>
+              <p className="font-mono text-[18px] font-bold tabular-nums text-ink">
+                <Money value={bal} />
+              </p>
               {a.accountType === "credit_card" && a.creditLimit != null && (
-                <p className="text-[11px] text-ink-3">Limit: {fmtr(a.creditLimit)}</p>
+                <p className="text-[11px] text-ink-3">Limit: <Money value={a.creditLimit} /></p>
               )}
             </div>
           </div>
           {r && (
             <div className="mt-3 flex gap-4 border-t border-line pt-3 text-[12px] text-ink-3">
-              <span>Statement: {fmtr(r.statement_balance ?? 0)}</span>
-              <span className={diff === 0 ? "text-emerald-600" : "text-red-600"}>
-                Diff: {fmtr(diff)}
+              <span>Statement: <Money value={r.statement_balance ?? 0} /></span>
+              <span className={diff === 0 ? "text-grn" : "text-red"}>
+                Diff: <Money value={diff} />
               </span>
-              {unmatched > 0 && <span className="font-semibold text-amber-600">{unmatched} unmatched</span>}
+              {unmatched > 0 && <span className="font-semibold text-amb">{unmatched} unmatched</span>}
             </div>
           )}
         </Panel>

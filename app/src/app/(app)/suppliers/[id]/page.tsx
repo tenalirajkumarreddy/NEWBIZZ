@@ -5,6 +5,7 @@ import { listStockableItems } from "@/lib/data/stock";
 import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
+import { PageContainer } from "@/components/ui";
 import { SupplierAvlPanel } from "./SupplierAvlPanel";
 import { SupplierOpeningBalance } from "./SupplierOpeningBalance";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
@@ -19,7 +20,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
   if (!supplier) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="report">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -67,7 +68,7 @@ export default async function SupplierDetailPage({ params }: { params: { id: str
           </p>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

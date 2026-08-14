@@ -4,6 +4,7 @@ import { getItem } from "@/lib/data/catalog";
 import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
+import { PageContainer } from "@/components/ui";
 import { dateIST, percent } from "@/lib/format";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
@@ -20,7 +21,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   if (!item) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="form">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/items" className="text-[12px] font-medium text-ink-4 hover:text-brand">
@@ -71,7 +72,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
       </Card>
 
       <DocumentAttachPanel entityType="item" entityId={item.id} entityLabel={item.sku} />
-    </div>
+    </PageContainer>
   );
 }
 

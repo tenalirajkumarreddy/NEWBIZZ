@@ -6,7 +6,7 @@ import { getCustomerPortalStatus } from "@/lib/data/portal";
 import { listPaymentIntents, listAllStores, listPaymentMethods } from "@/lib/data/collections";
 import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer } from "@/components/ui";
 import { Money } from "@/components/ui/Money";
 import { ImageUpload } from "@/components/ui";
 import { PartyLedger } from "@/components/shared/PartyLedger";
@@ -38,7 +38,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
   ]);
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-5 px-6 py-6 lg:px-8">
+    <PageContainer width="wide">
       {/* ── Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
@@ -168,7 +168,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
       {intents.length > 0 && (
         <PaymentIntentsPanel intents={intents} stores={stores} paymentMethods={paymentMethods} />
       )}
-    </div>
+    </PageContainer>
   );
 }
 

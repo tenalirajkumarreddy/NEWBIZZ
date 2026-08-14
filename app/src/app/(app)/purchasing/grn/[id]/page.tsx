@@ -5,6 +5,7 @@ import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, qty as fmtQty, percent } from "@/lib/format";
 import { GrnBillAction } from "./GrnBillAction";
 
@@ -18,25 +19,25 @@ export default async function GrnDetailPage({ params }: { params: { id: string }
   const canBill = grn.status === "received" && !grn.billedBillId;
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing/grn" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Goods Receipts</Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{grn.grnNo}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{grn.grnNo}</span>
             <StatusBadge status={grn.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(grn.grnDate)} · {grn.supplierName ?? "—"}
-            {grn.poNo ? ` · from PO ${grn.poNo}` : ""}
-          </p>
-        </div>
-        {canBill ? (
-          <GrnBillAction grnId={grn.id} grnNo={grn.grnNo} />
-        ) : grn.billedBillId ? (
-          <Link href={`/purchasing/bills/${grn.billedBillId}`} className="text-[12px] font-medium text-brand hover:underline">View bill →</Link>
-        ) : null}
-      </div>
+          </span>
+        }
+        subtitle={`${dateIST(grn.grnDate)} · ${grn.supplierName ?? "—"}${grn.poNo ? ` · from PO ${grn.poNo}` : ""}`}
+        backHref="/purchasing/grn"
+        backLabel="Goods Receipts"
+        actions={
+          canBill ? (
+            <GrnBillAction grnId={grn.id} grnNo={grn.grnNo} />
+          ) : grn.billedBillId ? (
+            <Link href={`/purchasing/bills/${grn.billedBillId}`} className="text-[12px] font-medium text-brand hover:underline">View bill →</Link>
+          ) : null
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fact label="Supplier" value={grn.supplierName ?? "—"} />
@@ -71,7 +72,7 @@ export default async function GrnDetailPage({ params }: { params: { id: string }
       )}
 
       <p className="text-[11px] text-ink-4">Stock rose at these costs when the GRN posted. Billing books input GST and the payable.</p>
-    </div>
+    </PageContainer>
   );
 }
 

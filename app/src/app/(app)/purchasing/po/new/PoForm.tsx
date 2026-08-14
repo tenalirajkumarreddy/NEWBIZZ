@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { Field, Select, Input } from "@/components/ui/Field";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Money } from "@/components/ui/Money";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { placePurchaseOrder } from "@/lib/actions/purchases";
 import { todayIST } from "@/lib/constants";
 import type { SupplierOption } from "@/lib/data/suppliers";
@@ -29,13 +30,21 @@ const newLine = (): LineDraft => ({ key: `l${seq++}`, item_id: "", qty: "", unit
 export function NewPoForm({
   suppliers,
   items,
+  onDone,
+  onCancel,
 }: {
   suppliers: SupplierOption[];
   items: StockableItemOption[];
+  // Passed when hosted in a Drawer so the user stays on the list page.
+  // Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [supplierId, setSupplierId] = useState("");
   const [poDate, setPoDate] = useState(todayIST());
@@ -79,8 +88,10 @@ export function NewPoForm({
         lines: payload,
       });
       if (res.ok) {
+        reset();
         toast.success("PO placed", "Purchase order created.");
-        router.push(`/purchasing/po/${res.poId}`);
+        if (onDone) onDone();
+        else router.push(`/purchasing/po/${res.poId}`);
         router.refresh();
       } else {
         toast.error("Could not place PO", res.error);
@@ -89,7 +100,8 @@ export function NewPoForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this purchase order. They'll be lost if you leave this page." />
       <Panel title="Order details">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Supplier" required className="sm:col-span-1">
@@ -156,7 +168,7 @@ export function NewPoForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/purchasing/po")}>Cancel</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel ?? (() => router.push("/purchasing/po"))}>Cancel</Button>
         <Button variant="primary" size="md" onClick={onSubmit} loading={pending} disabled={!supplierId}>Place PO</Button>
       </Card>
     </div>

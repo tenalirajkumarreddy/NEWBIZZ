@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { updateItem } from "@/lib/actions/catalog";
 import type { ItemType, ItemDetail, UnitOption, CategoryOption } from "@/lib/data/catalog";
 
@@ -31,6 +32,8 @@ export function EditItemForm({
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [name, setName] = useState(item.name);
   const [type, setType] = useState<ItemType>(item.type);
@@ -68,6 +71,7 @@ export function EditItemForm({
         status,
       });
       if (res.ok) {
+        reset();
         toast.success("Item updated", `${item.sku} saved.`);
         router.push(`/items/${item.id}`);
         router.refresh();
@@ -78,7 +82,8 @@ export function EditItemForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes. They'll be lost if you leave this page." />
       <Panel title="Identity">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="SKU" htmlFor="sku" hint="Read-only — contact admin to change">

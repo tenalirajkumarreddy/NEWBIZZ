@@ -5,6 +5,7 @@ import { Panel, Card, SectionHeading } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { count as fmtCount } from "@/lib/format";
 import { AddMemberForm } from "./AddMemberForm";
 import { RemoveMemberButton } from "./RemoveMemberButton";
@@ -20,14 +21,13 @@ export default async function AltGroupDetailPage(props: { params: Promise<{ id: 
   if (!group) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/bom/alternate-groups" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← Alternate Groups
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">{group.name}</h1>
-        {group.notes && <p className="mt-0.5 text-[13px] text-ink-3">{group.notes}</p>}
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/bom/alternate-groups"
+        backLabel="Alternate Groups"
+        title={group.name}
+        subtitle={group.notes}
+      />
 
       <Panel
         title={`Members (${group.members.length})`}
@@ -106,6 +106,6 @@ export default async function AltGroupDetailPage(props: { params: Promise<{ id: 
           </Table>
         </Panel>
       )}
-    </div>
+    </PageContainer>
   );
 }

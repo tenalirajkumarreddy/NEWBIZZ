@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Panel, Badge, Button, Table, THead, TBody, TR, TH, TD } from "@/components/ui";
+import { Panel, Badge, Button, Money, Table, THead, TBody, TR, TH, TD } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { setChequeStatus, bounceCheque, registerCheque } from "@/lib/actions/bank";
 import type { ChequeRow } from "@/lib/data/bank";
@@ -69,10 +69,10 @@ export function ChequeRegister({ cheques }: Props) {
               <TH>Cheque No.</TH>
               <TH>Direction</TH>
               <TH>Party</TH>
-              <TH className="text-right">Amount</TH>
+              <TH numeric>Amount</TH>
               <TH>Date</TH>
               <TH>Status</TH>
-              <TH className="text-center">Actions</TH>
+              <TH>Actions</TH>
             </TR>
           </THead>
           <TBody>
@@ -87,20 +87,20 @@ export function ChequeRegister({ cheques }: Props) {
               return (
                 <TR key={c.id}>
                   <TD className="font-mono text-[13px] font-medium">{c.chequeNo}</TD>
-                  <TD className="text-[13px]">
+                  <TD>
                     <Badge tone={c.direction === "inbound" ? "grn" : "brand"}>
                       {c.direction === "inbound" ? "Inbound (Received)" : "Outbound (Issued)"}
                     </Badge>
                   </TD>
-                  <TD className="text-[13px]">{c.partyType ? `${c.partyType} ${c.partyId ? c.partyId.slice(0, 8) : ""}` : "—"}</TD>
-                  <TD className="whitespace-nowrap text-right text-[13px] font-medium tabular-nums">
-                    ₹{c.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  <TD>{c.partyType ? `${c.partyType} ${c.partyId ? c.partyId.slice(0, 8) : ""}` : "—"}</TD>
+                  <TD numeric className="font-medium text-ink">
+                    <Money value={c.amount} />
                   </TD>
-                  <TD className="whitespace-nowrap text-[13px] text-ink-3">{c.chequeDate ?? "—"}</TD>
+                  <TD className="whitespace-nowrap text-ink-3">{c.chequeDate ?? "—"}</TD>
                   <TD>
                     <Badge tone={tone}>{c.status}</Badge>
                   </TD>
-                  <TD className="text-center">
+                  <TD>
                     <ChequeActions cheque={c} onAction={handleStatus} />
                   </TD>
                 </TR>
@@ -121,21 +121,36 @@ function ChequeActions({ cheque, onAction }: { cheque: ChequeRow; onAction: (id:
     cheque.status === "deposited" ? "cleared" : null;
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center gap-1">
       {nextStatus && (
-        <button onClick={() => onAction(cheque.id, nextStatus)} className="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-grn hover:bg-grn-wash hover:text-grn"
+          onClick={() => onAction(cheque.id, nextStatus)}
+        >
           {nextStatus === "deposited" ? "Deposit" : "Clear"}
-        </button>
+        </Button>
       )}
       {cheque.status === "registered" && (
-        <button onClick={() => onAction(cheque.id, "bounced")} className="rounded bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 hover:bg-red-100">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-red hover:bg-red-wash hover:text-red"
+          onClick={() => onAction(cheque.id, "bounced")}
+        >
           Bounce
-        </button>
+        </Button>
       )}
       {(cheque.status === "registered" || cheque.status === "deposited") && (
-        <button onClick={() => onAction(cheque.id, "cancelled")} className="rounded bg-fill px-2 py-0.5 text-[11px] font-medium text-ink-3 hover:text-ink">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-ink-3 hover:bg-fill hover:text-ink"
+          onClick={() => onAction(cheque.id, "cancelled")}
+        >
           Cancel
-        </button>
+        </Button>
       )}
     </div>
   );

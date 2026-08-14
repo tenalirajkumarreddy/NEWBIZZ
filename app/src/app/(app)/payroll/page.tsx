@@ -5,6 +5,7 @@ import { DashboardTab } from "./DashboardTab";
 import { WorkersTab } from "./WorkersTab";
 import { SettingsTab } from "./SettingsTab";
 import type { TabId } from "@/components/payroll/Tabs";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export default async function PayrollPage({
   searchParams,
@@ -18,12 +19,12 @@ export default async function PayrollPage({
   const tab = (tabParam as TabId) || "dashboard";
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <h1 className="text-[22px] font-bold tracking-tight text-ink">Attendance & Payroll</h1>
+    <PageContainer width="wide">
+      <PageHeader title="Attendance & Payroll" />
       <Tabs active={tab} />
       {tab === "dashboard" && <DashboardTab monthParam={monthParam} canManage={canManage} />}
       {tab === "workers" && <WorkersTab canManage={canManage} />}
       {tab === "settings" && <SettingsTab canManage={canManage} />}
-    </div>
+    </PageContainer>
   );
 }

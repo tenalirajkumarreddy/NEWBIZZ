@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrder, getHomeStateCode } from "@/lib/data/sales";
 import { Panel, Card } from "@/components/ui/Card";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -22,41 +22,43 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   const canCancel = order.status === "confirmed" || order.status === "approved" || order.status === "draft";
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Breadcrumb + header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/orders" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Order Book
-          </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{order.order_no}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{order.order_no}</span>
             <StatusBadge status={order.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+          </span>
+        }
+        subtitle={
+          <>
             {dateIST(order.order_date)} · {order.storeName ?? "—"}
             {order.customerName ? ` · ${order.customerName}` : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {canFulfil && (
-            <FulfilOrderAction
-              orderId={order.id}
-              orderNo={order.order_no}
-              lines={order.lines}
-              storeStateCode={order.storeStateCode}
-              homeStateCode={homeStateCode}
-            />
-          )}
-          {canCancel && <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />}
-          {order.status === "fulfilled" && (
-            <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />
-          )}
-          {order.status === "invoiced" && (
-            <span className="text-[12px] font-medium text-grn">Invoiced</span>
-          )}
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            {canFulfil && (
+              <FulfilOrderAction
+                orderId={order.id}
+                orderNo={order.order_no}
+                lines={order.lines}
+                storeStateCode={order.storeStateCode}
+                homeStateCode={homeStateCode}
+              />
+            )}
+            {canCancel && <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />}
+            {order.status === "fulfilled" && (
+              <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />
+            )}
+            {order.status === "invoiced" && (
+              <span className="text-[12px] font-medium text-grn">Invoiced</span>
+            )}
+          </>
+        }
+        backHref="/orders"
+        backLabel="Order Book"
+      />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -93,7 +95,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           <p className="mt-1 text-[13px] text-ink-2">{order.notes}</p>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

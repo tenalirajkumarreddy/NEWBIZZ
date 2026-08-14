@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { deleteRoute, createSession, type ActionResult } from "@/lib/actions/routes";
 
 export function RouteActions({
@@ -13,6 +14,7 @@ export function RouteActions({
   users: { id: string; full_name: string }[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [deletePending, setDeletePending] = useState(false);
   const [deleteState, setDeleteState] = useState<ActionResult | null>(null);
   const [sessionPending, setSessionPending] = useState(false);
@@ -25,8 +27,13 @@ export function RouteActions({
       routeId,
       agentId: formData.get("agentId") as string,
     });
-    if (res.ok) router.refresh();
-    else setSessionState(res);
+    if (res.ok) {
+      toast.success("Session started");
+      router.refresh();
+    } else {
+      toast.error(res.error);
+      setSessionState(res);
+    }
     setSessionPending(false);
   }
 
@@ -35,7 +42,10 @@ export function RouteActions({
     setDeleteState(null);
     const res = await deleteRoute(routeId);
     if (res.ok) router.push("/routes");
-    else setDeleteState(res);
+    else {
+      toast.error(res.error);
+      setDeleteState(res);
+    }
     setDeletePending(false);
   }
 

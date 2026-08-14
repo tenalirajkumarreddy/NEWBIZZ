@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createCustomer } from "@/lib/actions/customers";
 
 const STATE_CODES = [
@@ -31,6 +32,8 @@ export function NewCustomerForm() {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [name, setName] = useState("");
   const [gstin, setGstin] = useState("");
@@ -57,6 +60,7 @@ export function NewCustomerForm() {
         credit_days: Number(creditDays) || 0,
       });
       if (res.ok) {
+        reset();
         toast.success("Customer created", `${res.code} — ${name} added.`);
         router.push(`/customers/${res.customerId}`);
         router.refresh();
@@ -67,7 +71,8 @@ export function NewCustomerForm() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this customer. They'll be lost if you leave this page." />
       <Panel title="Identity">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Code" hint="Auto-generated on save">

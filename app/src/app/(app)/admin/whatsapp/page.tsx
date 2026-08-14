@@ -4,6 +4,7 @@ import { WhatsAppSettingsForm } from "./WhatsAppSettingsForm";
 import { WebhookSelfTestForm } from "./WebhookSelfTestForm";
 import { WhatsAppTestPanel } from "./WhatsAppTestPanel";
 import { WhatsAppTemplatesManager } from "./WhatsAppTemplatesManager";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "WhatsApp Settings — NEWBIZZ" };
 export const dynamic = "force-dynamic";
@@ -13,14 +14,11 @@ export default async function AdminWhatsappPage() {
   const templates = await listTemplates();
 
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-ink">WhatsApp Settings</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          Meta Business Cloud API connection. Keep the access token private — it is encrypted
-          before it is stored.
-        </p>
-      </div>
+    <PageContainer width="form">
+      <PageHeader
+        title="WhatsApp Settings"
+        subtitle="Meta Business Cloud API connection. Keep the access token private — it is encrypted before it is stored."
+      />
 
       <WhatsAppSettingsForm
         initial={config
@@ -54,6 +52,6 @@ export default async function AdminWhatsappPage() {
       <WhatsAppTestPanel dryRun={config?.dryRun ?? true} />
 
       <WhatsAppTemplatesManager templates={templates} />
-    </div>
+    </PageContainer>
   );
 }

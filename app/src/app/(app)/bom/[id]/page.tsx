@@ -1,40 +1,41 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBom } from "@/lib/data/bom";
+import { getBom, listAlternateGroups } from "@/lib/data/bom";
+import { listItems } from "@/lib/data/catalog";
 import { Panel, Card, SectionHeading } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { CloseBomButton } from "./CloseBomButton";
+import { BomEditActions } from "./BomEditActions";
 
 export const metadata = { title: "BOM Detail — NEWBIZZ" };
 
 export default async function BomDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
-  const bom = await getBom(id);
+  const [bom, items, altGroups] = await Promise.all([
+    getBom(id),
+    listItems({ limit: 2000 }),
+    listAlternateGroups(),
+  ]);
   if (!bom) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/bom" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← BOM / Recipes
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">
-          {bom.parentSku} — {bom.parentName}
-        </h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          Stage {bom.stage} · <StatusBadge status={bom.status} size="sm" />
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/bom"
+        backLabel="BOM / Recipes"
+        title={`${bom.parentSku} — ${bom.parentName}`}
+        subtitle={
+          <>
+            Stage {bom.stage} · <StatusBadge status={bom.status} size="sm" />
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={`/bom/${id}/edit`}>
-          <Button variant="secondary" size="sm">Edit</Button>
-        </Link>
-        <Link href={`/bom/${id}/clone`}>
-          <Button variant="secondary" size="sm">Clone</Button>
-        </Link>
+        <BomEditActions bom={bom} items={items} altGroups={altGroups} />
         <Link href={`/bom/where-used?itemId=${bom.parentItemId}`}>
           <Button variant="ghost" size="sm">Where used</Button>
         </Link>
@@ -114,6 +115,6 @@ export default async function BomDetailPage(props: { params: Promise<{ id: strin
           <p className="text-[13px] leading-relaxed text-ink-2 whitespace-pre-wrap">{bom.notes}</p>
         </Panel>
       )}
-    </div>
+    </PageContainer>
   );
 }

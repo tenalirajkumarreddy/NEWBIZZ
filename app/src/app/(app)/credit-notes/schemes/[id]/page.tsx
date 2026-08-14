@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getScheme } from "@/lib/data/creditnotes";
 import { Panel, Card } from "@/components/ui/Card";
@@ -6,6 +5,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, count as fmtCount, qty as fmtQty, percent } from "@/lib/format";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { SchemeEligibilityPanel } from "./SchemeEligibilityPanel";
 
 // Scheme detail (§7.5) — the tier ladder, the date window, and per-store
@@ -16,25 +16,17 @@ export default async function SchemeDetailPage({ params }: { params: { id: strin
   if (!scheme) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Breadcrumb + header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/credit-notes/schemes" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Volume Schemes
-          </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="text-[22px] font-bold tracking-tight text-ink">{scheme.name}</h1>
-            <StatusBadge status={scheme.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(scheme.periodStart)} – {dateIST(scheme.periodEnd)} ·{" "}
-            {scheme.gstAdjusted
-              ? `GST-adjusted @ ${percent(scheme.gstRate, { alreadyPct: true, decimals: 0 })}`
-              : "No GST adjustment"}
-          </p>
-        </div>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/credit-notes/schemes"
+        backLabel="Volume Schemes"
+        title={<>{scheme.name} <StatusBadge status={scheme.status} /></>}
+        subtitle={`${dateIST(scheme.periodStart)} – ${dateIST(scheme.periodEnd)} · ${
+          scheme.gstAdjusted
+            ? `GST-adjusted @ ${percent(scheme.gstRate, { alreadyPct: true, decimals: 0 })}`
+            : "No GST adjustment"
+        }`}
+      />
 
       {/* Tier ladder */}
       <Panel title="Rebate tiers" flush>
@@ -75,6 +67,6 @@ export default async function SchemeDetailPage({ params }: { params: { id: strin
           credit note and marks the row posted.
         </p>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

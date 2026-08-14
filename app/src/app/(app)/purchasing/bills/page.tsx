@@ -1,40 +1,44 @@
 import Link from "next/link";
 import { listBills } from "@/lib/data/purchases";
+import { listSupplierOptions } from "@/lib/data/suppliers";
+import { listStockableItems } from "@/lib/data/stock";
 import { Panel } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, count as fmtCount } from "@/lib/format";
+import { CreateBillActions } from "./CreateBillActions";
+import { CreatePayActions } from "../pay/CreatePayActions";
 
 export default async function BillsPage() {
   const bills = await listBills({ limit: 200 });
+  const [suppliers, items] = await Promise.all([listSupplierOptions(), listStockableItems()]);
   const open = bills.filter((b) => b.status === "posted" || b.status === "part_paid");
   const payable = open.reduce((s, b) => s + (b.grandTotal - b.amountPaid), 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Purchasing</Link>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Supplier Bills</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(bills.length)} bills · payable open <span className="font-mono text-amb"><Money value={payable} /></span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/purchasing/pay/new"><Button variant="secondary" size="sm">Pay supplier</Button></Link>
-          <Link href="/purchasing/bills/new"><Button variant="primary" size="sm">Record bill</Button></Link>
-        </div>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Supplier Bills"
+        subtitle={<>{fmtCount(bills.length)} bills · payable open <span className="font-mono text-amb"><Money value={payable} /></span></>}
+        backHref="/purchasing"
+        backLabel="Purchasing"
+        actions={
+          <>
+            <CreatePayActions suppliers={suppliers} />
+            <CreateBillActions suppliers={suppliers} items={items} />
+          </>
+        }
+      />
 
       <Panel flush>
         {bills.length === 0 ? (
           <EmptyState
             title="No bills yet"
             description="A supplier bill books input GST and the payable (clearing any matched GRN). Record one directly or from a received GRN."
-            action={<Link href="/purchasing/bills/new"><Button variant="secondary" size="sm">Record bill</Button></Link>}
+            action={<CreateBillActions suppliers={suppliers} items={items} />}
           />
         ) : (
           <Table>
@@ -74,6 +78,6 @@ export default async function BillsPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

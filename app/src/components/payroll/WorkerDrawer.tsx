@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Drawer } from "@/components/ui/Drawer";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Badge } from "@/components/ui/Badge";
 import { fetchWorkerLedger, fetchEmployeeProfile, fetchWorkers } from "@/lib/actions/payroll";
@@ -96,7 +97,10 @@ export function WorkerDrawer({
           <div>
             <h3 className="mb-2 text-[13px] font-semibold text-ink">Ledger</h3>
             {ledger.length === 0 ? (
-              <p className="text-[13px] text-ink-4">No transactions yet.</p>
+              <EmptyState
+                title="No transactions yet"
+                description="Payments and adjustments to this worker's ledger will appear here."
+              />
             ) : (
               <div className="max-h-[400px] overflow-y-auto">
                 <Table>

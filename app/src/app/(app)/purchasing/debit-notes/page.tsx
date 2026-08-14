@@ -1,36 +1,37 @@
 import Link from "next/link";
 import { listDebitNotes } from "@/lib/data/purchases";
+import { listSupplierOptions } from "@/lib/data/suppliers";
+import { listStockableItems } from "@/lib/data/stock";
 import { Panel } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, count as fmtCount, titleCase } from "@/lib/format";
+import { CreateDebitNoteActions } from "./CreateDebitNoteActions";
 
 export default async function DebitNotesPage() {
   const notes = await listDebitNotes({ limit: 200 });
+  const [suppliers, items] = await Promise.all([listSupplierOptions(), listStockableItems()]);
   const total = notes.reduce((s, n) => s + n.amount, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Purchasing</Link>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Debit Notes</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(notes.length)} purchase returns · <span className="font-mono"><Money value={total} /></span> debited
-          </p>
-        </div>
-        <Link href="/purchasing/debit-notes/new"><Button variant="primary" size="sm">New debit note</Button></Link>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Debit Notes"
+        subtitle={<>{fmtCount(notes.length)} purchase returns · <span className="font-mono"><Money value={total} /></span> debited</>}
+        backHref="/purchasing"
+        backLabel="Purchasing"
+        actions={<CreateDebitNoteActions suppliers={suppliers} items={items} />}
+      />
 
       <Panel flush>
         {notes.length === 0 ? (
           <EmptyState
             title="No debit notes yet"
             description="A debit note records a purchase return — it reduces the supplier payable and reverses RM inventory + input GST."
-            action={<Link href="/purchasing/debit-notes/new"><Button variant="secondary" size="sm">New debit note</Button></Link>}
+            action={<CreateDebitNoteActions suppliers={suppliers} items={items} />}
           />
         ) : (
           <Table>
@@ -65,6 +66,6 @@ export default async function DebitNotesPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

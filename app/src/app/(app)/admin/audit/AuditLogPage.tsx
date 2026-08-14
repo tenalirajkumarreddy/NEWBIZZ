@@ -8,6 +8,8 @@ interface Props {
   initialRows: AuditRow[];
   entities: string[];
   actions: AuditAction[];
+  /** Pre-filter to a single actor (uuid), e.g. from the user profile page. */
+  initialActor?: string;
 }
 
 const ACTION_TONE: Record<AuditAction, "neutral" | "slate" | "brand" | "grn" | "amb" | "red"> = {
@@ -57,13 +59,14 @@ const ENTITY_LABELS: Record<string, string> = {
   licenses: "Licence",
 };
 
-export function AuditLogPage({ initialRows, entities, actions }: Props) {
+export function AuditLogPage({ initialRows, entities, actions, initialActor }: Props) {
   const [rows, setRows] = useState<AuditRow[]>(initialRows);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<string>("");
   const [entity, setEntity] = useState<string>("");
   const [q, setQ] = useState("");
+  const [actor, setActor] = useState<string>(initialActor ?? "");
   const lastId = useRef<number | undefined>(undefined);
   const inFlight = useRef(false);
 
@@ -82,6 +85,7 @@ export function AuditLogPage({ initialRows, entities, actions }: Props) {
       if (action) params.set("action", action);
       if (entity) params.set("entity", entity);
       if (q) params.set("q", q);
+      if (actor) params.set("actor", actor);
       const res = await fetch(`/admin/audit/data?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
       setRows(data.rows);
@@ -93,7 +97,7 @@ export function AuditLogPage({ initialRows, entities, actions }: Props) {
       inFlight.current = false;
       setLoading(false);
     }
-  }, [action, entity, q]);
+  }, [action, entity, q, actor]);
 
   const loadMore = useCallback(async () => {
     if (inFlight.current || !hasMore || lastId.current === undefined) return;
@@ -104,6 +108,7 @@ export function AuditLogPage({ initialRows, entities, actions }: Props) {
       if (action) params.set("action", action);
       if (entity) params.set("entity", entity);
       if (q) params.set("q", q);
+      if (actor) params.set("actor", actor);
       if (lastId.current !== undefined) params.set("before", String(lastId.current));
       const res = await fetch(`/admin/audit/data?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
@@ -114,7 +119,7 @@ export function AuditLogPage({ initialRows, entities, actions }: Props) {
       inFlight.current = false;
       setLoading(false);
     }
-  }, [action, entity, q, hasMore]);
+  }, [action, entity, q, actor, hasMore]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -151,12 +156,36 @@ export function AuditLogPage({ initialRows, entities, actions }: Props) {
         <Button variant="secondary" size="sm" onClick={applyFilters} disabled={loading}>
           {loading ? "Loading…" : "Filter"}
         </Button>
-        {(action || entity || q) && (
-          <Button variant="ghost" size="sm" onClick={() => { setAction(""); setEntity(""); setQ(""); }}>
-            Clear
+        {(action || entity || q || actor) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setAction("");
+              setEntity("");
+              setQ("");
+              setActor("");
+            }}
+          >
+            Clear{actor ? " actor filter" : ""}
           </Button>
         )}
       </div>
+
+      {actor && (
+        <div className="flex items-center gap-2 rounded-lg border border-brand/20 bg-brand-wash px-3 py-2 text-[12px] text-brand">
+          <span className="font-semibold">Filtered to one user's activity</span>
+          <button
+            onClick={() => {
+              setActor("");
+              applyFilters();
+            }}
+            className="font-medium underline hover:text-brand-d"
+          >
+            Remove filter
+          </button>
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-lg border border-line">
         <Table>

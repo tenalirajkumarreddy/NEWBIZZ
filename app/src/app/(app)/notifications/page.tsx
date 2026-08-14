@@ -1,6 +1,7 @@
 import { listNotifications, getNotificationPrefs } from "@/lib/data/notifications";
 import { NotificationsPage } from "./NotificationsPage";
-import { NotificationPrefsPanel } from "./NotificationPrefsPanel";
+import { NotificationPrefsDrawer } from "./NotificationPrefsDrawer";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Notifications — NEWBIZZ" };
 export const dynamic = "force-dynamic";
@@ -12,15 +13,13 @@ export default async function NotificationsRoute() {
   ]);
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex items-baseline justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Notifications</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">Your inbox — order, invoice, stock and system events.</p>
-        </div>
-      </div>
+    <PageContainer width="wide">
+      <PageHeader
+        title="Notifications"
+        subtitle="Your inbox — order, invoice, stock and system events."
+        actions={<NotificationPrefsDrawer prefs={prefs} />}
+      />
       <NotificationsPage rows={rows} total={total} hasMore={total > 50} />
-      <NotificationPrefsPanel prefs={prefs} />
-    </div>
+    </PageContainer>
   );
 }

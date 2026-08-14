@@ -12,6 +12,9 @@ export interface NavItem {
   label: string;
   href: string;
   perm?: string;
+  /** Alternative gate: visible to anyone holding one of these role codes (admin
+   *  always passes). Overrides `perm` when both are set. */
+  roles?: string[];
   badgeKey?: string; // resolved to a live count by the shell (optional)
 }
 
@@ -94,7 +97,7 @@ export const NAV: NavGroup[] = [
   {
     label: "Admin",
     items: [
-      { id: "users", label: "Users & Access", href: "/admin/users", perm: "roles.manage" },
+      { id: "users", label: "Users & Access", href: "/admin/users", roles: ["manager"] },
       { id: "audit", label: "Audit Log", href: "/admin/audit", perm: "audit.view" },
       { id: "licenses", label: "Licence Register", href: "/admin/licenses", perm: "license.view", badgeKey: "licensesDue" },
       { id: "settings", label: "Company Settings", href: "/admin/settings", perm: "settings.manage" },

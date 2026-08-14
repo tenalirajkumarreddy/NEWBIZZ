@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { listStores, listSellableItems } from "@/lib/data/sales";
 import { getCurrentFy } from "@/lib/data/fy";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { NewOrderForm } from "./NewOrderForm";
 
 // New order — demand capture (§4.4). place_order confirms the order with no
@@ -14,16 +14,17 @@ export default async function NewOrderPage() {
   ]);
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/orders" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← Order Book
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">New order</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          {fy ? `FY ${fy.code}` : "FY —"} · Demand only — nothing posts until the order is invoiced
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        title="New order"
+        subtitle={
+          <>
+            {fy ? `FY ${fy.code}` : "FY —"} · Demand only — nothing posts until the order is invoiced
+          </>
+        }
+        backHref="/orders"
+        backLabel="Order Book"
+      />
 
       {stores.length === 0 || items.length === 0 ? (
         <EmptyState
@@ -38,6 +39,6 @@ export default async function NewOrderPage() {
       ) : (
         <NewOrderForm stores={stores} items={items} />
       )}
-    </div>
+    </PageContainer>
   );
 }

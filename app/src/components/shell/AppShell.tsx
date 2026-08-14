@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import type { AppClaims } from "@/lib/auth/claims";
+import type { BranchRow } from "@/lib/data/branches";
+import type { FinancialYearRow } from "@/lib/data/types";
+import type { FyRow } from "@/lib/data/settings";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { StatusBar } from "./StatusBar";
@@ -20,6 +23,11 @@ export function AppShell({
   phone,
   roleLabel,
   badges,
+  warehouses,
+  currentWarehouse,
+  currentFy,
+  financialYears,
+  canManageSettings,
   children,
 }: {
   claims: AppClaims;
@@ -27,6 +35,11 @@ export function AppShell({
   phone: string;
   roleLabel: string;
   badges?: Record<string, number | undefined>;
+  warehouses: BranchRow[];
+  currentWarehouse: BranchRow | null;
+  currentFy: FinancialYearRow | null;
+  financialYears: FyRow[];
+  canManageSettings: boolean;
   children: ReactNode;
 }) {
   return (
@@ -34,7 +47,7 @@ export function AppShell({
       className="grid h-[100dvh] overflow-hidden bg-bg"
       style={{
         gridTemplateColumns: "240px 1fr",
-        gridTemplateRows: "60px minmax(0, 1fr) 36px",
+        gridTemplateRows: "60px minmax(0, 1fr) 28px",
       }}
     >
       {/* Keeps cached claims honest without trusting them for auth. */}
@@ -45,6 +58,11 @@ export function AppShell({
           displayName={displayName}
           phone={phone}
           roleLabel={roleLabel}
+          warehouses={warehouses}
+          currentWarehouse={currentWarehouse}
+          currentFy={currentFy}
+          financialYears={financialYears}
+          canManageSettings={canManageSettings}
         />
       </div>
 
@@ -57,9 +75,10 @@ export function AppShell({
       </main>
 
       <div className="col-span-2">
-        {/* branchLabel will bind to the resolved warehouse name once that
-            lookup exists; the claim only carries the id. */}
-        <StatusBar />
+        <StatusBar
+          branchLabel={currentWarehouse ? `${currentWarehouse.name} · ${currentWarehouse.code}` : "No warehouse"}
+          fyLabel={currentFy ? `FY ${currentFy.code}` : "FY —"}
+        />
       </div>
     </div>
   );

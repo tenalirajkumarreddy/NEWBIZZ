@@ -3,7 +3,7 @@ import { listReceipts, listAllStores, listPaymentMethods, listPaymentIntents } f
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { count as fmtCount } from "@/lib/format";
@@ -14,6 +14,7 @@ import { PaymentIntentsPanel } from "./PaymentIntentsPanel";
 // Collections — the receipts register (§4.6). Every rupee in lands here:
 // Dr cash/bank/custody, Cr AR. Allocated = knocked down to invoices;
 // the remainder sits on-account against the customer.
+export const metadata = { title: "Collections — NEWBIZZ" };
 export default async function ReceiptsPage() {
   const [receipts, fy, stores, paymentMethods, intents] = await Promise.all([
     listReceipts({ limit: 200 }),
@@ -34,16 +35,16 @@ export default async function ReceiptsPage() {
   const pendingIntentAmount = pendingIntents.reduce((s, i) => s + i.amount, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Collections</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="full">
+      <PageHeader
+        title="Collections"
+        subtitle={
+          <>
             {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(receipts.length)} receipts
-          </p>
-        </div>
-        <RecordPaymentAction stores={stores} paymentMethods={paymentMethods} />
-      </div>
+          </>
+        }
+        actions={<RecordPaymentAction stores={stores} paymentMethods={paymentMethods} />}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
@@ -88,6 +89,6 @@ export default async function ReceiptsPage() {
           <ReceiptsTable receipts={receipts} />
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

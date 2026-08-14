@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Input, Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createFixedAsset } from "@/lib/actions/assets";
 import type { AssetClass, DepMethod } from "@/lib/data/assets";
 
@@ -23,6 +24,8 @@ export function NewAssetForm() {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [name, setName] = useState("");
   const [assetClass, setAssetClass] = useState<AssetClass>("plant_machinery");
@@ -57,6 +60,7 @@ export function NewAssetForm() {
         note: note || undefined,
       });
       if (res.ok) {
+        reset();
         toast.success("Asset registered", capitalize ? "Capitalized to the ledger." : name);
         router.push(`/assets/${res.assetId}`);
         router.refresh();
@@ -67,7 +71,8 @@ export function NewAssetForm() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this asset. They'll be lost if you leave this page." />
       <Panel title="Asset details">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" required htmlFor="name" className="sm:col-span-2">

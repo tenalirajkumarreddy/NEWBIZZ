@@ -4,6 +4,7 @@ import { Panel } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, count as fmtCount } from "@/lib/format";
 
 // Depreciation runs (§5.7) — one row per posted period run, linked to its
@@ -13,14 +14,17 @@ export default async function DepreciationRunsPage() {
   const total = runs.reduce((s, r) => s + r.totalAmount, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/assets" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Fixed Assets</Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Depreciation Runs</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          {fmtCount(runs.length)} runs · <span className="font-mono"><Money value={total} /></span> depreciated
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/assets"
+        backLabel="Fixed Assets"
+        title="Depreciation Runs"
+        subtitle={
+          <>
+            {fmtCount(runs.length)} runs · <span className="font-mono"><Money value={total} /></span> depreciated
+          </>
+        }
+      />
 
       <Panel flush>
         {runs.length === 0 ? (
@@ -61,6 +65,6 @@ export default async function DepreciationRunsPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount } from "@/lib/format";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Routes & Visits — NEWBIZZ" };
 
@@ -18,20 +19,20 @@ export default async function RoutesListPage() {
   const activeSessions = sessions.filter((s) => s.status === "active" || s.status === "paused");
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Routes &amp; Visits</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="full">
+      <PageHeader
+        title="Routes &amp; Visits"
+        subtitle={
+          <>
             {fmtCount(routes.length)} routes · {fmtCount(activeSessions.length)} active sessions
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+          </>
+        }
+        actions={
           <Link href="/routes/new">
             <Button variant="primary" size="sm">New Route</Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* Active sessions */}
       {activeSessions.length > 0 && (
@@ -130,6 +131,6 @@ export default async function RoutesListPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

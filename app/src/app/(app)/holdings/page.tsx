@@ -8,8 +8,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { count as fmtCount, qty as fmtQty, rupeesCompact } from "@/lib/format";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { TransferList } from "./TransferList";
-import { NewTransferPanel } from "./NewTransferPanel";
+import { NewHandoverButton } from "./NewHandoverButton";
 
 export const metadata = { title: "Holdings & Handover — NEWBIZZ" };
 
@@ -37,38 +38,39 @@ export default async function HoldingsPage() {
   const pending = transfers.filter((t) => t.status === "pending");
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Holdings & Handover</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="full">
+      <PageHeader
+        title="Holdings &amp; Handover"
+        subtitle={
+          <>
             Cash and stock in staff custody · {rupeesCompact(totalCash)} cash ·{" "}
             {rupeesCompact(totalStockValue)} stock value
             {pending.length > 0 ? ` · ${fmtCount(pending.length)} pending transfer${pending.length === 1 ? "" : "s"}` : ""}
-          </p>
-        </div>
-        {pending.length > 0 && (
-          <Badge tone="amb" size="sm">{fmtCount(pending.length)} awaiting response</Badge>
-        )}
-      </div>
-
-      <NewTransferPanel
-        claims={claims}
-        users={users}
-        branches={branches}
-        items={items}
-        myUserId={mine.userId}
-        myCash={mine.cash}
-        myStock={mine.stock.map((s) => ({
-          itemId: s.itemId,
-          sku: s.itemSku,
-          name: s.itemName,
-          qty: s.qty,
-          baseUnitCode: s.baseUnitCode,
-        }))}
+          </>
+        }
+        actions={
+          <>
+            {pending.length > 0 && (
+              <Badge tone="amb" size="sm">{fmtCount(pending.length)} awaiting response</Badge>
+            )}
+            <NewHandoverButton
+              claims={claims}
+              users={users}
+              branches={branches}
+              items={items}
+              myUserId={mine.userId}
+              myCash={mine.cash}
+              myStock={mine.stock.map((s) => ({
+                itemId: s.itemId,
+                sku: s.itemSku,
+                name: s.itemName,
+                qty: s.qty,
+                baseUnitCode: s.baseUnitCode,
+              }))}
+            />
+          </>
+        }
       />
-
-      <TransferList transfers={transfers} myUserId={mine.userId} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Cash in custody" flush>
@@ -133,11 +135,13 @@ export default async function HoldingsPage() {
         </Panel>
       </div>
 
+      <TransferList transfers={transfers} myUserId={mine.userId} />
+
       <p className="text-[12px] text-ink-4">
         Balances move only when the receiver accepts — accept is all-or-nothing in one
         transaction. Cash moves post a journal (2140 by custodian); stock moves keep value in
         inventory.
       </p>
-    </div>
+    </PageContainer>
   );
 }

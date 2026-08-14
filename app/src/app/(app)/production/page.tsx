@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount, money } from "@/lib/format";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Production Runs — NEWBIZZ" };
 
@@ -13,18 +14,20 @@ export default async function ProductionListPage() {
   const runs = await listRuns();
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Production Runs</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="full">
+      <PageHeader
+        title="Production Runs"
+        subtitle={
+          <>
             {fmtCount(runs.length)} runs — atomic EOD events consuming inputs and producing output
-          </p>
-        </div>
-        <Link href="/production/new">
-          <Button size="sm">New Run</Button>
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          <Link href="/production/new">
+            <Button size="sm">New Run</Button>
+          </Link>
+        }
+      />
 
       <Panel title="All production runs" flush>
         {runs.length === 0 ? (
@@ -84,6 +87,6 @@ export default async function ProductionListPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

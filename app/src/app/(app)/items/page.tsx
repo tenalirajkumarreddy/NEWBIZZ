@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { count as fmtCount, percent } from "@/lib/format";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -24,6 +25,7 @@ const TYPE_TONE: Record<string, "brand" | "amb" | "grn" | "slate" | "neutral"> =
   service: "slate",
 };
 
+export const metadata = { title: "Items — NEWBIZZ" };
 export default async function ItemsPage() {
   const items = await listItems();
   const active = items.filter((i) => i.status === "active").length;
@@ -32,19 +34,16 @@ export default async function ItemsPage() {
   ).length;
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Item Master</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(items.length)} items · {fmtCount(active)} active
-            {reorderAlert > 0 ? ` · ${fmtCount(reorderAlert)} with reorder level set` : ""}
-          </p>
-        </div>
-        <Link href="/items/new">
-          <Button variant="primary" size="sm">New item</Button>
-        </Link>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Item Master"
+        subtitle={`${fmtCount(items.length)} items · ${fmtCount(active)} active${reorderAlert > 0 ? ` · ${fmtCount(reorderAlert)} with reorder level set` : ""}`}
+        actions={
+          <Link href="/items/new">
+            <Button variant="primary" size="sm">New item</Button>
+          </Link>
+        }
+      />
 
       <Panel flush>
         {items.length === 0 ? (
@@ -115,6 +114,6 @@ export default async function ItemsPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

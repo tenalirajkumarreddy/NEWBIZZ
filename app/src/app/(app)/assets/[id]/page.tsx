@@ -4,8 +4,10 @@ import { getFixedAsset } from "@/lib/data/assets";
 import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST } from "@/lib/format";
+import { PageContainer } from "@/components/ui";
 import { DisposeAssetPanel } from "./DisposeAssetPanel";
 
 const CLASS_LABEL: Record<string, string> = {
@@ -24,7 +26,7 @@ export default async function AssetDetailPage({ params }: { params: { id: string
   if (!asset) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="report">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/assets" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Fixed Assets</Link>
@@ -61,7 +63,10 @@ export default async function AssetDetailPage({ params }: { params: { id: string
 
       <Panel title="Depreciation history" flush>
         {asset.depHistory.length === 0 ? (
-          <div className="px-4 py-6 text-center text-[13px] text-ink-4">No depreciation booked yet.</div>
+          <EmptyState
+            title="No depreciation booked yet"
+            description="Depreciation accrues on this asset once monthly runs are executed."
+          />
         ) : (
           <Table>
             <THead>
@@ -96,7 +101,7 @@ export default async function AssetDetailPage({ params }: { params: { id: string
           <p className="mt-1 text-[13px] text-ink-2">{asset.note}</p>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

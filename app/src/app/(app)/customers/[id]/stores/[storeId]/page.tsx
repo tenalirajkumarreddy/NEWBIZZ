@@ -4,7 +4,7 @@ import { getStore, getCustomerActivity } from "@/lib/data/customers";
 import { getStore360, listInteractions, listComplaints } from "@/lib/data/crm";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer } from "@/components/ui";
 import { Money } from "@/components/ui/Money";
 import { titleCase } from "@/lib/format";
 import { StoreProfileActions } from "./StoreProfileActions";
@@ -30,7 +30,7 @@ export default async function StoreProfilePage({ params }: { params: { id: strin
   const addressParts = [store.addressLine, store.area, store.city, store.pincode].filter(Boolean) as string[];
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-5 px-6 py-6 lg:px-8">
+    <PageContainer width="report">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -93,6 +93,6 @@ export default async function StoreProfilePage({ params }: { params: { id: strin
         mapsUrl={mapsUrl}
         addressParts={addressParts}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -5,6 +5,7 @@ import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, qty as fmtQty, titleCase } from "@/lib/format";
 
 // Debit-note detail (§5.5) — the purchase return. Header, returned lines at WA
@@ -15,19 +16,18 @@ export default async function DebitNoteDetailPage({ params }: { params: { id: st
   if (!dn) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing/debit-notes" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Debit Notes</Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{dn.debitNoteNo}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{dn.debitNoteNo}</span>
             <StatusBadge status={dn.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(dn.createdAt)} · {dn.supplierName ?? "—"} · {titleCase(dn.reason)}
-          </p>
-        </div>
-      </div>
+          </span>
+        }
+        subtitle={`${dateIST(dn.createdAt)} · ${dn.supplierName ?? "—"} · ${titleCase(dn.reason)}`}
+        backHref="/purchasing/debit-notes"
+        backLabel="Debit Notes"
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fact label="Supplier" value={dn.supplierName ?? "—"} />
@@ -62,7 +62,7 @@ export default async function DebitNoteDetailPage({ params }: { params: { id: st
       )}
 
       <p className="text-[11px] text-ink-4">This debit note reduced the supplier&rsquo;s payable and reversed inventory + input GST when posted.</p>
-    </div>
+    </PageContainer>
   );
 }
 

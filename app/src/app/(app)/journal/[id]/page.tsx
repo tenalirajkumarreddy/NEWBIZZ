@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getJournalEntry } from "@/lib/data/journal";
 import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, money } from "@/lib/format";
 import { JournalEntryActions } from "./JournalEntryActions";
@@ -22,25 +23,15 @@ export default async function JournalEntryPage({ params }: { params: { id: strin
   const canReverse = entry.status === "posted" && !isReversal;
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/journal" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Day Book
-          </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{entry.entry_no}</h1>
-            <StatusBadge status={entry.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(entry.entry_date)} · {titleCase(entry.source)}
-            {entry.postedByName ? ` · ${entry.postedByName}` : ""}
-          </p>
-        </div>
-        {canReverse && (
-          <JournalEntryActions entryId={entry.id} entryNo={entry.entry_no} />
-        )}
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/journal"
+        backLabel="Day Book"
+        title={<>{entry.entry_no} <StatusBadge status={entry.status} /></>}
+        mono
+        subtitle={`${dateIST(entry.entry_date)} · ${titleCase(entry.source)}${entry.postedByName ? ` · ${entry.postedByName}` : ""}`}
+        actions={canReverse && <JournalEntryActions entryId={entry.id} entryNo={entry.entry_no} />}
+      />
 
       {isReversal && (
         <div className="rounded-md bg-amb-wash px-3 py-2 text-[12px] text-amb ring-1 ring-inset ring-amb/20">
@@ -90,6 +81,6 @@ export default async function JournalEntryPage({ params }: { params: { id: strin
           </tfoot>
         </Table>
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

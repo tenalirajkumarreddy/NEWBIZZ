@@ -5,6 +5,7 @@ import { count as fmtCount } from "@/lib/format";
 import { DeviceConfigManager } from "./DeviceConfigManager";
 import { LiveTimeline } from "./LiveTimeline";
 import Link from "next/link";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export default async function ProductionDevicesPage({
   searchParams,
@@ -22,13 +23,15 @@ export default async function ProductionDevicesPage({
   const deviceCount = new Set(configs.map((c) => c.deviceId)).size;
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-ink">Production Devices</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          {fmtCount(configs.length)} mappings · {fmtCount(deviceCount)} device{deviceCount !== 1 ? "s" : ""}
-        </p>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Production Devices"
+        subtitle={
+          <>
+            {fmtCount(configs.length)} mappings · {fmtCount(deviceCount)} device{deviceCount !== 1 ? "s" : ""}
+          </>
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-line">
@@ -63,7 +66,7 @@ export default async function ProductionDevicesPage({
           <DeviceConfigManager configs={configs} items={items} />
         </Panel>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

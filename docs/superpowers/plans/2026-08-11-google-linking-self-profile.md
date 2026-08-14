@@ -538,3 +538,57 @@ End-to-end smoke (all manual):
 2. Phone sign-in → topbar avatar → Profile → account card + "Not linked" → Link Google → back on `/profile` with email shown → Unlink → back to "Not linked".
 3. Signed-out visit to `/profile` → `/login`.
 4. After linking, Google sign-in signs the user in directly (no banner).
+
+## Task 4 review result (logged in-conversation; SDD workspace under .superpowers/sdd)
+
+- Reviewer verdict 1: Needs fixes.
+- Important: ProfilePage.tsx unstable-effect loop. createClient() (client.ts:10-14) returns a NEW client per render; useCallback deps [supabase] + useEffect([refreshGoogle]) -> refire on every render; each setGoogle(new object) -> render -> loop of getUserIdentities() calls. Fix: stable client via useState lazy init.
+- Minor: unlink() discards getUserIdentities error; missing trailing newlines on both new files.
+- Deviation g.email -> g.identity_data?.email ?? g.id APPROVED by reviewer (checked installed @supabase/auth-js module types: no UserIdentity.email) - verified correct.
+- users.ts pre-existing redesign edits in the 7d0fc64 commit confirmed as provenance, not Task 4 work.
+- Lint: pre-existing env gap (no ESLint config/dependency; next lint interactive) - documented, not a Task 4 defect.
+
+## Task 4 review — second pass (after fixes)
+
+- Fix commit d1b84e2 (fix(profile): stabilize supabase client to stop effect loop).
+- Important fixed: ProfilePage now creates client via useState lazy init (stable across renders) -> useCallback/useEffect fire once on mount, no loop.
+- Minor fixed: unlink surfaces getUserIdentities error; both new files now end with LF newline.
+- Re-review basis: fix applies reviewer-prescribed approach verbatim; typecheck + build PASS; diff inspected by orchestrator. Approved.
+- Task 4 FINAL: APPROVED. Commits: 7d0fc64 (feat) + d1b84e2 (fix).
+
+## Task 5: Topbar Profile menu item — RESULT
+
+- Implementer: DONE. Commit 436b707 (feat(shell): add profile link to user menu), single path staged.
+- Reviewer: APPROVED. Profile Link inserted verbatim (Topbar.tsx:308-315) above Sign out; href/role/className match brief; no duplicate import; only one file changed; typecheck PASS.
+- Provenance: commit sweeps in pre-existing Topbar redesign (live Warehouse/FY selectors) — expected, staged per brief, not Task 5 work.
+- Minor (deferred to final review): Profile Link lacks onClick={() => setOpen(false)}; menu may stay open after client-side nav. Matches brief verbatim.
+- Step 3 manual browser flow: pending integration verification (environment lacks running app/browser).
+
+## Whole-branch review (final gate)
+
+- Verdict: PASS - ready to ship, no blockers.
+- Verified end-to-end: orphan flow (callback RPC with caller JWT via server client; gate to /login?google=unlinked; LoginFlow banner; no admin Pending zombies), linking flow (linkIdentity redirectTo /auth/callback?next=/profile; callback honors next), unlink flow (phone untouched), security (no service role in feature; RPC definer + search_path + authenticated-only, verified live; no anon exposure), session/auth consistency, data flow (getMyProfile -> getUser -> UserRow renders all 4 fields), migration contract matches plan verbatim.
+- Finder (Minor, acknowledged, not new): callback failure-contract diverges from spec text (40529fc made deliberate gate -> /login?error=oauth instead of google=unlinked when cleanup not true; per-task approved). Profile link menu-close (fixed in 0e7f46a). ProfilePage unlink inline error surfacing (harmless, matches approved fix).
+- Post-fix: typecheck PASS. Commit 0e7f46a (fix(shell): close user menu on profile navigation).
+
+## FINAL STATE - Google linking + self-profile feature COMPLETE
+
+Commits (feature, 10 total):
+  7ea6f3f feat(db) add cleanup_orphan_google_user RPC
+  88b97a4 fix(db) idempotent
+  9f67b17 feat(auth) callback orphan detect + cleanup
+  40529fc fix(auth) gate unlinked banner on successful cleanup
+  0e9a813 feat(login) unlinked banner + copy fix
+  7d0fc64 feat(profile) self-profile page
+  d1b84e2 fix(profile) stabilize client (effect loop)
+  436b707 feat(shell) profile menu link
+  0e7f46a fix(shell) close menu on nav
+  (rollup: 187790d plan, a3475d1 spec)
+
+Production deployment: 0942 migration + idempotent applied to wmpxwpubfxpexybqnynz; RPC verified live (SECURITY DEFINER, authenticated-only, anon/public revoked). Security advisors: no new gaps (function flagged only under the intentional authenticated-definer WARN class, same as the other 167 definer functions).
+
+Final verification: typecheck PASS, build PASS (route /profile present), lint unrunnable (pre-existing no-ESLint).
+
+Pending (integration-only, environment):
+  - Manual browser OAuth flows (link/unlink round-trips, signed-out /profile redirect).
+  - Supabase dashboard: ensure Google OAuth provider enabled + Google Cloud consent + authorized redirect/redirect URIs in place before live Google flow.

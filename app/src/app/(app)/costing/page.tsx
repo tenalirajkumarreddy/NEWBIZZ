@@ -4,6 +4,7 @@ import { Panel, Card } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Kpi, Money, PageContainer, PageHeader } from "@/components/ui";
 import { count as fmtCount, money } from "@/lib/format";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { CostingActions } from "./CostingActions";
@@ -21,13 +22,47 @@ export default async function CostingDashboardPage() {
   const months = [...new Set(runs.map((r) => r.periodMonth))].sort().reverse();
   const snapshotMonths = [...new Set(snapshots.map((s) => s.periodMonth))].sort().reverse();
 
+  const drafts = runs.filter((r) => r.status === "draft").length;
+  const finalized = runs.filter((r) => r.status === "final");
+  const unitsCosted = finalized.reduce((s, r) => s + r.unitsCompleted, 0);
+  const totalPoolValue = pools.reduce((s, p) => s + p.amount, 0);
+
+  // The run that best represents "today's COGM": the newest month's finalized
+  // run (highest stage reached), falling back to the newest draft run.
+  const newestMonth = months[0];
+  const monthRuns = newestMonth ? runs.filter((r) => r.periodMonth === newestMonth) : [];
+  const metricRun = [...monthRuns].reverse().find((r) => r.status === "final") ?? monthRuns[0] ?? null;
+
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-ink">Process Costing</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          Weighted-average cost to make (COGM) per product per month — {fmtCount(runs.length)} runs
-        </p>
+    <PageContainer>
+      <PageHeader
+        title="Process Costing"
+        subtitle={`Weighted-average cost to make (COGM) per product per month — ${fmtCount(runs.length)} runs · ${money(unitsCosted)} units costed`}
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi
+          label="Costing runs"
+          value={fmtCount(runs.length)}
+          sub={`${fmtCount(drafts)} draft · ${fmtCount(finalized.length)} finalized`}
+        />
+        <Kpi
+          label="Overhead pools"
+          value={fmtCount(pools.length)}
+          sub={`${money(totalPoolValue)} pooled`}
+        />
+        <Kpi
+          label="Latest COGM / unit"
+          value={metricRun ? <Money value={metricRun.cogmPerUnit} /> : "—"}
+          sub={metricRun ? `${metricRun.periodMonth} · Stage ${metricRun.stage}` : "Run costing to seed"}
+          tone={metricRun && metricRun.cogmPerUnit > 0 ? "grn" : undefined}
+        />
+        <Kpi
+          label="Units costed"
+          value={fmtCount(unitsCosted)}
+          sub={`${fmtCount(finalized.length)} finalized run${finalized.length === 1 ? "" : "s"}`}
+          tone={unitsCosted > 0 ? "grn" : undefined}
+        />
       </div>
 
       {/* Costing runs */}
@@ -121,6 +156,6 @@ export default async function CostingDashboardPage() {
 
       {/* Overhead pools */}
       <OverheadPoolSection pools={pools} />
-    </div>
+    </PageContainer>
   );
 }

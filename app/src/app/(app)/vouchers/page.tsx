@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listJournalEntries } from "@/lib/data/journal";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -15,6 +15,7 @@ function titleCase(s: string) {
 // Manual Vouchers register (§5.2) — hand-posted journals (payment, receipt,
 // contra, journal). System-generated entries live in the Day Book; this page is
 // just the manual ones plus the entry point to raise a new voucher.
+export const metadata = { title: "Manual Vouchers — NEWBIZZ" };
 export default async function VouchersPage() {
   const [manual, voucher, fy] = await Promise.all([
     listJournalEntries({ source: "manual", limit: 200 }),
@@ -28,21 +29,19 @@ export default async function VouchersPage() {
   const total = entries.reduce((s, e) => s + e.debitTotal, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Manual Vouchers</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(entries.length)} hand-posted entries
-          </p>
-        </div>
-        <Link
-          href="/vouchers/new"
-          className="self-start rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d"
-        >
-          + New voucher
-        </Link>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Manual Vouchers"
+        subtitle={`${fy ? `FY ${fy.code}` : "FY —"} · ${fmtCount(entries.length)} hand-posted entries`}
+        actions={
+          <Link
+            href="/vouchers/new"
+            className="rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d"
+          >
+            + New voucher
+          </Link>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Manual entries" value={fmtCount(entries.length)} sub="This financial year" />
@@ -90,6 +89,6 @@ export default async function VouchersPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

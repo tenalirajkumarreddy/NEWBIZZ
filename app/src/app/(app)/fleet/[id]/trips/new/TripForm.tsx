@@ -6,9 +6,21 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { createTrip, type ActionResult } from "@/lib/actions/fleet";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
-export function TripForm({ vehicleId }: { vehicleId: string }) {
+export function TripForm({
+  vehicleId,
+  onDone,
+  onCancel,
+}: {
+  vehicleId: string;
+  // Passed when hosted in a Drawer so the user stays on the vehicle detail
+  // page. Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
+}) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<ActionResult | null>(null);
 
@@ -21,8 +33,14 @@ export function TripForm({ vehicleId }: { vehicleId: string }) {
       startKm: formData.get("startKm") ? Number(formData.get("startKm")) : undefined,
       notes: (formData.get("notes") as string) || undefined,
     });
-    if (res.ok) router.push(`/fleet/${vehicleId}`);
-    else setState(res);
+    if (res.ok) {
+      toast.success("Trip started");
+      if (onDone) onDone();
+      else router.push(`/fleet/${vehicleId}`);
+    } else {
+      toast.error(res.error);
+      setState(res);
+    }
     setPending(false);
   }
 
@@ -56,9 +74,15 @@ export function TripForm({ vehicleId }: { vehicleId: string }) {
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Start Trip"}
         </Button>
-        <Link href={`/fleet/${vehicleId}`} className="text-[13px] text-link hover:underline self-center">
-          Cancel
-        </Link>
+        {onCancel ? (
+          <Button type="button" variant="ghost" size="md" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : (
+          <Link href={`/fleet/${vehicleId}`} className="text-[13px] text-link hover:underline self-center">
+            Cancel
+          </Link>
+        )}
       </div>
     </form>
   );

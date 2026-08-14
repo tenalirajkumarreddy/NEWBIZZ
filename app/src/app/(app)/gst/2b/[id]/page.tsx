@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { get2bReport } from "@/lib/data/gst";
 import { Panel, Card } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
@@ -29,18 +29,14 @@ export default async function Gstr2bDetailPage({ params }: { params: { id: strin
   const matchedTax = report.rows.filter((r) => r.matchStatus === "matched").reduce((s, r) => s + r.tax, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/gst/2b" className="text-[12px] font-medium text-ink-4 hover:text-brand">← GSTR-2B</Link>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">2B · {report.import.period}</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(report.import.rowCount)} portal rows
-            {report.import.filename ? ` · ${report.import.filename}` : ""}
-          </p>
-        </div>
-        <Reconcile2bButton importId={report.import.id} />
-      </div>
+    <PageContainer width="wide">
+      <PageHeader
+        backHref="/gst/2b"
+        backLabel="GSTR-2B"
+        title={`2B · ${report.import.period}`}
+        subtitle={`${fmtCount(report.import.rowCount)} portal rows${report.import.filename ? ` · ${report.import.filename}` : ""}`}
+        actions={<Reconcile2bButton importId={report.import.id} />}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Matched" value={fmtCount(matched)} sub="ITC safe to claim" tone="grn" />
@@ -125,6 +121,6 @@ export default async function Gstr2bDetailPage({ params }: { params: { id: strin
           Reconcile matches each portal row to a recorded supplier bill by GSTIN + vendor bill number, comparing taxable and tax (₹1 tolerance). Re-run any time after recording missing bills.
         </p>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

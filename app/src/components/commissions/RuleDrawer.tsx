@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
+import { useToast } from "@/components/ui/Toast";
 import { saveRule, type CommissionRuleInput } from "@/lib/actions/commissions";
 import type { CommissionRuleRow, UserOption, RoleOption } from "@/lib/data/commissions";
 
@@ -33,6 +35,8 @@ export function RuleDrawer({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
+  const toast = useToast();
 
   async function handleSave() {
     setSaving(true);
@@ -64,6 +68,8 @@ export function RuleDrawer({
     }
 
     setSaving(false);
+    toast.success(rule ? "Rule updated" : "Rule added");
+    router.refresh();
     onClose();
   }
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getChallan, type ChallanLine } from "@/lib/data/challans";
 import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty as fmtQty } from "@/lib/format";
 import { ChallanRowActions } from "../ChallanRowActions";
@@ -15,18 +16,16 @@ export default async function ChallanDetailPage({ params }: { params: { id: stri
   if (!challan) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Breadcrumb + header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/challans" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Delivery Challans
-          </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{challan.challan_no}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{challan.challan_no}</span>
             <StatusBadge status={challan.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+          </span>
+        }
+        subtitle={
+          <>
             Printed {dateIST(challan.printedAt)}
             {challan.orderNo ? (
               <>
@@ -36,15 +35,19 @@ export default async function ChallanDetailPage({ params }: { params: { id: stri
                 </Link>
               </>
             ) : null}
-          </p>
-        </div>
-        <ChallanRowActions
-          challanId={challan.id}
-          challanNo={challan.challan_no}
-          status={challan.status}
-          orderId={challan.orderId}
-        />
-      </div>
+          </>
+        }
+        actions={
+          <ChallanRowActions
+            challanId={challan.id}
+            challanNo={challan.challan_no}
+            status={challan.status}
+            orderId={challan.orderId}
+          />
+        }
+        backHref="/challans"
+        backLabel="Delivery Challans"
+      />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -86,7 +89,7 @@ export default async function ChallanDetailPage({ params }: { params: { id: stri
           <p className="mt-1 text-[13px] text-ink-2">{challan.notes}</p>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

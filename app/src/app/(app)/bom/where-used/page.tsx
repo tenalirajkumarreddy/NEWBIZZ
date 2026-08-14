@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { count as fmtCount } from "@/lib/format";
 import { WhereUsedSearch } from "./WhereUsedSearch";
 
@@ -19,16 +20,13 @@ export default async function WhereUsedPage(props: {
   const usage = itemId ? await whereUsed(itemId) : null;
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/bom" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← BOM / Recipes
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Where Used</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          Find all BOMs that reference a specific item or alternate group
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/bom"
+        backLabel="BOM / Recipes"
+        title="Where Used"
+        subtitle="Find all BOMs that reference a specific item or alternate group"
+      />
 
       <WhereUsedSearch initialItemId={itemId ?? ""} />
 
@@ -76,6 +74,6 @@ export default async function WhereUsedPage(props: {
           )}
         </Panel>
       )}
-    </div>
+    </PageContainer>
   );
 }

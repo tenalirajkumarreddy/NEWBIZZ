@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createBom } from "@/lib/actions/bom";
 import type { ItemListRow } from "@/lib/data/catalog";
 import type { BomDetail, AlternateGroupRow } from "@/lib/data/bom";
@@ -25,14 +26,22 @@ export function EditBomForm({
   bom,
   items,
   altGroups,
+  onDone,
+  onCancel,
 }: {
   bom: BomDetail;
   items: ItemListRow[];
   altGroups: AlternateGroupRow[];
+  // Passed when hosted in a Drawer so the user stays on the detail page.
+  // Undefined on the standalone /edit page.
+  onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [parentId] = useState(bom.parentItemId);
   const [stage, setStage] = useState(String(bom.stage));
@@ -84,8 +93,10 @@ export function EditBomForm({
           })),
       });
       if (res.ok) {
+        reset();
         toast.success("BOM updated", "The old version was closed and a new version created.");
-        router.push(`/bom/${res.bomId}`);
+        if (onDone) onDone();
+        else router.push(`/bom/${res.bomId}`);
         router.refresh();
       } else {
         toast.error("Could not update BOM", res.error);
@@ -96,7 +107,8 @@ export function EditBomForm({
   const canSubmit = lines.some((l) => Number(l.qty) > 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this BOM. They'll be lost if you leave this page." />
       <Panel title="Header">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Parent item" required>
@@ -154,7 +166,7 @@ export function EditBomForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push(`/bom/${bom.id}`)}>
+        <Button variant="ghost" size="sm" onClick={onCancel ?? (() => router.push(`/bom/${bom.id}`))}>
           Cancel
         </Button>
         <Button variant="primary" size="md" onClick={submit} loading={pending} disabled={!canSubmit}>

@@ -61,6 +61,8 @@ export function NewTransferPanel({
   myUserId,
   myCash,
   myStock,
+  bare = false,
+  onDone,
 }: {
   claims: AppClaims;
   users: UserOption[];
@@ -69,6 +71,12 @@ export function NewTransferPanel({
   myUserId: string | null;
   myCash: number;
   myStock: MyStockLine[];
+  // Render without the surrounding Panel — used when hosted in a Drawer,
+  // where the Drawer header already carries the title.
+  bare?: boolean;
+  // Called after a successful transfer/deposit when hosted in a Drawer so
+  // the drawer can close. Undefined on the inline page render.
+  onDone?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -180,6 +188,7 @@ export function NewTransferPanel({
             : "It is pending until the receiver accepts.",
         );
         reset();
+        if (onDone) onDone();
         router.refresh();
       } else {
         toast.error("Nothing was created", res.error);
@@ -187,22 +196,18 @@ export function NewTransferPanel({
     });
   }
 
-  return (
-    <Panel
-      title="New handover"
-      subtitle={`Your custody right now: ${money(myCash)} cash · ${fmtQty(myStock.reduce((s, x) => s + x.qty, 0))} units of stock`}
-    >
-      <div className="flex flex-col gap-4">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="What moves" htmlFor="t-mode">
-            <Select id="t-mode" value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
-              {availableModes.map((m) => (
-                <option key={m} value={m}>
-                  {m === "stock" ? "Stock" : m === "cash" ? "Cash → another user" : "Cash → bank deposit"}
-                </option>
-              ))}
-            </Select>
-          </Field>
+  const body = (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field label="What moves" htmlFor="t-mode">
+          <Select id="t-mode" value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
+            {availableModes.map((m) => (
+              <option key={m} value={m}>
+                {m === "stock" ? "Stock" : m === "cash" ? "Cash → another user" : "Cash → bank deposit"}
+              </option>
+            ))}
+          </Select>
+        </Field>
 
           {mode === "stock" && stockConfig && (
             <>
@@ -368,6 +373,16 @@ export function NewTransferPanel({
           </Button>
         </div>
       </div>
+  );
+
+  if (bare) return body;
+
+  return (
+    <Panel
+      title="New handover"
+      subtitle={`Your custody right now: ${money(myCash)} cash · ${fmtQty(myStock.reduce((s, x) => s + x.qty, 0))} units of stock`}
+    >
+      {body}
     </Panel>
   );
 }

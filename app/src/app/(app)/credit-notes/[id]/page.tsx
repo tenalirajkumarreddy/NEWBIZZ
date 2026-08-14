@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty as fmtQty } from "@/lib/format";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { REASON_LABEL } from "../CreditNotesTable";
 
 // Credit-note detail — the AR-reducing document. Header facts, the value split
@@ -19,32 +20,30 @@ export default async function CreditNoteDetailPage({ params }: { params: { id: s
   const isReturn = cn.reason === "sales_adjustment";
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Breadcrumb + header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/credit-notes" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Credit Notes
-          </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{cn.credit_note_no}</h1>
-            <StatusBadge status={cn.status} />
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/credit-notes"
+        backLabel="Credit Notes"
+        title={
+          <>
+            {cn.credit_note_no}{" "}
+            <StatusBadge status={cn.status} />{" "}
             <StatusBadge status={cn.reason} label={REASON_LABEL[cn.reason]} dot={false} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(cn.createdAt)} · {cn.storeName ?? "—"}
-            {cn.customerName ? ` · ${cn.customerName}` : ""}
-          </p>
-        </div>
-        {cn.referenceSaleId && cn.referenceInvoiceNo && (
-          <Link
-            href={`/invoices/${cn.referenceSaleId}`}
-            className="text-[12px] font-medium text-brand hover:underline"
-          >
-            Against {cn.referenceInvoiceNo} →
-          </Link>
-        )}
-      </div>
+          </>
+        }
+        mono
+        subtitle={`${dateIST(cn.createdAt)} · ${cn.storeName ?? "—"}${cn.customerName ? ` · ${cn.customerName}` : ""}`}
+        actions={
+          cn.referenceSaleId && cn.referenceInvoiceNo && (
+            <Link
+              href={`/invoices/${cn.referenceSaleId}`}
+              className="text-[12px] font-medium text-brand hover:underline"
+            >
+              Against {cn.referenceInvoiceNo} →
+            </Link>
+          )
+        }
+      />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -104,7 +103,7 @@ export default async function CreditNoteDetailPage({ params }: { params: { id: s
         This credit note reduced the customer&rsquo;s outstanding when it was posted
         {isReturn ? " and restocked the returned goods at their original cost." : "."}
       </p>
-    </div>
+    </PageContainer>
   );
 }
 

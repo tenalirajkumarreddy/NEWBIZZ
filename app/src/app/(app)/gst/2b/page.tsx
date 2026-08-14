@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateTimeIST, count as fmtCount } from "@/lib/format";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { Import2bPanel } from "./Import2bPanel";
 
 // GSTR-2B reconciliation (§5.9) — import the portal's auto-drafted ITC statement
@@ -15,12 +16,13 @@ export default async function Gstr2bPage() {
   const imports = await list2bImports();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/gst" className="text-[12px] font-medium text-ink-4 hover:text-brand">← GST Reports</Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">GSTR-2B Reconciliation</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">Match the portal&rsquo;s ITC statement against your recorded bills</p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/gst"
+        backLabel="GST Reports"
+        title="GSTR-2B Reconciliation"
+        subtitle="Match the portal&rsquo;s ITC statement against your recorded bills"
+      />
 
       <Import2bPanel defaultPeriod={currentPeriod()} />
 
@@ -63,8 +65,8 @@ export default async function Gstr2bPage() {
               ))}
             </TBody>
           </Table>
-        )}
+)}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

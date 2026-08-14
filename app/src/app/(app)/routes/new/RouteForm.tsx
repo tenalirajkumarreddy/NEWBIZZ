@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { upsertRoute, type ActionResult } from "@/lib/actions/routes";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 
 export function RouteForm() {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<ActionResult | null>(null);
+  const rootRef = useRef<HTMLFormElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   async function handle(formData: FormData) {
     setPending(true);
@@ -19,13 +24,20 @@ export function RouteForm() {
       name: formData.get("name") as string,
       isDefault: formData.get("isDefault") === "on",
     });
-    if (res.ok) router.push("/routes");
-    else setState(res);
+    if (res.ok) {
+      reset();
+      toast.success("Route created");
+      router.push("/routes");
+    } else {
+      toast.error(res.error);
+      setState(res);
+    }
     setPending(false);
   }
 
   return (
-    <form action={handle} className="flex flex-col gap-4">
+    <form ref={rootRef} action={handle} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this route. They'll be lost if you leave this page." />
       <Field label="Route name" required>
         <input
           name="name"

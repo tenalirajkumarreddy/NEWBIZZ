@@ -6,6 +6,7 @@ import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { RouteActions } from "./RouteActions";
 
 export const metadata = { title: "Route Detail — NEWBIZZ" };
@@ -22,23 +23,23 @@ export default async function RouteDetailPage(props: { params: Promise<{ id: str
   if (!route) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <Link href="/routes" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Routes</Link>
-
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-[22px] font-bold tracking-tight text-ink">{route.name}</h1>
+    <PageContainer width="full">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <span>{route.name}</span>
             {route.isDefault && <Badge tone="grn" size="sm">Default</Badge>}
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+          </span>
+        }
+        subtitle={
+          <>
             {stores.length} assigned stores · {sessions.length} sessions
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <RouteActions routeId={route.id} users={users} />
-        </div>
-      </div>
+          </>
+        }
+        actions={<RouteActions routeId={route.id} users={users} />}
+        backHref="/routes"
+        backLabel="Routes"
+      />
 
       {/* Sessions */}
       <Panel title="Sessions" flush>
@@ -120,6 +121,6 @@ export default async function RouteDetailPage(props: { params: Promise<{ id: str
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

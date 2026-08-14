@@ -1,33 +1,36 @@
 import Link from "next/link";
 import { listGrns } from "@/lib/data/purchases";
+import { listSupplierOptions } from "@/lib/data/suppliers";
+import { listStockableItems } from "@/lib/data/stock";
 import { Panel } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, count as fmtCount } from "@/lib/format";
+import { ReceiveGoodsActions } from "./ReceiveGoodsActions";
 
 export default async function GrnsPage() {
   const grns = await listGrns({ limit: 200 });
+  const [suppliers, items] = await Promise.all([listSupplierOptions(), listStockableItems()]);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Purchasing</Link>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Goods Receipts</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">{fmtCount(grns.length)} GRNs · stock in at cost</p>
-        </div>
-        <Link href="/purchasing/grn/new"><Button variant="primary" size="sm">Receive goods</Button></Link>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Goods Receipts"
+        subtitle={`${fmtCount(grns.length)} GRNs · stock in at cost`}
+        backHref="/purchasing"
+        backLabel="Purchasing"
+        actions={<ReceiveGoodsActions suppliers={suppliers} items={items} />}
+      />
 
       <Panel flush>
         {grns.length === 0 ? (
           <EmptyState
             title="No goods receipts yet"
             description="A GRN books received goods into stock at cost (Dr inventory / Cr GRN clearing). Bill it later to book GST and the payable."
-            action={<Link href="/purchasing/grn/new"><Button variant="secondary" size="sm">Receive goods</Button></Link>}
+            action={<ReceiveGoodsActions suppliers={suppliers} items={items} />}
           />
         ) : (
           <Table>
@@ -66,6 +69,6 @@ export default async function GrnsPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

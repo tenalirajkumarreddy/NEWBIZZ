@@ -21,6 +21,7 @@ import {
   isPortalPrincipal,
   type AppClaims,
 } from "@/lib/auth/claims";
+import { canAccessPath, NO_ACCESS_PATH } from "@/lib/auth/route-guard";
 import type { Database } from "./database.types";
 
 // Shape of a single cookie the ssr client asks us to persist.
@@ -29,6 +30,14 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 // Routes reachable without an active session.
 const PUBLIC_PREFIXES = ["/login", "/auth"];
 const HOLDING_ROUTE = "/pending";
+
+// Auth handlers that must run even when a session exists. /auth/signout POSTs
+// to clear the session and /auth/callback exchanges an OAuth code — if
+// middleware bounced these (the public-page redirect below) a suspended user
+// would be stuck on /pending forever and a portal principal never able to log
+// out. They pass straight through to their route handlers, which are
+// themselves idempotent and safe for signed-in callers.
+const AUTH_HANDLER_PREFIXES = ["/auth/signout", "/auth/callback"];
 
 // Portal surface. Reachable signed-out (login) and by signed-in portal principals
 // only; internal users are bounced away. `/portal` itself and `/portal/login` are
@@ -51,6 +60,12 @@ function isPortal(pathname: string): boolean {
 
 function isSelfGuardedApi(pathname: string): boolean {
   return pathname === API_PREFIX || pathname.startsWith(API_PREFIX + "/");
+}
+
+function isAuthHandler(pathname: string): boolean {
+  return AUTH_HANDLER_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
 }
 
 // Pick where a signed-in principal lands. Internal (active) users go to the main
@@ -102,6 +117,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // through to their handler — they are invoked without a browser session and
   // authenticate in-handler. Skip the whole session gate for them.
   if (isSelfGuardedApi(pathname)) return response;
+
+  // Sign-out / OAuth-callback handlers pass through regardless of session state
+  // (signed in, suspended, or a portal principal), so the buttons that clear
+  // the session keep working. See AUTH_HANDLER_PREFIXES above.
+  if (isAuthHandler(pathname)) return response;
 
   // Signed out: force to /login for anything non-public. Portal surface is
   // public (renders its own login), so a signed-out visitor may see it.
@@ -156,6 +176,20 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
+
+  // Route-level permission gate. The Sidebar hides links a user can't use, but a
+  // direct URL (typed, stale bookmark, or shared) would render anyway — redirect
+  // those to /no-access. UX gate only; the DB still refuses by permission.
+  if (isActive(claims) && !canAccessPath(claims, pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = NO_ACCESS_PATH;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // Let server routes know which path rendered so the (app) layout can re-run
+  // the same permission guard (defence in depth, in case middleware was skipped).
+  response.headers.set("x-pathname", pathname);
 
   return response;
 }

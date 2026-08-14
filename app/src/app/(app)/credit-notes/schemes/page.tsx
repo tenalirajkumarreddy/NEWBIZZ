@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listSchemes } from "@/lib/data/creditnotes";
 import { Panel, Card } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -18,18 +18,13 @@ export default async function SchemesPage() {
   const pending = schemes.reduce((s, sc) => s + sc.pendingApproval, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/credit-notes" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Credit Notes
-          </Link>
-          <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Volume Schemes</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(schemes.length)} schemes · tiered rebates issued as credit notes
-          </p>
-        </div>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        backHref="/credit-notes"
+        backLabel="Credit Notes"
+        title="Volume Schemes"
+        subtitle={`${fmtCount(schemes.length)} schemes · tiered rebates issued as credit notes`}
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Active schemes" value={fmtCount(active)} sub="Open rebate windows" />
@@ -99,6 +94,6 @@ export default async function SchemesPage() {
           GST-adjusted schemes also reverse proportional output tax.
         </p>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

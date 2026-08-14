@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Panel, Badge, Button, Table, THead, TBody, TR, TH, TD } from "@/components/ui";
+import { Panel, Badge, Button, Kpi, Money, Table, THead, TBody, TR, TH, TD, EmptyState } from "@/components/ui";
 import { updateBankAccount } from "@/lib/actions/bank";
 import { useToast } from "@/components/ui/Toast";
+import { count as fmtCount, money, dateIST } from "@/lib/format";
 import type { BankAccountRow, BankTransactionRow, ReconReport, ImportRow, AdjRow } from "@/lib/data/bank";
 
 interface Props {
@@ -16,10 +17,6 @@ interface Props {
 }
 
 type Tab = "transactions" | "reconciliation" | "imports" | "adjustments" | "settings";
-
-function fmtr(n: number) {
-  return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-}
 
 export function AccountDetail({ account, transactions, recon, imports, adjustments }: Props) {
   const [tab, setTab] = useState<Tab>("transactions");
@@ -41,37 +38,6 @@ export function AccountDetail({ account, transactions, recon, imports, adjustmen
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-[22px] font-bold tracking-tight text-ink">{account.name}</h1>
-            <Badge tone={account.status === "active" ? "grn" : "slate"}>{account.status}</Badge>
-            <Badge tone="brand">{account.accountType === "credit_card" ? "Credit Card" : "Bank"}</Badge>
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {account.accountType === "credit_card"
-              ? account.cardLastFour ? `•••• ${account.cardLastFour}` : ""
-              : [account.bankName, account.accountNo].filter(Boolean).join(" | ")}
-            {account.ifsc ? ` | IFSC: ${account.ifsc}` : ""}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {recon && (
-            <div className="rounded-lg border border-line bg-surface px-4 py-2 text-right">
-              <p className="text-[11px] uppercase tracking-wider text-ink-3">Book Balance</p>
-              <p className="text-[20px] font-bold tabular-nums text-ink">{fmtr(recon.bookBalance ?? 0)}</p>
-              {recon.difference !== 0 && (
-                <p className="text-[11px] text-red-600">Diff: {fmtr(recon.difference)}</p>
-              )}
-              {recon.difference === 0 && (
-                <p className="text-[11px] text-emerald-600">Reconciled ✓</p>
-              )}
-            </div>
-          )}
-          <Link href={`/bank/${account.id}/import`} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-darker">+ Import Statement</Link>
-        </div>
-      </div>
-
       <div className="flex gap-1 border-b border-line">
         {tabs.map((t) => (
           <button
@@ -108,154 +74,169 @@ export function AccountDetail({ account, transactions, recon, imports, adjustmen
               </button>
             ))}
           </div>
-          <div className="overflow-x-auto rounded-lg border border-line">
+          <Panel flush>
+            {filteredTxns.length === 0 ? (
+              <EmptyState title="No transactions found" description="Nothing in this view yet — try a different filter." />
+            ) : (
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Date</TH>
+                    <TH>Description</TH>
+                    <TH>Ref No.</TH>
+                    <TH numeric>Amount</TH>
+                    <TH numeric>Balance</TH>
+                    <TH>Status</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {filteredTxns.map((t) => (
+                    <TR key={t.id}>
+                      <TD className="whitespace-nowrap">{t.txnDate}</TD>
+                      <TD className="max-w-[300px] truncate" title={t.description ?? ""}>{t.description ?? "—"}</TD>
+                      <TD className="text-ink-3">{t.refNo ?? "—"}</TD>
+                      <TD numeric className={t.amount >= 0 ? "font-semibold text-grn" : "font-semibold text-red"}>
+                        <Money value={t.amount} />
+                      </TD>
+                      <TD numeric className="text-ink-3">
+                        {t.runningBalance != null ? <Money value={t.runningBalance} /> : "—"}
+                      </TD>
+                      <TD>
+                        <Badge tone={t.matched ? "grn" : "amb"}>
+                          {t.matched ? "Matched" : "Unmatched"}
+                        </Badge>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </Panel>
+        </div>
+      )}
+
+      {tab === "reconciliation" && (
+        <div className="flex flex-col gap-4">
+          {recon ? (
+            <>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Kpi label="Book Balance (GL)" value={<Money value={recon.bookBalance} />} />
+                <Kpi label="Statement Balance" value={<Money value={recon.statementBalance} />} />
+                <Kpi
+                  label="Matched Items"
+                  value={fmtCount(recon.matchedCount)}
+                  sub="statement lines tied to books"
+                  tone="grn"
+                />
+                <Kpi
+                  label="Unmatched Items"
+                  value={fmtCount(recon.unmatchedStmtCount)}
+                  sub={recon.unmatchedStmtCount > 0 ? `${money(recon.unmatchedStmtValue)} on statement` : "fully matched"}
+                  tone={recon.unmatchedStmtCount > 0 ? "amb" : "grn"}
+                />
+              </div>
+
+              <Panel>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[15px] font-semibold text-ink">Difference</p>
+                    <p className={`font-mono text-[24px] font-bold tabular-nums ${recon.difference === 0 ? "text-grn" : "text-red"}`}>
+                      <Money value={recon.difference} />
+                    </p>
+                  </div>
+                  {recon.difference === 0 && <p className="text-[13px] text-grn">Account is fully reconciled ✓</p>}
+                  {recon.difference !== 0 && (
+                    <p className="text-[13px] text-ink-3">
+                      {recon.unmatchedStmtCount} statement lines worth{" "}
+                      <Money value={recon.unmatchedStmtValue} className="text-ink" /> need matching or adjustments
+                    </p>
+                  )}
+                </div>
+              </Panel>
+            </>
+          ) : (
+            <Panel>
+              <EmptyState
+                title="No reconciliation yet"
+                description="Import a statement or post adjustments to reconcile this account against the GL."
+              />
+            </Panel>
+          )}
+        </div>
+      )}
+
+      {tab === "imports" && (
+        <Panel flush>
+          {imports.length === 0 ? (
+            <EmptyState title="No statements imported yet" description="Bank statement imports appear here once uploaded." />
+          ) : (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>File</TH>
+                  <TH>Period</TH>
+                  <TH numeric>Total</TH>
+                  <TH numeric>Inserted</TH>
+                  <TH numeric>Duplicates</TH>
+                  <TH numeric>Closing Balance</TH>
+                  <TH>Imported At</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {imports.map((imp) => (
+                  <TR key={imp.id}>
+                    <TD className="font-medium text-ink">{imp.fileName ?? "Manual import"}</TD>
+                    <TD className="text-ink-3">{imp.periodStart ?? "—"} to {imp.periodEnd ?? "—"}</TD>
+                    <TD numeric>{fmtCount(imp.rowCount)}</TD>
+                    <TD numeric className="text-grn">{imp.insertedCount}</TD>
+                    <TD numeric className="text-ink-3">{fmtCount(imp.duplicateCount)}</TD>
+                    <TD numeric>{imp.closingBalance != null ? <Money value={imp.closingBalance} /> : "—"}</TD>
+                    <TD className="whitespace-nowrap text-ink-3">{dateIST(imp.importedAt)}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          )}
+        </Panel>
+      )}
+
+      {tab === "adjustments" && (
+        <Panel flush>
+          {adjustments.length === 0 ? (
+            <EmptyState title="No adjustments posted" description="Reconciliation adjustments appear here once booked." />
+          ) : (
             <Table>
               <THead>
                 <TR>
                   <TH>Date</TH>
-                  <TH>Description</TH>
-                  <TH>Ref No.</TH>
-                  <TH className="text-right">Amount</TH>
-                  <TH className="text-right">Balance</TH>
-                  <TH className="text-center">Status</TH>
+                  <TH>Type</TH>
+                  <TH numeric>Amount</TH>
+                  <TH>Narration</TH>
+                  <TH>JE Ref</TH>
                 </TR>
               </THead>
               <TBody>
-                {filteredTxns.length === 0 && (
-                  <TR><TD colSpan={6} className="py-8 text-center text-[13px] text-ink-3">No transactions found.</TD></TR>
-                )}
-                {filteredTxns.map((t) => (
-                  <TR key={t.id}>
-                    <TD className="whitespace-nowrap text-[13px]">{t.txnDate}</TD>
-                    <TD className="max-w-[300px] truncate text-[13px]" title={t.description ?? ""}>{t.description ?? "—"}</TD>
-                    <TD className="text-[13px] text-ink-3">{t.refNo ?? "—"}</TD>
-                    <TD className={`whitespace-nowrap text-right text-[13px] font-medium tabular-nums ${
-                      t.amount >= 0 ? "text-emerald-600" : "text-red-600"
-                    }`}>
-                      {fmtr(t.amount)}
+                {adjustments.map((a) => (
+                  <TR key={a.id}>
+                    <TD className="whitespace-nowrap">{a.adjDate}</TD>
+                    <TD>
+                      <Badge tone="brand">{a.adjType.replace(/_/g, " ")}</Badge>
                     </TD>
-                    <TD className="whitespace-nowrap text-right text-[13px] tabular-nums text-ink-3">
-                      {t.runningBalance != null ? fmtr(t.runningBalance) : "—"}
+                    <TD numeric className="text-ink">
+                      <Money value={a.amount} />
                     </TD>
-                    <TD className="text-center">
-                      <Badge tone={t.matched ? "grn" : "amb"}>
-                        {t.matched ? "Matched" : "Unmatched"}
-                      </Badge>
+                    <TD className="max-w-[250px] truncate text-ink-3">{a.narration ?? "—"}</TD>
+                    <TD>
+                      {a.journalEntryId ? (
+                        <Link href={`/journal/${a.journalEntryId}`} className="text-brand hover:underline">View</Link>
+                      ) : "—"}
                     </TD>
                   </TR>
                 ))}
               </TBody>
             </Table>
-          </div>
-        </div>
-      )}
-
-      {tab === "reconciliation" && recon && (
-        <Panel>
-          <h3 className="mb-4 text-[15px] font-semibold text-ink">Bank Reconciliation Statement</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-lg bg-fill p-4">
-              <p className="text-[11px] uppercase tracking-wider text-ink-3">Book Balance (GL)</p>
-              <p className="text-[24px] font-bold tabular-nums text-ink">{fmtr(recon.bookBalance)}</p>
-            </div>
-            <div className="rounded-lg bg-fill p-4">
-              <p className="text-[11px] uppercase tracking-wider text-ink-3">Statement Balance</p>
-              <p className="text-[24px] font-bold tabular-nums text-ink">{fmtr(recon.statementBalance)}</p>
-            </div>
-            <div className="rounded-lg bg-fill p-4">
-              <p className="text-[11px] uppercase tracking-wider text-ink-3">Matched Items</p>
-              <p className="text-[24px] font-bold tabular-nums text-emerald-600">{recon.matchedCount}</p>
-            </div>
-            <div className="rounded-lg bg-fill p-4">
-              <p className="text-[11px] uppercase tracking-wider text-ink-3">Unmatched Items</p>
-              <p className="text-[24px] font-bold tabular-nums text-amber-600">{recon.unmatchedStmtCount}</p>
-            </div>
-          </div>
-          <div className={`mt-4 rounded-lg p-4 ${recon.difference === 0 ? "bg-emerald-50" : "bg-red-50"}`}>
-            <p className="text-[11px] uppercase tracking-wider text-ink-3">Difference</p>
-            <p className={`text-[28px] font-bold tabular-nums ${recon.difference === 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {fmtr(recon.difference)}
-            </p>
-            {recon.difference === 0 && <p className="text-[13px] text-emerald-600">Account is fully reconciled ✓</p>}
-            {recon.difference !== 0 && (
-              <p className="text-[13px] text-red-600">
-                {recon.unmatchedStmtCount} statement lines worth {fmtr(recon.unmatchedStmtValue)} need matching or adjustments
-              </p>
-            )}
-          </div>
+          )}
         </Panel>
-      )}
-
-      {tab === "imports" && (
-        <div className="overflow-x-auto rounded-lg border border-line">
-          <Table>
-            <THead>
-              <TR>
-                <TH>File</TH>
-                <TH>Period</TH>
-                <TH>Total</TH>
-                <TH>Inserted</TH>
-                <TH>Duplicates</TH>
-                <TH>Closing Balance</TH>
-                <TH>Imported At</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {imports.length === 0 && (
-                <TR><TD colSpan={7} className="py-8 text-center text-[13px] text-ink-3">No statements imported yet.</TD></TR>
-              )}
-              {imports.map((imp) => (
-                <TR key={imp.id}>
-                  <TD className="text-[13px] font-medium">{imp.fileName ?? "Manual import"}</TD>
-                  <TD className="text-[13px] text-ink-3">{imp.periodStart ?? "—"} to {imp.periodEnd ?? "—"}</TD>
-                  <TD className="text-[13px] tabular-nums">{imp.rowCount}</TD>
-                  <TD className="text-[13px] tabular-nums text-emerald-600">{imp.insertedCount}</TD>
-                  <TD className="text-[13px] tabular-nums text-ink-3">{imp.duplicateCount}</TD>
-                  <TD className="text-[13px] tabular-nums">
-                    {imp.closingBalance != null ? fmtr(imp.closingBalance) : "—"}
-                  </TD>
-                  <TD className="whitespace-nowrap text-[13px] text-ink-3">{new Date(imp.importedAt).toLocaleString()}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </div>
-      )}
-
-      {tab === "adjustments" && (
-        <div className="overflow-x-auto rounded-lg border border-line">
-          <Table>
-            <THead>
-              <TR>
-                <TH>Date</TH>
-                <TH>Type</TH>
-                <TH className="text-right">Amount</TH>
-                <TH>Narration</TH>
-                <TH>JE Ref</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {adjustments.length === 0 && (
-                <TR><TD colSpan={5} className="py-8 text-center text-[13px] text-ink-3">No adjustments posted.</TD></TR>
-              )}
-              {adjustments.map((a) => (
-                <TR key={a.id}>
-                  <TD className="whitespace-nowrap text-[13px]">{a.adjDate}</TD>
-                  <TD className="text-[13px]">
-                    <Badge tone="brand">{a.adjType.replace(/_/g, " ")}</Badge>
-                  </TD>
-                  <TD className="whitespace-nowrap text-right text-[13px] font-medium tabular-nums">{fmtr(a.amount)}</TD>
-                  <TD className="max-w-[250px] truncate text-[13px] text-ink-3">{a.narration ?? "—"}</TD>
-                  <TD className="text-[13px] text-ink-3">
-                    {a.journalEntryId ? (
-                      <a href={`/journal/${a.journalEntryId}`} className="text-brand hover:underline">View</a>
-                    ) : "—"}
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </div>
       )}
 
       {tab === "settings" && (

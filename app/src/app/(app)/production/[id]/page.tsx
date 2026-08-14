@@ -5,6 +5,7 @@ import { Panel, Card, SectionHeading } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { money } from "@/lib/format";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { ReverseRunDialog } from "./ReverseRunDialog";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
@@ -21,22 +22,21 @@ export default async function RunDetailPage(props: { params: Promise<{ id: strin
   if (!run) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/production" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← Production Runs
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">
-          {run.runNo}
-        </h1>
-        <p className="mt-0.5 flex items-center gap-2 text-[13px] text-ink-3">
-          {run.runDate} ·{" "}
-          <Badge tone={run.stage === 1 ? "brand" : "grn"} size="sm">
-            Stage {run.stage} {STAGE_LABELS[run.stage]}
-          </Badge>
-          {" "}· <StatusBadge status={run.status} size="sm" />
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        title={run.runNo}
+        subtitle={
+          <>
+            {run.runDate} ·{" "}
+            <Badge tone={run.stage === 1 ? "brand" : "grn"} size="sm">
+              Stage {run.stage} {STAGE_LABELS[run.stage]}
+            </Badge>
+            {" "}· <StatusBadge status={run.status} size="sm" />
+          </>
+        }
+        backHref="/production"
+        backLabel="Production Runs"
+      />
 
       {run.status === "posted" && (
         <Card className="flex items-center justify-between gap-3 p-4">
@@ -125,6 +125,6 @@ export default async function RunDetailPage(props: { params: Promise<{ id: strin
       </Card>
 
       <DocumentAttachPanel entityType="production_run" entityId={run.id} entityLabel={run.runNo} />
-    </div>
+    </PageContainer>
   );
 }

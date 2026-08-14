@@ -2,11 +2,12 @@ import { listConversations } from "@/lib/data/whatsapp";
 import { getWhatsappConfig } from "@/lib/data/whatsapp";
 import { listTemplates } from "@/lib/data/whatsapp-worker";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Badge } from "@/components/ui";
+import { Badge, PageContainer } from "@/components/ui";
 import { WhatsAppInbox } from "./WhatsAppInbox";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: "WhatsApp Inbox — NEWBIZZ" };
 export default async function WhatsappPage() {
   const [conversations, config, templates] = await Promise.all([
     listConversations(),
@@ -17,7 +18,7 @@ export default async function WhatsappPage() {
   const unreadTotal = conversations.reduce((s, c) => s + c.unread_count, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[22px] font-bold tracking-tight text-ink">WhatsApp Inbox</h1>
@@ -36,6 +37,6 @@ export default async function WhatsappPage() {
       ) : (
         <WhatsAppInbox conversations={conversations} dryRun={config.dryRun} templates={templates} />
       )}
-    </div>
+    </PageContainer>
   );
 }

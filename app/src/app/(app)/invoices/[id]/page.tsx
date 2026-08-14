@@ -9,6 +9,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty, percent } from "@/lib/format";
 import { SalesReturnPanel } from "./SalesReturnPanel";
 import { InvoiceCorrectionPanel } from "./InvoiceCorrectionPanel";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
 
 // Invoice detail — the value document. Header facts, GST-broken-out lines, and
@@ -26,32 +27,34 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
   const returnedByLine = inv.status !== "void" ? await getReturnedByLine(inv.id) : {};
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Breadcrumb + header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/invoices" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-            ← Invoicing
-          </Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{inv.invoice_no}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{inv.invoice_no}</span>
             <StatusBadge status={inv.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+          </span>
+        }
+        subtitle={
+          <>
             {dateIST(inv.invoice_date)} · {inv.storeName ?? "—"}
             {inv.customerName ? ` · ${inv.customerName}` : ""}
             {!inv.isOfficial && <span> · <span className="text-amb">Cash memo (no GST)</span></span>}
-          </p>
-        </div>
-        {inv.orderId && inv.orderNo && (
-          <Link
-            href={`/orders/${inv.orderId}`}
-            className="text-[12px] font-medium text-brand hover:underline"
-          >
-            From order {inv.orderNo} →
-          </Link>
-        )}
-      </div>
+          </>
+        }
+        actions={
+          inv.orderId && inv.orderNo ? (
+            <Link
+              href={`/orders/${inv.orderId}`}
+              className="text-[12px] font-medium text-brand hover:underline"
+            >
+              From order {inv.orderNo} →
+            </Link>
+          ) : null
+        }
+        backHref="/invoices"
+        backLabel="Invoicing"
+      />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -160,7 +163,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           : "Cash memo (no tax) · "}
         Money and stock were posted to the ledger when this invoice was raised.
       </p>
-    </div>
+    </PageContainer>
   );
 }
 

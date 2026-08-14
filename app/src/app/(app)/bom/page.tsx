@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { listBoms } from "@/lib/data/bom";
+import { listItems } from "@/lib/data/catalog";
+import { listAlternateGroups } from "@/lib/data/bom";
 import { Panel } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount } from "@/lib/format";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { titleCase } from "@/lib/format";
+import { NewBomActions } from "./NewBomActions";
 
 export const metadata = { title: "BOM / Recipes — NEWBIZZ" };
 
 export default async function BomListPage() {
   const boms = await listBoms();
+  const [items, altGroups] = await Promise.all([listItems({ limit: 2000 }), listAlternateGroups()]);
 
   const active = boms.filter((b) => {
     const now = new Date();
@@ -27,35 +32,31 @@ export default async function BomListPage() {
   const future = boms.filter((b) => new Date(b.effectiveFrom) > new Date());
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">BOM / Recipes</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer>
+      <PageHeader
+        title="BOM / Recipes"
+        subtitle={
+          <>
             {fmtCount(boms.length)} recipes · {fmtCount(active.length)} active ·{" "}
             {fmtCount(future.length)} future · {fmtCount(expired.length)} expired
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/bom/alternate-groups">
-            <Button variant="secondary" size="sm">Alt Groups</Button>
-          </Link>
-          <Link href="/bom/new">
-            <Button size="sm">New BOM</Button>
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <Link href="/bom/alternate-groups">
+              <Button variant="secondary" size="sm">Alt Groups</Button>
+            </Link>
+            <NewBomActions items={items} altGroups={altGroups} />
+          </>
+        }
+      />
 
       <Panel title="BOM list" flush>
         {boms.length === 0 ? (
           <EmptyState
             title="No recipes yet"
             description="Create a Bill of Materials for your manufactured items — define what goes into each product."
-            action={
-              <Link href="/bom/new">
-                <Button size="sm">New BOM</Button>
-              </Link>
-            }
+            action={<NewBomActions items={items} altGroups={altGroups} />}
           />
         ) : (
           <Table>
@@ -98,6 +99,6 @@ export default async function BomListPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

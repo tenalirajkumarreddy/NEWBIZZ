@@ -43,14 +43,18 @@ export function NotificationsPage({ rows, total, hasMore }: Props) {
     });
   }
 
-  async function run(fn: () => Promise<{ ok: boolean; error?: string }>, successMsg: string) {
+  async function run(
+    fn: () => Promise<{ ok: boolean; error?: string }>,
+    successMsg: string,
+    transform: (items: NotificationRow[]) => NotificationRow[],
+  ) {
     setBusy(true);
     try {
       const res = await fn();
       if (res.ok) {
         toast.success(successMsg);
         setSelected(new Set());
-        window.location.reload();
+        setItems((prev) => transform(prev));
       } else {
         toast.error(res.error ?? "Failed");
       }
@@ -64,16 +68,28 @@ export function NotificationsPage({ rows, total, hasMore }: Props) {
   async function handleMarkRead() {
     const ids = [...selected];
     if (ids.length === 0) {
-      await run(() => markAllNotificationsRead(), "All notifications marked read");
+      await run(
+        () => markAllNotificationsRead(),
+        "All notifications marked read",
+        (items) => items.map((n) => (n.status === "unread" ? { ...n, status: "read" } : n)),
+      );
       return;
     }
-    await run(() => markNotificationsRead(ids), `${ids.length} marked read`);
+    await run(
+      () => markNotificationsRead(ids),
+      `${ids.length} marked read`,
+      (items) => items.map((n) => (ids.includes(n.id) ? { ...n, status: "read" } : n)),
+    );
   }
 
   async function handleArchive() {
     const ids = [...selected];
     if (ids.length === 0) return;
-    await run(() => archiveNotifications(ids), `${ids.length} archived`);
+    await run(
+      () => archiveNotifications(ids),
+      `${ids.length} archived`,
+      (items) => items.map((n) => (ids.includes(n.id) ? { ...n, status: "archived" } : n)),
+    );
   }
 
   const tabs: { key: Tab; label: string }[] = [

@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLoan } from "@/lib/data/loans";
 import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, percent } from "@/lib/format";
@@ -18,20 +18,23 @@ export default async function LoanDetailPage({ params }: { params: { id: string 
   const nextUnpaid = loan.schedule.find((s) => !s.paid);
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/loans" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Loans &amp; EMI</Link>
-          <div className="mt-1 flex items-center gap-3">
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
             <span className="font-mono text-[13px] text-ink-4">{loan.loanNo}</span>
-            <h1 className="text-[22px] font-bold tracking-tight text-ink">{loan.lender}</h1>
+            <span>{loan.lender}</span>
             <StatusBadge status={loan.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+          </span>
+        }
+        subtitle={
+          <>
             {dateIST(loan.startDate)} · {percent(loan.annualRate, { alreadyPct: true, decimals: 2 })} · {loan.tenureMonths} months
-          </p>
-        </div>
-      </div>
+          </>
+        }
+        backHref="/loans"
+        backLabel="Loans &amp; EMI"
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fact label="Principal" value={<Money value={loan.principal} />} mono />
@@ -98,7 +101,7 @@ export default async function LoanDetailPage({ params }: { params: { id: string 
           <p className="mt-1 text-[13px] text-ink-2">{loan.note}</p>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createSupplier } from "@/lib/actions/suppliers";
 import { STATE_CODES, SUPPLIER_KINDS } from "@/lib/constants";
 import type { Database } from "@/lib/supabase/database.types";
@@ -18,6 +19,8 @@ export function NewSupplierForm() {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [name, setName] = useState("");
   const [kind, setKind] = useState<SupplierKind>("material");
@@ -52,6 +55,7 @@ export function NewSupplierForm() {
         payment_terms: paymentTerms || undefined,
       });
       if (res.ok) {
+        reset();
         toast.success("Supplier created", `${name} added.`);
         router.push(`/suppliers/${res.supplierId}`);
         router.refresh();
@@ -62,7 +66,8 @@ export function NewSupplierForm() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes. They'll be lost if you leave this page." />
       <Panel title="Identity">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" required htmlFor="name" className="sm:col-span-2">

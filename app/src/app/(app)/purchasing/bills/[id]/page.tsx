@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Money } from "@/components/ui/Money";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { dateIST, qty as fmtQty, percent } from "@/lib/format";
 
 // Supplier-bill detail (§5.4). Header, GST-broken-out lines, and the tax
@@ -19,25 +20,23 @@ export default async function BillDetailPage({ params }: { params: { id: string 
   const open = bill.status === "posted" || bill.status === "part_paid";
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/purchasing/bills" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Supplier Bills</Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{bill.billNo}</h1>
+    <PageContainer width="report">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{bill.billNo}</span>
             <StatusBadge status={bill.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {dateIST(bill.billDate)} · {bill.supplierName ?? "—"}
-            {bill.supplierBillNo ? ` · vendor ${bill.supplierBillNo}` : ""}
-          </p>
-        </div>
-        {open && (
+          </span>
+        }
+        subtitle={`${dateIST(bill.billDate)} · ${bill.supplierName ?? "—"}${bill.supplierBillNo ? ` · vendor ${bill.supplierBillNo}` : ""}`}
+        backHref="/purchasing/bills"
+        backLabel="Supplier Bills"
+        actions={open && (
           <Link href={`/purchasing/pay/new?supplier=${bill.supplierId}`}>
             <Button variant="primary" size="sm">Pay supplier</Button>
           </Link>
         )}
-      </div>
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fact label="Supplier" value={bill.supplierName ?? "—"} />
@@ -90,7 +89,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
       </div>
 
       <p className="text-[11px] text-ink-4">Input GST and the payable were posted when this bill was booked.</p>
-    </div>
+    </PageContainer>
   );
 }
 

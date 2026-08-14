@@ -3,6 +3,7 @@ import { listBranches, listStockableItems } from "@/lib/data/stock";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { OpeningStockForm } from "./OpeningStockForm";
 
 export const metadata = { title: "Opening Stock — NEWBIZZ" };
@@ -11,20 +12,22 @@ export default async function OpeningStockPage() {
   const [branches, items] = await Promise.all([listBranches(), listStockableItems()]);
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Load Opening Stock</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="report">
+      <PageHeader
+        title="Load Opening Stock"
+        subtitle={
+          <>
             One-time setup entry: quantities on hand and their weighted-average cost as of the
             cut-over date. Posts Dr Inventory / Cr Opening Balance Equity per line — the whole
             batch commits in one transaction or not at all.
-          </p>
-        </div>
-        <Link href="/stock">
-          <Button variant="secondary" size="sm">Back to Warehouse Stock</Button>
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          <Link href="/stock">
+            <Button variant="secondary" size="sm">Back to Warehouse Stock</Button>
+          </Link>
+        }
+      />
 
       {items.length === 0 || branches.length === 0 ? (
         <Panel>
@@ -47,6 +50,6 @@ export default async function OpeningStockPage() {
       ) : (
         <OpeningStockForm branches={branches} items={items} />
       )}
-    </div>
+    </PageContainer>
   );
 }

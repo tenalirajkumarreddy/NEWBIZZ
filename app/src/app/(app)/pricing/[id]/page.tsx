@@ -5,6 +5,7 @@ import { Panel } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
+import { PageContainer } from "@/components/ui";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { count as fmtCount, dateIST } from "@/lib/format";
 import { PriceListActions } from "./PriceListActions";
@@ -17,7 +18,7 @@ export default async function PriceListDetailPage({ params }: { params: { id: st
   if (!pl) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="report">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/pricing" className="text-[12px] font-medium text-ink-4 hover:text-brand">
@@ -85,6 +86,6 @@ export default async function PriceListDetailPage({ params }: { params: { id: st
           mode="add"
         />
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

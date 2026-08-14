@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listLoans } from "@/lib/data/loans";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,6 +13,7 @@ import { dateIST, count as fmtCount, percent } from "@/lib/format";
 // Loans & EMI (§5.8). Bank loans with a reducing-balance schedule; each EMI
 // splits principal vs interest. Outstanding = principal still owed across unpaid
 // installments; the next due date drives the upcoming-EMI badge.
+export const metadata = { title: "Loans & EMI — NEWBIZZ" };
 export default async function LoansPage() {
   const [loans, fy] = await Promise.all([listLoans({ limit: 200 }), getCurrentFy()]);
 
@@ -22,18 +23,20 @@ export default async function LoansPage() {
   const dueSoon = active.filter((l) => l.nextDueDate && l.nextDueDate <= todayStr).length;
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Loans &amp; EMI</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="full">
+      <PageHeader
+        title="Loans &amp; EMI"
+        subtitle={
+          <>
             {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(active.length)} active loans
-          </p>
-        </div>
-        <Link href="/loans/new" className="self-start rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d">
-          + Add loan
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          <Link href="/loans/new" className="self-start rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d">
+            + Add loan
+          </Link>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Total outstanding" value={<Money value={outstanding} />} sub="Principal owed" tone={outstanding > 0 ? "amb" : "grn"} />
@@ -90,6 +93,6 @@ export default async function LoansPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

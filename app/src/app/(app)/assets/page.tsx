@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listFixedAssets } from "@/lib/data/assets";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,6 +22,7 @@ const CLASS_LABEL: Record<string, string> = {
 // Fixed Assets & Depreciation (§5.7). Register capital assets, depreciate them
 // (SLM or WDV), and dispose with gain/loss. Gross block − accumulated
 // depreciation = net block, which flows straight to the Balance Sheet.
+export const metadata = { title: "Fixed Assets — NEWBIZZ" };
 export default async function AssetsPage() {
   const [assets, fy] = await Promise.all([listFixedAssets({ limit: 300 }), getCurrentFy()]);
 
@@ -31,23 +32,25 @@ export default async function AssetsPage() {
   const netBlock = grossBlock - accumDep;
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Fixed Assets</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer>
+      <PageHeader
+        title="Fixed Assets"
+        subtitle={
+          <>
             {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(active.length)} active assets
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/assets/depreciation" className="self-start rounded-md bg-fill px-3 py-2 text-[12px] font-semibold text-ink-2 ring-1 ring-inset ring-line hover:text-brand">
-            Depreciation runs →
-          </Link>
-          <Link href="/assets/new" className="self-start rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d">
-            + Register asset
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <Link href="/assets/depreciation" className="self-start rounded-md bg-fill px-3 py-2 text-[12px] font-semibold text-ink-2 ring-1 ring-inset ring-line hover:text-brand">
+              Depreciation runs →
+            </Link>
+            <Link href="/assets/new" className="self-start rounded-md bg-brand px-3 py-2 text-[12px] font-semibold text-white hover:bg-brand-d">
+              + Register asset
+            </Link>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Gross block" value={<Money value={grossBlock} />} sub="Capitalized cost" />
@@ -100,6 +103,6 @@ export default async function AssetsPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

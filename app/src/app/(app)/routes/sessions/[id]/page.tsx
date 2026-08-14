@@ -5,6 +5,7 @@ import { Panel, Card } from "@/components/ui/Card";
 import { StatusBadge, Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer } from "@/components/ui";
 
 export const metadata = { title: "Session Detail — NEWBIZZ" };
 
@@ -17,7 +18,7 @@ export default async function SessionDetailPage(props: { params: Promise<{ id: s
   if (!session) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="form">
       <Link href={`/routes/${session.routeId}`} className="text-[12px] font-medium text-ink-4 hover:text-brand">
         ← {session.routeName}
       </Link>
@@ -86,6 +87,6 @@ export default async function SessionDetailPage(props: { params: Promise<{ id: s
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

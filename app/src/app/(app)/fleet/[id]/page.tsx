@@ -5,15 +5,16 @@ import { listWarehouses } from "@/lib/data/branches";
 import { getIntanglesLiveData } from "@/lib/actions/fleet";
 import { Panel, Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { money } from "@/lib/format";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { FleetActions } from "./FleetActions";
+import { VehicleRecordActions } from "./VehicleRecordActions";
 import { createClient } from "@/lib/supabase/server";
 import PendingRefillsSection from "./PendingRefillsSection";
 import VehicleDetailClient from "./VehicleDetailClient";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
+import { PageContainer } from "@/components/ui";
 
 export const metadata = { title: "Vehicle Detail — NEWBIZZ" };
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function VehicleDetailPage(props: { params: Promise<{ id: s
     .reduce((s, t) => s + (t.distanceKm ?? 0), 0);
 
   return (
-    <div className="mx-auto flex max-w-[1000px] flex-col gap-4 px-6 py-6 lg:px-8">
+    <PageContainer width="detail">
       <Link href="/fleet" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Vehicles</Link>
 
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
@@ -68,7 +69,10 @@ export default async function VehicleDetailPage(props: { params: Promise<{ id: s
           <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{vehicle.regNo}</h1>
           <Badge tone={vehicle.status === "active" ? "grn" : vehicle.status === "maintenance" ? "amb" : "slate"} size="sm">{vehicle.status}</Badge>
         </div>
-        <FleetActions vehicleId={vehicle.id} />
+        <div className="flex flex-col items-end gap-2 sm:items-center">
+          <VehicleRecordActions vehicleId={vehicle.id} />
+          <FleetActions vehicleId={vehicle.id} />
+        </div>
       </div>
 
       <VehicleDetailClient
@@ -106,11 +110,6 @@ export default async function VehicleDetailPage(props: { params: Promise<{ id: s
       {/* Trips */}
       <Panel
         title="Trips"
-        actions={
-          <Link href={`/fleet/${vehicle.id}/trips/new`}>
-            <Button variant="secondary" size="sm">Start Trip</Button>
-          </Link>
-        }
         flush
       >
         {trips.length === 0 ? (
@@ -171,15 +170,7 @@ export default async function VehicleDetailPage(props: { params: Promise<{ id: s
       </Panel>
 
       {/* Fuel logs */}
-      <Panel
-        title="Fuel Logs"
-        actions={
-          <Link href={`/fleet/${vehicle.id}/fuel/new`}>
-            <Button variant="secondary" size="sm">Log Fuel</Button>
-          </Link>
-        }
-        flush
-      >
+      <Panel title="Fuel Logs" flush>
         {fuelLogs.length === 0 ? (
           <EmptyState title="No fuel logs" description="Log fuel purchases to track running costs." />
         ) : (
@@ -207,6 +198,6 @@ export default async function VehicleDetailPage(props: { params: Promise<{ id: s
       </Panel>
 
       <DocumentAttachPanel entityType="vehicle" entityId={vehicle.id} entityLabel={vehicle.regNo} />
-    </div>
+    </PageContainer>
   );
 }

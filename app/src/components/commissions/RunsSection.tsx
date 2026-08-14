@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Panel, SectionHeading } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Drawer } from "@/components/ui/Drawer";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toast";
 import { Money } from "@/components/ui/Money";
 import { dateIST, money as fmtMoney } from "@/lib/format";
 import { computeCommissionRun, postCommissionRun, getRunDetail } from "@/lib/actions/commissions";
@@ -41,23 +43,39 @@ export function RunsSection({
   const [viewRun, setViewRun] = useState<RunDetail | null>(null);
   const [computing, setComputing] = useState<string | null>(null);
   const [posting, setPosting] = useState<string | null>(null);
+  const router = useRouter();
+  const toast = useToast();
 
   async function handleCompute(month: string) {
     setComputing(month);
-    await computeCommissionRun(month);
+    const result = await computeCommissionRun(month);
     setComputing(null);
+    if (result.ok) {
+      toast.success("Commission run computed");
+      router.refresh();
+    } else {
+      toast.error(result.error);
+    }
   }
 
   async function handlePost(runId: string) {
     setPosting(runId);
-    await postCommissionRun(runId);
+    const result = await postCommissionRun(runId);
     setPosting(null);
+    if (result.ok) {
+      toast.success("Commission run posted to journal");
+      router.refresh();
+    } else {
+      toast.error(result.error);
+    }
   }
 
   async function handleViewRun(run: CommissionRunRow) {
     const result = await getRunDetail(run.id);
     if (result.ok) {
       setViewRun({ run: result.run, lines: result.lines });
+    } else {
+      toast.error(result.error);
     }
   }
 
@@ -175,7 +193,10 @@ export function RunsSection({
               )}
             </div>
             {viewRun.lines.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-ink-4">No lines in this run.</p>
+              <EmptyState
+                title="No lines in this run"
+                description="This run has no commission lines to show yet."
+              />
             ) : (
               <Table>
                 <THead>

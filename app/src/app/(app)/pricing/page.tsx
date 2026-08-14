@@ -4,25 +4,25 @@ import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { count as fmtCount, dateIST } from "@/lib/format";
 
+export const metadata = { title: "Rate Master — NEWBIZZ" };
 export default async function PricingPage() {
   const lists = await listPriceLists();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Rate Master</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(lists.length)} price lists — selling prices per item, per list, with slab support
-          </p>
-        </div>
-        <Link href="/pricing/new">
-          <Button variant="primary" size="sm">New price list</Button>
-        </Link>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Rate Master"
+        subtitle={`${fmtCount(lists.length)} price lists — selling prices per item, per list, with slab support`}
+        actions={
+          <Link href="/pricing/new">
+            <Button variant="primary" size="sm">New price list</Button>
+          </Link>
+        }
+      />
 
       <Panel flush>
         {lists.length === 0 ? (
@@ -77,6 +77,6 @@ export default async function PricingPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

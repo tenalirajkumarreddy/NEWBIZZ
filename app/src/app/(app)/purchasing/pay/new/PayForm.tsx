@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { Field, Select, Input } from "@/components/ui/Field";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Money } from "@/components/ui/Money";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { paySupplier, fetchOpenBills } from "@/lib/actions/purchases";
 import { todayIST } from "@/lib/constants";
 import type { SupplierOption } from "@/lib/data/suppliers";
@@ -27,13 +28,21 @@ const MODES = [
 export function PaySupplierForm({
   suppliers,
   initialSupplierId,
+  onDone,
+  onCancel,
 }: {
   suppliers: SupplierOption[];
   initialSupplierId?: string;
+  // Passed when hosted in a Drawer so the user stays on the list page.
+  // Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [supplierId, setSupplierId] = useState(initialSupplierId ?? "");
   const [payDate, setPayDate] = useState(todayIST());
@@ -112,8 +121,10 @@ export function PaySupplierForm({
         allocations,
       });
       if (res.ok) {
+        reset();
         toast.success("Payment recorded", "Supplier ledger updated.");
-        router.push("/purchasing/pay");
+        if (onDone) onDone();
+        else router.push("/purchasing/pay");
         router.refresh();
       } else {
         toast.error("Could not record payment", res.error);
@@ -122,7 +133,8 @@ export function PaySupplierForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this payment. They'll be lost if you leave this page." />
       <Panel title="Payment">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Supplier" required className="lg:col-span-2">
@@ -194,7 +206,7 @@ export function PaySupplierForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/purchasing/pay")}>Cancel</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel ?? (() => router.push("/purchasing/pay"))}>Cancel</Button>
         <Button variant="primary" size="md" onClick={onSubmit} loading={pending} disabled={!supplierId || amt <= 0}>Record payment</Button>
       </Card>
     </div>

@@ -8,6 +8,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select, Input } from "@/components/ui/Field";
 import { savePayConfig } from "@/lib/actions/payroll";
+import { useToast } from "@/components/ui/Toast";
 import type { PayConfigRow, UserOption } from "@/lib/data/payroll";
 
 export function PayConfigSection({
@@ -21,6 +22,7 @@ export function PayConfigSection({
 }) {
   const [edits, setEdits] = useState<Record<string, PayConfigRow>>({});
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     const map: Record<string, PayConfigRow> = {};
@@ -62,8 +64,13 @@ export function PayConfigSection({
       standardShiftHrs: e.standardShiftHrs,
       paidLeaves: e.paidLeaves,
     }));
-    await savePayConfig(entries);
+    const result = await savePayConfig(entries);
     setSaving(false);
+    if (result.ok) {
+      toast.success("Pay config saved");
+    } else {
+      toast.error(result.error);
+    }
   }
 
   const entries = Object.values(edits);

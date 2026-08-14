@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { upsertVehicle, type ActionResult } from "@/lib/actions/fleet";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 
 export function VehicleForm() {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<ActionResult | null>(null);
+  const rootRef = useRef<HTMLFormElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   async function handle(formData: FormData) {
     setPending(true);
@@ -22,13 +27,20 @@ export function VehicleForm() {
       ownedOrHired: (formData.get("ownedOrHired") as string) || undefined,
       status: (formData.get("status") as string) || undefined,
     });
-    if (res.ok) router.push("/fleet");
-    else setState(res);
+    if (res.ok) {
+      reset();
+      toast.success("Vehicle saved");
+      router.push("/fleet");
+    } else {
+      toast.error(res.error);
+      setState(res);
+    }
     setPending(false);
   }
 
   return (
-    <form action={handle} className="flex flex-col gap-4">
+    <form ref={rootRef} action={handle} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this vehicle. They'll be lost if you leave this page." />
       <Field label="Registration number" required>
         <input
           name="regNo"

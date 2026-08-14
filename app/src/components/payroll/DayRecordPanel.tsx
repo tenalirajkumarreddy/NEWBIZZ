@@ -45,45 +45,55 @@ export function DayRecordPanel({
   const selectedShift = shiftTemplates.find((s) => s.id === selectedShiftId);
 
   useEffect(() => {
-    fetchDayAttendanceDetail(date).then((rows) => {
-      setExistingRecords(rows);
-      setLoaded(true);
+    let active = true;
+    fetchDayAttendanceDetail(date)
+      .then((rows) => {
+        if (!active) return;
+        setExistingRecords(rows);
+        setLoaded(true);
 
-      if (rows.length > 0) {
-        // day already recorded — populate from existing
-        setWorkers(
-          activeUsers.map((u) => {
-            const match = rows.find((r) => r.userId === u.entityId);
-            return {
+        if (rows.length > 0) {
+          // day already recorded — populate from existing
+          setWorkers(
+            activeUsers.map((u) => {
+              const match = rows.find((r) => r.userId === u.entityId);
+              return {
+                entityType: u.entityType,
+                entityId: u.entityId,
+                userName: u.fullName,
+                present: match !== undefined,
+                status: match?.status ?? "absent",
+                hours: match?.hours ?? 0,
+                otHours: match?.otHours ?? 0,
+                shift: match?.shift ?? selectedShift?.name ?? "",
+                note: match?.note ?? "",
+              };
+            }),
+          );
+        } else {
+          // fresh form — default all to absent
+          setWorkers(
+            activeUsers.map((u) => ({
               entityType: u.entityType,
               entityId: u.entityId,
               userName: u.fullName,
-              present: match !== undefined,
-              status: match?.status ?? "absent",
-              hours: match?.hours ?? 0,
-              otHours: match?.otHours ?? 0,
-              shift: match?.shift ?? selectedShift?.name ?? "",
-              note: match?.note ?? "",
-            };
-          }),
-        );
-      } else {
-        // fresh form — default all to absent
-        setWorkers(
-          activeUsers.map((u) => ({
-            entityType: u.entityType,
-            entityId: u.entityId,
-            userName: u.fullName,
-            present: false,
-            status: "absent",
-            hours: selectedShift?.totalHours ?? 8,
-            otHours: 0,
-            shift: selectedShift?.name ?? "",
-            note: "",
-          })),
-        );
-      }
-    });
+              present: false,
+              status: "absent",
+              hours: selectedShift?.totalHours ?? 8,
+              otHours: 0,
+              shift: selectedShift?.name ?? "",
+              note: "",
+            })),
+          );
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        toast.error("Couldn't load the day details");
+      });
+    return () => {
+      active = false;
+    };
   }, [date]);
 
   useEffect(() => {
@@ -111,7 +121,12 @@ export function DayRecordPanel({
     setSaving(true);
 
     // mark day as working
-    await markCalendarDay(date, true, null);
+    const dayResult = await markCalendarDay(date, true, null);
+    if (dayResult && !dayResult.ok) {
+      toast.error("Error marking the day as worked", dayResult.error);
+      setSaving(false);
+      return;
+    }
 
     const result = await saveDailyAttendance(
       date,

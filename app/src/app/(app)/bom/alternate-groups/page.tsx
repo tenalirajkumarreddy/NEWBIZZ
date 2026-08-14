@@ -3,6 +3,7 @@ import { listAlternateGroups } from "@/lib/data/bom";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { count as fmtCount } from "@/lib/format";
 
 export const metadata = { title: "Alternate Groups — NEWBIZZ" };
@@ -11,18 +12,20 @@ export default async function AltGroupsListPage() {
   const groups = await listAlternateGroups();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Alternate Groups</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="report">
+      <PageHeader
+        title="Alternate Groups"
+        subtitle={
+          <>
             {fmtCount(groups.length)} groups — items that can substitute each other in a BOM
-          </p>
-        </div>
-        <Link href="/bom/alternate-groups/new">
-          <Button size="sm">New Group</Button>
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          <Link href="/bom/alternate-groups/new">
+            <Button size="sm">New Group</Button>
+          </Link>
+        }
+      />
 
       <Panel flush>
         {groups.length === 0 ? (
@@ -57,6 +60,6 @@ export default async function AltGroupsListPage() {
           </div>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

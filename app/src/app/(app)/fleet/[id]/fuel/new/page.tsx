@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getVehicle } from "@/lib/data/fleet";
 import { FuelForm } from "./FuelForm";
+import { PageContainer, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Log Fuel — NEWBIZZ" };
 
@@ -11,12 +11,9 @@ export default async function NewFuelPage(props: { params: Promise<{ id: string 
   if (!vehicle) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[600px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <Link href={`/fleet/${id}`} className="text-[13px] text-link hover:underline">
-        ← {vehicle.regNo}
-      </Link>
-      <h1 className="text-[22px] font-bold tracking-tight text-ink">Log Fuel</h1>
+    <PageContainer width="narrow">
+      <PageHeader title="Log Fuel" backHref={`/fleet/${id}`} backLabel={vehicle.regNo} />
       <FuelForm vehicleId={id} />
-    </div>
+    </PageContainer>
   );
 }

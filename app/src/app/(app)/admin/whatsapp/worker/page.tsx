@@ -1,4 +1,4 @@
-import { Kpi, Badge, Table, THead, TBody, TR, TH, TD, Panel, EmptyState } from "@/components/ui";
+import { Kpi, Badge, Table, THead, TBody, TR, TH, TD, Panel, EmptyState, PageContainer, PageHeader } from "@/components/ui";
 import { getWorkerStats, listRecentWhatsappNotifications } from "@/lib/data/whatsapp-worker";
 import { getWhatsappConfig } from "@/lib/data/whatsapp";
 import { dateTimeIST } from "@/lib/format";
@@ -14,16 +14,18 @@ export default async function AdminWhatsappWorkerPage() {
   ]);
 
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-ink">WhatsApp Worker</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          Dispatch pipeline health. The cron job at{" "}
-          <code className="rounded bg-fill px-1 font-mono text-[11px]">/api/cron/whatsapp</code>{" "}
-          drains queued whatsapp notifications to the Meta API.
-          {config?.dryRun && <span className="ml-2 text-amb">dry-run — sends are logged, not delivered</span>}
-        </p>
-      </div>
+    <PageContainer width="form">
+      <PageHeader
+        title="WhatsApp Worker"
+        subtitle={
+          <>
+            Dispatch pipeline health. The cron job at{" "}
+            <code className="rounded bg-fill px-1 font-mono text-[11px]">/api/cron/whatsapp</code>{" "}
+            drains queued whatsapp notifications to the Meta API.
+            {config?.dryRun && <span className="ml-2 text-amb">dry-run — sends are logged, not delivered</span>}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Pending" value={stats.pending} sub="queued, not yet sent" tone={stats.pending > 0 ? "amb" : "grn"} />
@@ -75,6 +77,6 @@ export default async function AdminWhatsappWorkerPage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

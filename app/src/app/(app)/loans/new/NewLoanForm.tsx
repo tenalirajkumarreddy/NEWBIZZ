@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { money } from "@/lib/format";
 import { createLoan } from "@/lib/actions/loans";
 
@@ -25,6 +26,8 @@ export function NewLoanForm() {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [lender, setLender] = useState("");
   const [principal, setPrincipal] = useState("");
@@ -56,6 +59,7 @@ export function NewLoanForm() {
         note: note || undefined,
       });
       if (res.ok) {
+        reset();
         toast.success("Loan added", disburse ? "Disbursed and scheduled." : "Schedule generated.");
         router.push(`/loans/${res.loanId}`);
         router.refresh();
@@ -66,7 +70,8 @@ export function NewLoanForm() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this loan. They'll be lost if you leave this page." />
       <Panel title="Loan details">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Lender" required htmlFor="lender" className="sm:col-span-2">

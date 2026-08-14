@@ -6,9 +6,21 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { postFuelLog, type ActionResult } from "@/lib/actions/fleet";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/Toast";
 
-export function FuelForm({ vehicleId }: { vehicleId: string }) {
+export function FuelForm({
+  vehicleId,
+  onDone,
+  onCancel,
+}: {
+  vehicleId: string;
+  // Passed when hosted in a Drawer so the user stays on the vehicle detail
+  // page. Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
+}) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<ActionResult | null>(null);
 
@@ -23,8 +35,14 @@ export function FuelForm({ vehicleId }: { vehicleId: string }) {
       odometer: formData.get("odometer") ? Number(formData.get("odometer")) : undefined,
       payFrom: (formData.get("payFrom") as "cash" | "bank") || "cash",
     });
-    if (res.ok) router.push(`/fleet/${vehicleId}`);
-    else setState(res);
+    if (res.ok) {
+      toast.success("Fuel log posted");
+      if (onDone) onDone();
+      else router.push(`/fleet/${vehicleId}`);
+    } else {
+      toast.error(res.error);
+      setState(res);
+    }
     setPending(false);
   }
 
@@ -75,9 +93,15 @@ export function FuelForm({ vehicleId }: { vehicleId: string }) {
         <Button type="submit" disabled={pending}>
           {pending ? "Posting…" : "Post Fuel"}
         </Button>
-        <Link href={`/fleet/${vehicleId}`} className="text-[13px] text-link hover:underline self-center">
-          Cancel
-        </Link>
+        {onCancel ? (
+          <Button type="button" variant="ghost" size="md" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : (
+          <Link href={`/fleet/${vehicleId}`} className="text-[13px] text-link hover:underline self-center">
+            Cancel
+          </Link>
+        )}
       </div>
     </form>
   );

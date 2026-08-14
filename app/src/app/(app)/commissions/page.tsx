@@ -10,6 +10,7 @@ function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+export const metadata = { title: "Targets & Commissions — NEWBIZZ" };
 export default async function AchievementPage({
   searchParams,
 }: {

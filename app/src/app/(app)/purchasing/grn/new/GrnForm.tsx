@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { Field, Select, Input } from "@/components/ui/Field";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Money } from "@/components/ui/Money";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { postGrn } from "@/lib/actions/purchases";
 import { todayIST } from "@/lib/constants";
 import type { SupplierOption } from "@/lib/data/suppliers";
@@ -29,13 +30,21 @@ const newLine = (): LineDraft => ({ key: `g${seq++}`, item_id: "", qty: "", unit
 export function NewGrnForm({
   suppliers,
   items,
+  onDone,
+  onCancel,
 }: {
   suppliers: SupplierOption[];
   items: StockableItemOption[];
+  // Passed when hosted in a Drawer so the user stays on the list page.
+  // Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [supplierId, setSupplierId] = useState("");
   const [grnDate, setGrnDate] = useState(todayIST());
@@ -73,8 +82,10 @@ export function NewGrnForm({
         lines: payload,
       });
       if (res.ok) {
+        reset();
         toast.success("Goods received", "Stock booked at cost.");
-        router.push(`/purchasing/grn/${res.grnId}`);
+        if (onDone) onDone();
+        else router.push(`/purchasing/grn/${res.grnId}`);
         router.refresh();
       } else {
         toast.error("Could not receive goods", res.error);
@@ -83,7 +94,8 @@ export function NewGrnForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this GRN. They'll be lost if you leave this page." />
       <Panel title="Receipt details">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Supplier" required>
@@ -147,7 +159,7 @@ export function NewGrnForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/purchasing/grn")}>Cancel</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel ?? (() => router.push("/purchasing/grn"))}>Cancel</Button>
         <Button variant="primary" size="md" onClick={onSubmit} loading={pending} disabled={!supplierId}>Receive goods</Button>
       </Card>
     </div>

@@ -19,9 +19,10 @@ interface Props {
   entitySerials: EntitySerialRow[];
   thresholds: FleetThresholds;
   branches: BranchRow[];
+  initialTab?: Tab;
 }
 
-type Tab = "company" | "fy" | "series" | "branches" | "payments" | "thresholds" | "entity";
+export type Tab = "company" | "fy" | "series" | "branches" | "payments" | "thresholds" | "entity";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "company", label: "Company" },
@@ -34,7 +35,9 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export function SettingsPage(props: Props) {
-  const [tab, setTab] = useState<Tab>("company");
+  const [tab, setTab] = useState<Tab>(
+    TABS.some((t) => t.key === props.initialTab) ? (props.initialTab as Tab) : "company",
+  );
 
   return (
     <div className="flex flex-col gap-4">

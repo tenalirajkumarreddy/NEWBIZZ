@@ -3,7 +3,7 @@ import { listInvoices, getSalesTodayKpis, listStores, listSellableItems, getHome
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { count as fmtCount } from "@/lib/format";
@@ -14,6 +14,7 @@ import { SalesDeskActions } from "./SalesDeskActions";
 // invoice, so this page is the invoice register with a working desk around it:
 // today's KPIs on top, every recorded sale below with row actions (view, record
 // payment), and "Record sale" as the primary act. /invoices redirects here.
+export const metadata = { title: "Sales — NEWBIZZ" };
 export default async function SalesDeskPage() {
   const [invoices, kpis, fy, stores, items, homeState] = await Promise.all([
     listInvoices({ limit: 200 }),
@@ -28,18 +29,17 @@ export default async function SalesDeskPage() {
   const outstandingValue = outstanding.reduce((s, i) => s + (i.grandTotal - i.amountPaid), 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Sales Desk</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+    <PageContainer width="full">
+      <PageHeader
+        title="Sales Desk"
+        subtitle={
+          <>
             {fy ? `FY ${fy.code}` : "FY —"} · {fmtCount(invoices.length)} sales recorded
             {outstanding.length > 0 ? ` · ${fmtCount(outstanding.length)} awaiting payment` : ""}
-          </p>
-        </div>
-        <SalesDeskActions stores={stores} items={items} homeState={homeState} />
-      </div>
+          </>
+        }
+        actions={<SalesDeskActions stores={stores} items={items} homeState={homeState} />}
+      />
 
       {/* KPI strip — today's desk position */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -82,6 +82,6 @@ export default async function SalesDeskPage() {
           <SalesTable invoices={invoices} />
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

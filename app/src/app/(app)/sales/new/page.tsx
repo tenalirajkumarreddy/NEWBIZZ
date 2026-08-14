@@ -1,7 +1,7 @@
 import { listStores, listSellableItems, getHomeStateCode } from "@/lib/data/sales";
 import { getCurrentFy } from "@/lib/data/fy";
 import { EmptyState } from "@/components/ui/EmptyState";
-import Link from "next/link";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { RecordSaleForm } from "./RecordSaleForm";
 
 // Record a sale — the Sales Desk's create surface. Loads the store + item
@@ -19,16 +19,17 @@ export default async function RecordSalePage() {
   ]);
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/sales" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← Sales Desk
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">Record a sale</h1>
-        <p className="mt-0.5 text-[13px] text-ink-3">
-          {fy ? `FY ${fy.code}` : "FY —"} · Revenue, GST and stock posted in one transaction
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        title="Record a sale"
+        subtitle={
+          <>
+            {fy ? `FY ${fy.code}` : "FY —"} · Revenue, GST and stock posted in one transaction
+          </>
+        }
+        backHref="/sales"
+        backLabel="Sales Desk"
+      />
 
       {stores.length === 0 || items.length === 0 ? (
         <EmptyState
@@ -43,6 +44,6 @@ export default async function RecordSalePage() {
       ) : (
         <RecordSaleForm stores={stores} items={items} homeState={homeState} />
       )}
-    </div>
+    </PageContainer>
   );
 }

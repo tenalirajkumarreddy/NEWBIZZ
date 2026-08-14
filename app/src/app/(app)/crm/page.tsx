@@ -5,6 +5,7 @@ import { LeadsTable } from "./LeadsTable";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = { title: "CRM & Complaints — NEWBIZZ" };
 export default async function CrmLeadsPage() {
   const [leads, kpis] = await Promise.all([
     listLeads(),

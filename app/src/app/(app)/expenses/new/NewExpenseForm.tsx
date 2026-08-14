@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Input, Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { recordExpense } from "@/lib/actions/expenses";
 import type { ExpenseAccountOption, ExpenseCategory, ExpenseSource } from "@/lib/data/expenses";
 import type { UserOption } from "@/lib/data/holdings";
@@ -40,6 +41,8 @@ export function NewExpenseForm({
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [date, setDate] = useState(todayIST());
   const [category, setCategory] = useState<ExpenseCategory>("fuel");
@@ -65,6 +68,7 @@ export function NewExpenseForm({
         note: note || undefined,
       });
       if (res.ok) {
+        reset();
         toast.success("Expense logged", "Pending approval — money moves once approved.");
         router.push(`/expenses/${res.expenseId}`);
         router.refresh();
@@ -75,7 +79,8 @@ export function NewExpenseForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this expense. They'll be lost if you leave this page." />
       <Panel title="Expense details">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Date" required htmlFor="date">

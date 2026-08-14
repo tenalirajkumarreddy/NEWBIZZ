@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { Field, Select, Input } from "@/components/ui/Field";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Money } from "@/components/ui/Money";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { postSupplierBill } from "@/lib/actions/purchases";
 import { todayIST } from "@/lib/constants";
 import type { SupplierOption } from "@/lib/data/suppliers";
@@ -30,13 +31,21 @@ const newLine = (): LineDraft => ({ key: `b${seq++}`, item_id: "", qty: "1", uni
 export function NewBillForm({
   suppliers,
   items,
+  onDone,
+  onCancel,
 }: {
   suppliers: SupplierOption[];
   items: StockableItemOption[];
+  // Passed when hosted in a Drawer so the user stays on the list page.
+  // Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [supplierId, setSupplierId] = useState("");
   const [billDate, setBillDate] = useState(todayIST());
@@ -89,8 +98,10 @@ export function NewBillForm({
         lines: payload,
       });
       if (res.ok) {
+        reset();
         toast.success("Bill recorded", "Input GST and payable booked.");
-        router.push(`/purchasing/bills/${res.billId}`);
+        if (onDone) onDone();
+        else router.push(`/purchasing/bills/${res.billId}`);
         router.refresh();
       } else {
         toast.error("Could not record bill", res.error);
@@ -99,7 +110,8 @@ export function NewBillForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this bill. They'll be lost if you leave this page." />
       <Panel title="Bill details">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Supplier" required className="lg:col-span-2">
@@ -172,7 +184,7 @@ export function NewBillForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/purchasing/bills")}>Cancel</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel ?? (() => router.push("/purchasing/bills"))}>Cancel</Button>
         <Button variant="primary" size="md" onClick={onSubmit} loading={pending} disabled={!supplierId}>Record bill</Button>
       </Card>
       <p className="text-[11px] text-ink-4">GST is auto-derived from each item if left blank. Place of supply (interstate vs intra) follows the supplier&rsquo;s state.</p>

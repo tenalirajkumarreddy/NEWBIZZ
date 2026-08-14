@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Input } from "@/components/ui";
+import { Button, Field, Input, UnsavedGuard, useFormDirty } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import type { AccountType } from "@/lib/data/bank";
 
@@ -27,6 +27,8 @@ export function BankAccountForm({ action, initial }: Props) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [type, setType] = useState<AccountType>(initial?.accountType ?? "bank");
+  const rootRef = useRef<HTMLFormElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,6 +50,7 @@ export function BankAccountForm({ action, initial }: Props) {
         payload.cardLastFour = data.get("cardLastFour") as string || undefined;
       }
       await action(payload);
+      reset();
       toast.success("Account created");
       router.push("/bank");
       router.refresh();
@@ -59,7 +62,8 @@ export function BankAccountForm({ action, initial }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form ref={rootRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this account. They'll be lost if you leave this page." />
       <Field label="Account Type" required>
         <select
           value={type}

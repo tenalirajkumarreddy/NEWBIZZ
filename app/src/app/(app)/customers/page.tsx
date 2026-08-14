@@ -2,12 +2,13 @@ import Link from "next/link";
 import { listCustomers } from "@/lib/data/customers";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
 import { count as fmtCount } from "@/lib/format";
 import { CustomersTable } from "./CustomersTable";
 
+export const metadata = { title: "Customers & Stores — NEWBIZZ" };
 export default async function CustomersPage({
   searchParams,
 }: {
@@ -26,23 +27,21 @@ export default async function CustomersPage({
   const creditExtended = onCredit.reduce((s, c) => s + c.creditLimit, 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Customers</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fmtCount(customers.length)} customers · {fmtCount(active)} active
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/customers/stores/new">
-            <Button variant="secondary" size="sm">New store</Button>
-          </Link>
-          <Link href="/customers/new">
-            <Button variant="primary" size="sm">New customer</Button>
-          </Link>
-        </div>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Customers"
+        subtitle={<>{fmtCount(customers.length)} customers · {fmtCount(active)} active</>}
+        actions={
+          <>
+            <Link href="/customers/stores/new">
+              <Button variant="secondary" size="sm">New store</Button>
+            </Link>
+            <Link href="/customers/new">
+              <Button variant="primary" size="sm">New customer</Button>
+            </Link>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Customers" value={fmtCount(customers.length)} sub={`${fmtCount(active)} active`} />
@@ -74,6 +73,6 @@ export default async function CustomersPage({
           <CustomersTable customers={customers} />
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

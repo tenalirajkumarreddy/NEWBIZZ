@@ -4,6 +4,7 @@ import { getCostingRun } from "@/lib/data/costing";
 import { Panel, Card, SectionHeading } from "@/components/ui/Card";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { money } from "@/lib/format";
 
 export const metadata = { title: "Costing Run — NEWBIZZ" };
@@ -14,20 +15,19 @@ export default async function CostingRunDetailPage(props: { params: Promise<{ id
   if (!run) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div>
-        <Link href="/costing" className="text-[12px] font-medium text-ink-4 hover:text-brand">
-          ← Process Costing
-        </Link>
-        <h1 className="mt-1 text-[22px] font-bold tracking-tight text-ink">
-          Costing — {run.periodMonth} Stage {run.stage}
-        </h1>
-        <p className="mt-0.5 flex items-center gap-2 text-[13px] text-ink-3">
-          <StatusBadge status={run.status} size="sm" />
-          <span>·</span>
-          <span>{run.unitsCompleted} units completed</span>
-        </p>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        backHref="/costing"
+        backLabel="Process Costing"
+        title={`Costing — ${run.periodMonth} Stage ${run.stage}`}
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            <StatusBadge status={run.status} size="sm" />
+            <span>·</span>
+            <span>{run.unitsCompleted} units completed</span>
+          </span>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -96,6 +96,6 @@ export default async function CostingRunDetailPage(props: { params: Promise<{ id
           <span>{new Date(run.computedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</span>
         </div>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

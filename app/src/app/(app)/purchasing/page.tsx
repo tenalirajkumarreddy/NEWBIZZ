@@ -3,7 +3,7 @@ import { listPurchaseOrders, listGrns, listBills, listSupplierPayments, listDebi
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
@@ -13,6 +13,7 @@ import { dateIST, count as fmtCount } from "@/lib/format";
 // Purchasing hub (§5.4) — the buy-side control tower. PO (intent) → GRN (goods
 // in at cost) → Bill (GST + payable) → Payment. Each doc has its own register;
 // this page gives the open-work picture and the entry points.
+export const metadata = { title: "Purchasing — NEWBIZZ" };
 export default async function PurchasingPage() {
   const [pos, grns, bills, payments, debitNotes, unbilled, fy] = await Promise.all([
     listPurchaseOrders({ limit: 8 }),
@@ -29,21 +30,18 @@ export default async function PurchasingPage() {
   const payableOpen = unpaidBills.reduce((s, b) => s + (b.grandTotal - b.amountPaid), 0);
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Purchasing</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fy ? `FY ${fy.code}` : "FY —"} · PO → GRN → Bill → Payment
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Link href="/purchasing/po/new"><Button variant="secondary" size="sm">New PO</Button></Link>
-          <Link href="/purchasing/grn/new"><Button variant="secondary" size="sm">Receive goods</Button></Link>
-          <Link href="/purchasing/bills/new"><Button variant="primary" size="sm">Record bill</Button></Link>
-        </div>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Purchasing"
+        subtitle={`${fy ? `FY ${fy.code}` : "FY —"} · PO → GRN → Bill → Payment`}
+        actions={
+          <>
+            <Link href="/purchasing/po/new"><Button variant="secondary" size="sm">New PO</Button></Link>
+            <Link href="/purchasing/grn/new"><Button variant="secondary" size="sm">Receive goods</Button></Link>
+            <Link href="/purchasing/bills/new"><Button variant="primary" size="sm">Record bill</Button></Link>
+          </>
+        }
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -106,7 +104,7 @@ export default async function PurchasingPage() {
           A bill can be raised directly (ad-hoc buy) or matched to a GRN.
         </p>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
 

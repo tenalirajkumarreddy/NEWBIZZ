@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, LabeledInput } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createBom } from "@/lib/actions/bom";
 import type { ItemListRow } from "@/lib/data/catalog";
 import type { AlternateGroupRow } from "@/lib/data/bom";
@@ -27,13 +28,21 @@ function freshLine(): LineEntry {
 export function NewBomForm({
   items,
   altGroups,
+  onDone,
+  onCancel,
 }: {
   items: ItemListRow[];
   altGroups: AlternateGroupRow[];
+  // Passed when hosted in a Drawer so the user stays on the list page.
+  // Undefined on the standalone /new page.
+  onDone?: () => void;
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { dirty, reset } = useFormDirty(rootRef);
 
   const [parentId, setParentId] = useState("");
   const [stage, setStage] = useState("1");
@@ -80,8 +89,10 @@ export function NewBomForm({
           })),
       });
       if (res.ok) {
+        reset();
         toast.success("BOM created", `Recipe for ${parentId} is ready.`);
-        router.push(`/bom/${res.bomId}`);
+        if (onDone) onDone();
+        else router.push(`/bom/${res.bomId}`);
         router.refresh();
       } else {
         toast.error("Could not create BOM", res.error);
@@ -93,7 +104,8 @@ export function NewBomForm({
     !!parentId && lines.some((l) => Number(l.qty) > 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={rootRef} className="flex flex-col gap-4">
+      <UnsavedGuard dirty={dirty} message="You have unsaved changes to this BOM. They'll be lost if you leave this page." />
       <Panel title="Header">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Parent item (the manufactured product)" required htmlFor="parent_id">
@@ -197,7 +209,7 @@ export function NewBomForm({
       </Panel>
 
       <Card className="flex items-center justify-end gap-2 p-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/bom")}>
+        <Button variant="ghost" size="sm" onClick={onCancel ?? (() => router.push("/bom"))}>
           Cancel
         </Button>
         <Button

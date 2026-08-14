@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTrialBalance } from "@/lib/data/accounting";
 import { getCurrentFy } from "@/lib/data/fy";
 import { Panel } from "@/components/ui/Card";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { Kpi } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -10,6 +11,7 @@ import { money } from "@/lib/format";
 // Trial Balance (§5.1) — every account's net debit/credit for the FY, straight
 // off get_trial_balance (mv_trial_balance, backed by journal_lines). The Dr and
 // Cr columns must tie; the footer proves it. Balance is debit-positive.
+export const metadata = { title: "Trial Balance — NEWBIZZ" };
 export default async function TrialBalancePage() {
   const [rows, fy] = await Promise.all([getTrialBalance(), getCurrentFy()]);
 
@@ -19,21 +21,19 @@ export default async function TrialBalancePage() {
   const balanced = Math.abs(debitTotal - creditTotal) < 0.5;
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Trial Balance</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">
-            {fy ? `FY ${fy.code}` : "FY —"} · {active.length} accounts with movement
-          </p>
-        </div>
-        <Link
-          href="/reports"
-          className="self-start rounded-md bg-fill px-3 py-2 text-[12px] font-semibold text-ink-2 ring-1 ring-inset ring-line hover:text-brand"
-        >
-          P&amp;L / Balance Sheet →
-        </Link>
-      </div>
+    <PageContainer width="report">
+      <PageHeader
+        title="Trial Balance"
+        subtitle={`${fy ? `FY ${fy.code}` : "FY —"} · ${active.length} accounts with movement`}
+        actions={
+          <Link
+            href="/reports"
+            className="self-start rounded-md bg-fill px-3 py-2 text-[12px] font-semibold text-ink-2 ring-1 ring-inset ring-line hover:text-brand"
+          >
+            P&amp;L / Balance Sheet →
+          </Link>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Kpi label="Total debits" value={money(debitTotal)} sub="Dr balances" />
@@ -96,6 +96,6 @@ export default async function TrialBalancePage() {
           </Table>
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

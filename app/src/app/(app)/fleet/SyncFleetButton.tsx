@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { syncVehiclesFromIntangles, type SyncResult } from "@/lib/actions/fleet";
 
 export function SyncFleetButton() {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<SyncResult | null>(null);
 
@@ -14,7 +16,12 @@ export function SyncFleetButton() {
     setPending(true);
     setState(null);
     const res = await syncVehiclesFromIntangles();
-    if (res.ok) router.refresh();
+    if (res.ok) {
+      toast.success(`Synced ${res.created} vehicles`);
+      router.refresh();
+    } else {
+      toast.error(res.error);
+    }
     setState(res);
     setPending(false);
   }

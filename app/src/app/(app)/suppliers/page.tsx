@@ -2,13 +2,14 @@ import Link from "next/link";
 import { listSuppliers } from "@/lib/data/suppliers";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Kpi } from "@/components/ui";
+import { Kpi, PageContainer, PageHeader } from "@/components/ui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { count as fmtCount } from "@/lib/format";
 import { SuppliersTable } from "./SuppliersTable";
 
 // Suppliers — the buy-side party master (§5.3). AP (2110) is keyed by
 // party=supplier; the AVL (per-supplier item prices) lives on each detail page.
+export const metadata = { title: "Suppliers — NEWBIZZ" };
 export default async function SuppliersPage() {
   const suppliers = await listSuppliers();
 
@@ -16,16 +17,16 @@ export default async function SuppliersPage() {
   const registered = suppliers.filter((s) => !!s.gstin).length;
 
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Suppliers</h1>
-          <p className="mt-0.5 text-[13px] text-ink-3">{fmtCount(suppliers.length)} suppliers</p>
-        </div>
-        <Link href="/suppliers/new">
-          <Button variant="primary" size="sm">New supplier</Button>
-        </Link>
-      </div>
+    <PageContainer width="full">
+      <PageHeader
+        title="Suppliers"
+        subtitle={`${fmtCount(suppliers.length)} suppliers`}
+        actions={
+          <Link href="/suppliers/new">
+            <Button variant="primary" size="sm">New supplier</Button>
+          </Link>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Suppliers" value={fmtCount(suppliers.length)} sub="All parties" />
@@ -48,6 +49,6 @@ export default async function SuppliersPage() {
           <SuppliersTable suppliers={suppliers} />
         )}
       </Panel>
-    </div>
+    </PageContainer>
   );
 }

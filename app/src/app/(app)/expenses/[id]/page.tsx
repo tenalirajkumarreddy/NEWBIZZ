@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getExpense } from "@/lib/data/expenses";
 import { Panel, Card } from "@/components/ui/Card";
+import { PageContainer, PageHeader } from "@/components/ui";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Money } from "@/components/ui/Money";
 import { dateIST, titleCase } from "@/lib/format";
@@ -21,21 +22,24 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
   if (!exp) notFound();
 
   return (
-    <div className="mx-auto flex max-w-[1000px] flex-col gap-4 px-6 py-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link href="/expenses" className="text-[12px] font-medium text-ink-4 hover:text-brand">← Expenses</Link>
-          <div className="mt-1 flex items-center gap-3">
-            <h1 className="font-mono text-[22px] font-bold tracking-tight text-ink">{exp.expenseNo}</h1>
+    <PageContainer width="detail">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="font-mono">{exp.expenseNo}</span>
             <StatusBadge status={exp.status} />
-          </div>
-          <p className="mt-0.5 text-[13px] text-ink-3">
+          </span>
+        }
+        subtitle={
+          <>
             {dateIST(exp.expenseDate)} · {titleCase(exp.category)}
             {exp.userName ? ` · ${exp.userName}` : ""}
-          </p>
-        </div>
-        {exp.status === "pending" && <ExpenseActions expenseId={exp.id} expenseNo={exp.expenseNo} />}
-      </div>
+          </>
+        }
+        actions={exp.status === "pending" && <ExpenseActions expenseId={exp.id} expenseNo={exp.expenseNo} />}
+        backHref="/expenses"
+        backLabel="Expenses"
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fact label="Amount" value={<Money value={exp.amount} />} mono />
@@ -70,7 +74,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
       <p className="text-[11px] text-ink-4">
         On approval: Dr {exp.accountName ?? exp.accountCode} / Cr {SOURCE_LABEL[exp.source] ?? exp.source}. Money moves only then.
       </p>
-    </div>
+    </PageContainer>
   );
 }
 
