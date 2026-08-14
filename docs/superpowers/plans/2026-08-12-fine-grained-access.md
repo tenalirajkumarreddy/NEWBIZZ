@@ -4,7 +4,7 @@
 
 **Goal:** Split coarse permission codes into fine-grained per-action toggles (view/create/edit/void/pay/…) across all six modules, and — critically — add real database-level `has_permission()` gates to the money/stock RPCs that currently have none.
 
-**Architecture:** The existing permission engine (`permissions` + `role_permissions` + `user_permission_overrides` + `has_permission()` SECURITY DEFINER function) is unchanged. This plan (1) adds ~37 new fine codes to the catalog, (2) expands every existing coarse-code grant into its fine superset so nobody loses access, (3) adds/rewires `has_permission()` checks inside RPC bodies and RLS policies so the DB enforces granularity, then (4) updates the UI layer (route-guard, nav, groups, Sales Desk split). Doc: `docs/superpowers/specs/2026-08-12-fine-grained-access-design.md`.
+**Architecture:** The existing permission engine (`permissions` + `role_permissions` + `user_permission_overrides` + `has_permission()` SECURITY DEFINER function) is unchanged. This plan (1) adds ~39 new fine codes to the catalog, (2) expands every existing coarse-code grant into its fine superset so nobody loses access, (3) adds/rewires `has_permission()` checks inside RPC bodies and RLS policies so the DB enforces granularity, (4) adds the document-release gate (accountant read-only, released documents) with a Release Center, and (5) updates the UI layer (route-guard, nav, groups, Sales Desk split, acknowledgment receipt). Doc: `docs/superpowers/specs/2026-08-12-fine-grained-access-design.md`.
 
 **Tech Stack:** Postgres (Supabase), PL/pgSQL SECURITY DEFINER RPCs, RLS policies, Next.js 14 app router, TypeScript. No test framework — verification is typecheck/build plus SQL/Supabase validation.
 
@@ -16,7 +16,9 @@
 - Retire coarse codes only AFTER they have zero remaining references (keep them dormant in the catalog for the release; a cleanup task removes unreferenced ones).
 - Immutable financial documents are never literally deleted — their modify/delete axis is the void/reverse RPCs (`void_invoice`, `cancel_order`, `reverse_*`, `bounce_cheque`), each gated by its own fine code.
 - Only `authenticated` may execute new/changed RPCs. No `anon`/`public` grants. Follow the existing migration convention: `security definer`, `set search_path to 'public'` (or `alter function … set search_path`), then `revoke execute … from anon, public; grant execute … to authenticated;`.
-- Copy uses existing design tokens. No emojis. No new dependencies, no new UI primitives, no new tables.
+- Copy uses existing design tokens. No emojis. No new dependencies, no new UI primitives. One new table total: `document_releases` (the release gate) — all other schema changes are RPC/policy rewrites only.
+- Operating model (binding): field users (agent/sales) record sales that ALWAYS book as cash memos, get only an acknowledgment receipt (no register, no `invoice.view`/`cashmemo.view`); accountant is read-only and sees ONLY released documents (view codes + release RLS, no create/pay/void codes); manager/admin have full control incl. converting memos->invoices and operating the Release Center.
+- Release is a visibility gate only — NOT a lock. Released documents remain editable/voidable by those with the relevant codes; edits flow through and the accountant sees the current state.
 - Migration files live in `app/supabase/migrations/` and follow the existing numbering style (`XXXX_<name>.sql`). New migrations start at `0101_` in this plan (next free sequence after `0097_…`/`0942_…`; the seed folder's `0100_seed_foundation.sql` is unrelated).
 - RPC body rewires must preserve ALL existing logic + the conditional `credit.override` branch in `post_invoice`/`place_order`. Only permission gates are added/changed.
 
@@ -25,16 +27,19 @@
 ## File Structure
 
 **DB migrations (create/replace, one per module; each re-states ONLY the functions/policies it changes):**
-- `app/supabase/migrations/0101_fine_grained_catalog.sql` — insert 37 codes, expansion map (role_permissions + overrides), validation views.
+- `app/supabase/migrations/0101_fine_grained_catalog.sql` — insert 39 codes, expansion map (role_permissions + overrides), role grant map, validation views.
 - `app/supabase/migrations/0102_fine_grained_sales.sql` — Sales & Invoicing RPC gates + RLS.
 - `app/supabase/migrations/0103_fine_grained_buy_stock.sql` — Buy & Stock RPC gates + RLS.
 - `app/supabase/migrations/0104_fine_grained_manufacturing.sql` — BOM/Production/Costing RPC gates + RLS.
 - `app/supabase/migrations/0105_fine_grained_accounting.sql` — Accounting RPC gates + RLS.
 - `app/supabase/migrations/0106_fine_grained_field_people.sql` — Field/CRM/Commission + WhatsApp gates.
-- `app/supabase/migrations/0107_fine_grained_cleanup.sql` — retire unreferenced coarse codes after zero-reference check.
+- `app/supabase/migrations/0107_fine_grained_release.sql` — document release table + RPC + accountant read gate.
+- `app/supabase/migrations/0108_fine_grained_cleanup.sql` — retire unreferenced coarse codes after zero-reference check.
 
 **App changes:**
 - Modify `app/src/lib/auth/route-guard.ts` — replace coarse perms with fine ones.
+- Create: `app/src/app/(app)/admin/releases/` (Release Center page + client component).
+- Create: `app/src/app/(app)/sales/ReceiptSheet.tsx` + `app/src/app/(app)/sales/receipt/[id]/page.tsx` (acknowledgment receipt).
 - Modify `app/src/components/shell/nav.ts` — perms on nav items (Sales Desk, challans, etc.).
 - Modify `app/src/lib/permission-groups.ts` — new group labels (cashmemo, challan, expense, asset, loan, report, bank, field, whatsapp, production, costing).
 - Modify `app/src/app/(app)/sales/page.tsx` + `app/src/app/(app)/sales/SalesTable.tsx` — Sales Desk split (invoice vs cash memo) driven by claims.
@@ -49,16 +54,16 @@
 
 **Interfaces:**
 - Consumes: existing `permissions`, `role_permissions`, `user_permission_overrides`, `roles` tables; existing `has_permission(text)`.
-- Produces: all 37 new codes present in `permissions`; every existing grant/override of a retired coarse code expanded to its fine set; two validation helper views/functions named `fine_access_diff()` used by Task 1 Step 4 and Task 7.
+- Produces: all 39 new codes present in `permissions`; every existing grant/override of a retired coarse code expanded to its fine set; the role grant map for the new codes.
 
-- [ ] **Step 1: Insert the 37 new permission codes**
+- [ ] **Step 1: Insert the 39 new permission codes**
 
 Append at the top of the migration:
 
 ```sql
 -- 0101_fine_grained_catalog.sql
 -- Insert the fine-grained catalog. Retired coarse codes stay in the table
--- (dormant) until 0107 removes the unreferenced ones.
+-- (dormant) until 0108 removes the unreferenced ones.
 insert into public.permissions (code, description) values
   ('invoice.create',     'Record an official taxable sale (post_invoice)'),
   ('invoice.payment',    'Record a collection / receipt against an invoice'),
@@ -96,7 +101,9 @@ insert into public.permissions (code, description) values
   ('crm.manage',         'Convert leads / issue complaint credit notes'),
   ('commission.manage',  'Compute and post commission runs'),
   ('whatsapp.inbox',     'Use the WhatsApp inbox'),
-  ('whatsapp.manage',    'Manage WhatsApp config and templates')
+  ('whatsapp.manage',    'Manage WhatsApp config and templates'),
+  ('expense.view',       'View released expenses (read-only)'),
+  ('release.manage',     'Operate the Document Release Center (admin/manager)')
 on conflict (code) do nothing;
 ```
 
@@ -176,25 +183,84 @@ begin
 end $$;
 ```
 
-- [ ] **Step 4: Apply + validate against the live DB**
+- [ ] **Step 4: Grant the new fine codes to roles (role grant map)**
+
+The expansion in Steps 2-3 only rewires retired codes. The NEW create/action codes have NO grants today — without this step, sales/manager/accountant would lose the ability to record sales, and nobody could operate the Release Center. Add these grants (append-only `on conflict … do nothing`; admin role is implicit, no rows needed):
+
+```sql
+do $$
+declare
+  v_role uuid;
+  v_perms text[];
+  v_perm text;
+begin
+  -- agent / sales / field: record sales -> auto CASH MEMO, receipts, challans,
+  -- field ops. NO invoice.view / cashmemo.view register access, NO invoice.create.
+  select id into v_role from roles where code in ('agent','sales');
+  if v_role is not null then
+    v_perms := array['cashmemo.create','receipt.record','challan.view','challan.record',
+                     'field.routes','field.fleet','field.transfer','stock.view'];
+    foreach v_perm in array v_perms loop
+      insert into public.role_permissions (role_id, permission, scope)
+      values (v_role, v_perm, 'all')
+      on conflict on constraint role_permissions_pkey do nothing;
+    end loop;
+  end if;
+
+  -- accountant: READ-ONLY + released. View codes only (no create/pay/void/reverse),
+  -- plus the release-bounded reads. Release gate is enforced by RLS (Task 8).
+  select id into v_role from roles where code = 'accountant';
+  if v_role is not null then
+    v_perms := array['invoice.view','expense.view','report.pnl','report.gst',
+                     'report.trial_balance','report.costing','supplier.view','item.view',
+                     'stock.view','journal.view','bank.reconcile','creditnote.view'];
+    foreach v_perm in array v_perms loop
+      insert into public.role_permissions (role_id, permission, scope)
+      values (v_role, v_perm, 'all')
+      on conflict on constraint role_permissions_pkey do nothing;
+    end loop;
+  end if;
+
+  -- manager: full operation incl. invoices, conversion, releases (admin implicit).
+  select id into v_role from roles where code = 'manager';
+  if v_role is not null then
+    v_perms := array['invoice.create','invoice.payment','invoice.void','cashmemo.create',
+                     'cashmemo.edit','order.approve','order.cancel','order.edit',
+                     'purchase.create','purchase.record_bill','purchase.pay',
+                     'expense.manage','asset.manage','loan.manage','documents.manage',
+                     'journal.reverse','production.reverse','bom.manage','release.manage',
+                     'report.pnl','report.gst','report.trial_balance','report.costing',
+                     'bank.cheque','crm.manage','commission.manage','whatsapp.inbox','whatsapp.manage'];
+    foreach v_perm in array v_perms loop
+      insert into public.role_permissions (role_id, permission, scope)
+      values (v_role, v_perm, 'all')
+      on conflict on constraint role_permissions_pkey do nothing;
+    end loop;
+  end if;
+end $$;
+```
+
+Notes: this DO block uses `roles where code in ('agent','sales')` per-row (each role gets the set). `operator`/`viewer` stay unchanged. The map is superset of current duties: it ADDS the create codes the ungated money RPCs now require, so no one who could record a sale today loses the ability.
+
+- [ ] **Step 5: Apply + validate against the live DB**
 
 Apply the migration (`supabase db push`, or Supabase MCP `apply_migration` name `fine_grained_catalog`). The `permissions` table is RLS-protected — run this validation AS the actor or through `set_config`; simplest reliable check is `get_my_permissions()` after granting, or run as an authenticated session via an admin:
 
 ```sql
--- count check: the 37 codes exist
+-- count check: the 39 codes exist
 select count(*) from public.permissions where code in (
   'invoice.create','cashmemo.view','cashmemo.create','cashmemo.edit','invoice.payment',
   'invoice.void','order.approve','order.cancel','order.edit','challan.view',
   'challan.record','purchase.create','purchase.record_bill','purchase.pay',
   'stock.custody','cash.deposit','bom.manage','production.jobs','production.reverse',
-  'costing.manage','journal.reverse','expense.manage','asset.manage','loan.manage',
+  'costing.manage','journal.reverse','expense.manage','expense.view','asset.manage','loan.manage',
   'documents.manage','report.pnl','report.gst','report.trial_balance','report.costing',
   'bank.cheque','field.routes','field.fleet','field.transfer','crm.manage',
-  'commission.manage','whatsapp.inbox','whatsapp.manage');
+  'commission.manage','whatsapp.inbox','whatsapp.manage','release.manage');
 ```
-Expected: 37.
+Expected: 39.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add app/supabase/migrations/0101_fine_grained_catalog.sql
@@ -528,7 +594,7 @@ Replace coarse perms in `RULES` with fine gates (admin always passes via `can`):
 | Route prefix | Old perm | New |
 |---|---|---|
 | `/invoices` | `invoice.view` | same |
-| `/sales` | `invoice.view` | `invoice.view` (cash-memo-only users rely on page-level split, see Step 3) OR `invoice.view` + `cashmemo.view` via a union helper. Use the union helper below. |
+| `/sales` | `invoice.view` | office register — gate with `canAccessAny(claims, ["invoice.view", "cashmemo.view"])` (manager/admin have these; field users have neither → no register) |
 | `/orders` | `order.view` | `order.view` |
 | `/challans` | `order.view` | `challan.view` |
 | `/purchasing` | `purchase.view` | `purchase.view` |
@@ -537,17 +603,16 @@ Replace coarse perms in `RULES` with fine gates (admin always passes via `can`):
 | `/gst` | `report.view_all` | `report.gst` |
 | `/costing` | `report.view_all` | `report.costing` (read) — or union with `costing.manage` |
 
-For `/sales`, change the rule to a roles-style entry OR extend `canAccessPath` so `can(claims, perm)` OR a list passes. Add a helper in route-guard.ts:
+For `/sales`, add a union helper in route-guard.ts:
 
 ```ts
-const rulePerms = (rule.perm && [rule.perm].flat());
-// allow union: /sales passes if invoice.view OR cashmemo.view
+// allow union: /sales (office register) passes if the user holds ANY listed code
 export function canAccessAny(claims: AppClaims, perms: string[]): boolean {
   if (claims.is_admin) return true;
   return perms.some((p) => claims.perms.includes(p));
 }
 ```
-and for `/sales` use `canAccessAny(claims, ["invoice.view", "cashmemo.view"])`.
+and use `canAccessAny(claims, ["invoice.view", "cashmemo.view"])` for `/sales`. Field users (agent/sales) hold neither code, so the register is office-only — matching the operating model (field users get receipts, not the desk).
 
 - [ ] **Step 2: nav.ts — fine perms + `anyOf`**
 
@@ -606,7 +671,7 @@ if (it.anyOf) return it.anyOf.some((p) => can(claims, p));
 - [ ] **Step 5: permission-groups.ts — new labels**
 
 Add labels for the new page prefixes (keys that groupPermissions will see):
-`cashmemo: "Sales & Invoicing"`, `order: "Orders & Challans"`, `challan: "Orders & Challans"`, `expense: "Expenses & Petty Cash"`, `asset: "Fixed Assets"`, `loan: "Loans & EMI"`, `report: "Reports"`, `bank: "Bank"`, `field: "Field Operations"`, `production: "Production"`, `costing: "Costing"`, `whatsapp: "Messaging"`, `documents: "Documents"`, `stock: "Stock & Handover"`, `crm: "CRM & Complaints"`, `commission: "Targets & Commissions"`, `hr: "HR & Payroll"`, `roles: "Roles & Users"`, `audit: "Audit"`, `license: "Licences"`, `settings: "Settings"`, `cash: "Cash & Handover"`.
+`cashmemo: "Sales & Invoicing"`, `order: "Orders & Challans"`, `challan: "Orders & Challans"`, `expense: "Expenses & Petty Cash"`, `asset: "Fixed Assets"`, `loan: "Loans & EMI"`, `report: "Reports"`, `bank: "Bank"`, `field: "Field Operations"`, `production: "Production"`, `costing: "Costing"`, `whatsapp: "Messaging"`, `documents: "Documents"`, `stock: "Stock & Handover"`, `crm: "CRM & Complaints"`, `commission: "Targets & Commissions"`, `hr: "HR & Payroll"`, `roles: "Roles & Users"`, `audit: "Audit"`, `license: "Licences"`, `settings: "Settings"`, `cash: "Cash & Handover"`, `release: "Company Settings"`.
 (New/unlisted prefixes use the existing `titleCase` fallback, so only add what needs a custom label.)
 
 - [ ] **Step 6: Typecheck + build + commit**
@@ -622,10 +687,217 @@ git commit -m "feat(app): wire fine-grained perms into guard, nav, groups, sales
 
 ---
 
-### Task 8: Retire unreferenced coarse codes + final validation
+### Task 8: Document release — table, RPC, accountant read-RLS
 
 **Files:**
-- Create: `app/supabase/migrations/0107_fine_grained_cleanup.sql`
+- Create: `app/supabase/migrations/0107_fine_grained_release.sql`
+
+**Interfaces:**
+- Consumes: `release.manage` code (Task 1); document tables (invoices, expenses, supplier_bills, vouchers, credit notes, challans); `has_permission()`.
+- Produces: `public.document_releases` table; `public.release_documents(p_types text[], p_from date, p_to date)` RPC returning `int` (rows released); the accountant read-RLS gate pattern reused by the module policies.
+
+- [ ] **Step 1: Create the release table + RPC**
+
+```sql
+-- 0107_fine_grained_release.sql
+create table if not exists public.document_releases (
+  entity_type text not null,             -- 'invoices' | 'expenses' | 'supplier_bills' | 'vouchers' | 'credit_notes' | 'challans'
+  entity_id   uuid not null,
+  released_at timestamptz not null default now(),
+  released_by uuid not null references public.users(id),
+  primary key (entity_type, entity_id)
+);
+alter table public.document_releases enable row level security;
+create policy dr_read on public.document_releases
+  for select to authenticated using (has_permission('release.manage'));
+create policy dr_admin_write on public.document_releases
+  for all to authenticated using (has_permission('release.manage')) with check (has_permission('release.manage'));
+
+create or replace function public.release_documents(
+  p_types text[],
+  p_from date,
+  p_to   date
+)
+returns int
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_actor uuid := current_app_user();
+  v_released int := 0;
+  r record;
+begin
+  if not has_permission('release.manage') then
+    raise exception 'release_documents: not authorized (release.manage required)';
+  end if;
+  if p_from > p_to then
+    raise exception 'release_documents: p_from must be <= p_to';
+  end if;
+
+  for r in
+    select 'invoices'::text as et, i.id as eid, i.invoice_date::date as d from public.invoices i
+    union all
+    select 'expenses'::text, e.id, e.expense_date::date from public.expenses e
+    union all
+    select 'supplier_bills'::text, b.id, b.bill_date::date from public.supplier_bills b
+    union all
+    select 'vouchers'::text, v.id, v.voucher_date::date from public.vouchers v
+    union all
+    select 'credit_notes'::text, c.id, c.credit_note_date::date from public.credit_notes c
+    union all
+    select 'challans'::text, ch.id, ch.challan_date::date from public.challans ch
+    where r.et = any(p_types)
+      and r.d between p_from and p_to
+  loop
+    insert into public.document_releases (entity_type, entity_id, released_at, released_by)
+    values (r.et, r.eid, now(), v_actor)
+    on conflict (entity_type, entity_id) do nothing
+    returning 1 into v_released;
+  end loop;
+
+  perform write_audit('update', 'document_releases',
+    v_actor::text,
+    format('released %s docs in %s..%s for types %s', v_released, p_from, p_to, p_types::text),
+    jsonb_build_object('types', p_types, 'from', p_from, 'to', p_to), v_actor);
+  return v_released;
+end $function$;
+```
+
+(Use the ACTUAL table/column names from the codebase for `expenses`, `supplier_bills`, `vouchers`, `credit_notes`, `challans` — verify each in `app/src/lib/supabase/database.types.ts` and the migrations, and adjust the union's columns to each table's real date column. Do not invent tables that don't exist; drop a union branch for a type that has no table.)
+
+- [ ] **Step 2: Hardening grants**
+
+```sql
+alter function public.release_documents(text[], date, date) set search_path = public;
+revoke execute on function public.release_documents(text[], date, date) from anon, public;
+grant execute on function public.release_documents(text[], date, date) to authenticated;
+```
+
+- [ ] **Step 3: Accountant read-RLS gate on releasable tables**
+
+The accountant is read-only + released-only. Every releasable document table's SELECT policy becomes: admin OR (view code AND released). For each table (invoices, expenses, supplier_bills, vouchers, credit_notes, challans) add/replace:
+
+```sql
+drop policy if exists read_released_invoices on public.invoices;
+create policy read_released_invoices on public.invoices
+  for select to authenticated
+  using (
+    has_permission('invoice.view')
+    and exists (
+      select 1 from public.document_releases dr
+      where dr.entity_type = 'invoices' and dr.entity_id = invoices.id
+    )
+  );
+```
+
+(Apply per table: `invoice.view` for invoices, `expense.view` for expenses, `purchase.view` for supplier_bills, `journal.view` for vouchers, `creditnote.view` for credit_notes, `challan.view` for challans. Admin/manager keep their existing broader policies — this policy ADDs the accountant gate via RLS OR-semantics; verify the existing select policies still allow manager/admin and that the release predicate does not over-restrict them.)
+
+- [ ] **Step 4: Apply + validate + commit**
+
+Apply (`fine_grained_release`). Validate: an accountant user (only view codes, no `release.manage`) sees a released invoice and NOT an unreleased one; a manager can release a batch and gets the count back. Commit:
+
+```bash
+git add app/supabase/migrations/0107_fine_grained_release.sql
+git commit -m "feat(db): document release table, rpc, and accountant read gate"
+```
+
+---
+
+### Task 9: Release Center UI + acknowledgment receipt
+
+**Files:**
+- Create: `app/src/app/(app)/admin/releases/page.tsx` (server page, admin+manager gate)
+- Create: `app/src/app/(app)/admin/releases/ReleaseCenter.tsx` (client component)
+- Create: `app/src/app/(app)/sales/ReceiptSheet.tsx` (acknowledgment receipt print view)
+- Modify: `app/src/lib/data/releases.ts` (new data functions: listReleaseCounts, call release RPC)
+- Modify: `app/src/lib/actions/releases.ts` (new server action `runRelease`)
+- Modify: `app/src/lib/auth/route-guard.ts` (add `/admin/releases` rule — in Task 7, add `{ prefix: "/admin/releases", perm: "release.manage" }`)
+- Modify: `app/src/components/shell/nav.ts` (admin group: "Release Center" → `/admin/releases`, `perm: "release.manage"`)
+
+**Interfaces:**
+- Consumes: `release_documents` RPC (Task 8); `release.manage` code; `getSession()` → `claims`.
+- Produces: `/admin/releases` page; a field-facing acknowledgment receipt view.
+
+- [ ] **Step 1: Data + action layer**
+
+`app/src/lib/data/releases.ts`:
+
+```ts
+import { createClient } from "@/lib/supabase/server";
+
+export interface ReleaseTypeCount {
+  entityType: string;
+  label: string;
+  released: number;
+  unreleased: number;
+}
+
+export async function listReleaseCounts(pFrom: string, pTo: string): Promise<ReleaseTypeCount[]> {
+  const supabase = createClient();
+  // Per-type counts of released vs unreleased within the date range. Implement
+  // with the existing data functions or a lightweight count query per type;
+  // each row: { entityType, label, released, unreleased }.
+  return [];
+}
+```
+
+`app/src/lib/actions/releases.ts`:
+
+```ts
+"use server";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import type { ActionResult } from "@/lib/actions/sales";
+
+export async function runRelease(
+  types: string[],
+  from: string,
+  to: string,
+): Promise<ActionResult<{ released: number }>> {
+  if (types.length === 0) return { ok: false, error: "Select at least one document type." };
+  if (!from || !to || from > to) return { ok: false, error: "Pick a valid date range." };
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("release_documents", {
+    p_types: types,
+    p_from: from,
+    p_to: to,
+  });
+  if (error || typeof data !== "number") {
+    return { ok: false, error: error?.message ?? "Release failed." };
+  }
+  revalidatePath("/admin/releases");
+  return { ok: true, released: data };
+}
+```
+
+- [ ] **Step 2: Release Center page + component**
+
+`app/src/app/(app)/admin/releases/page.tsx` — server page gated by `release.manage` (route-guard handles the redirect; page also checks and shows a `/no-access` fallback). Fetches `listReleaseCounts` for a default month range and renders `<ReleaseCenter />`.
+
+`ReleaseCenter.tsx` (client) — per-type tiles (label + released/unreleased counts) with a `Toggle` per type, a date range picker (month default), "Select all types", and a **Release** button. On click: `runRelease(selectedTypes, from, to)`; show the returned count in a toast; refetch counts. Uses existing `Panel`, `Toggle`, `Button`, `PageContainer`, `PageHeader`.
+
+- [ ] **Step 3: Acknowledgment receipt view**
+
+`ReceiptSheet.tsx` — a printable, read-only receipt for a single cash memo the field user just recorded: business name/address, receipt no (memo no), date, the user's name, line items (item, qty, unit price, amount), grand total. Server data comes from `getInvoice(id)`/`listInvoices` (the memo row is in the same table with `is_official=false`); render with `@media print` CSS (hide nav/buttons on print) and a "Print" button. The field flow: after recording a sale, the action returns the invoice id; the user is shown a "View receipt" button linking to this view (route e.g. `/sales/receipt/[id]`). No register — only the single own-memo view.
+
+- [ ] **Step 4: Typecheck + build + commit**
+
+Run from `app/`: `npm run typecheck` && `npm run build` — both pass. Commit:
+
+```bash
+git add app/src/lib/data/releases.ts app/src/lib/actions/releases.ts \
+        "app/src/app/(app)/admin/releases/page.tsx" "app/src/app/(app)/admin/releases/ReleaseCenter.tsx" \
+        "app/src/app/(app)/sales/ReceiptSheet.tsx" "app/src/app/(app)/sales/receipt/[id]/page.tsx"
+git commit -m "feat(app): release center and field acknowledgment receipt"
+```
+
+---
+
+### Task 10: Retire unreferenced coarse codes + final validation
+
+**Files:**
+- Create: `app/supabase/migrations/0108_fine_grained_cleanup.sql`
 
 - [ ] **Step 1: Confirm zero references before deleting**
 
@@ -664,7 +936,7 @@ delete from public.permissions
 - [ ] **Step 4: Commit**
 
 ```bash
-git add app/supabase/migrations/0107_fine_grained_cleanup.sql
+git add app/supabase/migrations/0108_fine_grained_cleanup.sql
 git commit -m "chore(db): retire unreferenced coarse permission codes"
 ```
 
@@ -680,13 +952,14 @@ npm run build
 ```
 
 DB manual smoke set (as an authenticated session):
-1. Agent (only `cashmemo.*`, no `invoice.*`): Sales Desk shows cash memos; "Record sale" (official) hidden/disabled; direct `post_invoice` with `is_official=true` raises `not authorized (invoice.create required)`.
-2. Accountant (only `invoice.*`): sees official invoices; cash-memo actions hidden; direct `post_invoice` with is_official=false raises `(cashmemo.create required)`.
-3. GST viewer (only `report.gst`): `/gst` renders; `/costing` and cost RPCs raise; `get_ar_aging` raises.
-4. No role regressions: every previous user's effective access is a superset (diff query passes).
+1. Agent (only `cashmemo.create`, no `invoice.view`/`cashmemo.view`): has NO Sales Desk register (route blocked); records a sale → memo → sees only the acknowledgment receipt for it; direct `post_invoice` with `is_official=true` raises `not authorized (invoice.create required)`.
+2. Accountant (read-only view codes): sees ONLY released invoices/expenses/etc.; an unreleased invoice is not visible; `release_documents` raises `not authorized (release.manage required)`; `post_invoice`/`record_expense` raise.
+3. Manager: releases a batch (types + range) via the Release Center; count returns; accountant now sees them; edits to a released doc flow through (release is visibility-only).
+4. GST viewer (only `report.gst`): `/gst` renders; `/costing` and cost RPCs raise; `get_ar_aging` raises.
+5. No role regressions: every previous user's effective access is a superset (diff query passes).
 
 ## Deployment notes
 
-- Migrations 0101–0106 must land before the app-layer Task 7 (Task 7's UI reads the same codes).
-- 0107 is last, only after the reference check returns zero for each dropped code.
+- Migrations 0101–0107 must land before the app-layer Task 7 (Task 7's UI reads the same codes).
+- 0108 is last, only after the reference check returns zero for each dropped code.
 - The Supabase MCP `apply_migration` names should match the file stems (`fine_grained_catalog`, `fine_grained_sales`, …) if the CLI is unavailable.
