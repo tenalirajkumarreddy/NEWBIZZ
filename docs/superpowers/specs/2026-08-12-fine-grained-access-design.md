@@ -35,6 +35,7 @@ Today: `invoice.view` (invoices + cash memos), `order.view`, `order.create`, `or
 | `cashmemo.view` (new) | cash memo list / detail | agent-vs-accountant visibility |
 | `invoice.create` (new) | `post_invoice` official | invoice-raising is HQ duty |
 | `cashmemo.create` (new) | `post_invoice` is_official=false | counter/road staff raise memos |
+| `cashmemo.edit` (new, missed) | amend unposted memo via `convert_invoice_type` where allowed | memos are amendable, invoices are not |
 | `invoice.payment` (new) | `record_receipt` | collectors take money without raising docs |
 | `invoice.void` (new, missed) | `void_invoice` | senior-only reversal |
 | `order.view` (kept) | order book | order vs delivery desk differ |
@@ -59,6 +60,7 @@ Today: `purchase.view`, `purchase.manage`, `supplier.view`, `customer.manage`, `
 | `customer.manage` (kept) | customer/store CRUD | `credit.override` already separate |
 | `item.view`, `pricing.manage`, `stock.view`, `stock.transfer` (kept) | | atomic actions |
 | `stock.custody` (new, missed) | holdings / handover custody ledger | currently open to every user; admin-only for others' custody |
+| `cash.deposit` (new, missed) | bank deposits split from `cash.transfer` | depositing cash is a distinct duty from handovers |
 
 ### Manufacturing
 
@@ -123,7 +125,7 @@ Today: WhatsApp inbox gated by `customer.manage`, config by `settings.manage`; `
 
 ## Summary counts
 
-- New codes: 35 (cashmemo.view, cashmemo.create, invoice.create, invoice.payment, invoice.void, order.approve, order.cancel, order.edit, challan.view, challan.record, purchase.create, purchase.record_bill, purchase.pay, stock.custody, bom.manage, production.jobs, production.reverse, costing.manage, journal.reverse, expense.manage, asset.manage, loan.manage, documents.manage, report.pnl, report.gst, report.trial_balance, report.costing, bank.cheque, field.routes, field.fleet, field.transfer, crm.manage, commission.manage, whatsapp.inbox, whatsapp.manage).
+- New codes: 37 (cashmemo.view, cashmemo.create, cashmemo.edit, invoice.create, invoice.payment, invoice.void, order.approve, order.cancel, order.edit, challan.view, challan.record, purchase.create, purchase.record_bill, purchase.pay, stock.custody, cash.deposit, bom.manage, production.jobs, production.reverse, costing.manage, journal.reverse, expense.manage, asset.manage, loan.manage, documents.manage, report.pnl, report.gst, report.trial_balance, report.costing, bank.cheque, field.routes, field.fleet, field.transfer, crm.manage, commission.manage, whatsapp.inbox, whatsapp.manage).
 - Kept atomic: 15 existing codes (supplier.view, item.view, pricing.manage, stock.view, stock.transfer, credit.override, journal.view, journal.post, hr.view, hr.manage, roles.manage, audit.view, license.view, settings.manage, bank.reconcile).
 - Retired (replaced by fine sets): `invoice.view` (into invoice.view + cashmemo.view), `purchase.manage`, `accounting.manage`, `report.view_all`, `field.view`, `orders.approve` (into order.approve).
 
