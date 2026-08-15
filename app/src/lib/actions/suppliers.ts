@@ -4,7 +4,7 @@
 // lib/actions/suppliers.ts — Server Actions for Suppliers & AVL (§5.3).
 //
 // Supplier and AVL records are commercial masters with no money/stock impact,
-// so they're written directly under RLS (has_permission('purchase.manage')).
+// so they're written directly under RLS (has_permission('purchase.create')).
 // The one ledger action is the opening balance, which posts a journal via RPC.
 // =====================================================================
 

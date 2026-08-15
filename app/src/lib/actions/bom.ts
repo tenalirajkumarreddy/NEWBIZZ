@@ -5,7 +5,7 @@
 //
 // BOMs are master data — no ledger/stock impact.
 // Writes go through the upsert_bom SECURITY DEFINER RPC (already in 0017)
-// or direct INSERT for alternate groups. Permissions (purchase.manage)
+// or direct INSERT for alternate groups. Permissions (bom.manage)
 // are enforced in the DB via RLS.
 // =====================================================================
 
