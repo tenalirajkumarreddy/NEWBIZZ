@@ -10,7 +10,9 @@
 // Page prefix -> human label. Order of keys below = section order on screen.
 const PAGE_GROUP_LABELS: Record<string, string> = {
   invoice: "Sales & Invoicing",
+  cashmemo: "Sales & Invoicing",
   order: "Orders & Challans",
+  challan: "Orders & Challans",
   receipt: "Receipts",
   payment: "Collections",
   customer: "Customers",
@@ -25,19 +27,26 @@ const PAGE_GROUP_LABELS: Record<string, string> = {
   bom: "BOM / Recipes",
   production: "Production",
   config: "Costing Config",
+  costing: "Costing",
   journal: "Journal & Ledger",
   accounting: "Accounting",
+  expense: "Expenses & Petty Cash",
+  asset: "Fixed Assets",
+  loan: "Loans & EMI",
   report: "Reports",
   bank: "Bank",
   field: "Field Operations",
   crm: "CRM & Complaints",
+  whatsapp: "Messaging",
   commission: "Targets & Commissions",
   hr: "HR & Payroll",
+  documents: "Documents",
   cash: "Cash & Handover",
   roles: "Roles & Users",
   audit: "Audit",
   license: "Licences",
   settings: "Settings",
+  release: "Company Settings",
 };
 
 export interface PermissionItem {

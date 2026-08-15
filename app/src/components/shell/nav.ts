@@ -15,6 +15,8 @@ export interface NavItem {
   /** Alternative gate: visible to anyone holding one of these role codes (admin
    *  always passes). Overrides `perm` when both are set. */
   roles?: string[];
+  /** visible if the user holds ANY of these (admin always passes). */
+  anyOf?: string[];
   badgeKey?: string; // resolved to a live count by the shell (optional)
 }
 
@@ -34,9 +36,10 @@ export const NAV: NavGroup[] = [
   {
     label: "Sell & Collect",
     items: [
-      { id: "sales", label: "Sales Desk", href: "/sales", perm: "invoice.view", badgeKey: "openOrders" },
+      { id: "sales", label: "Sales Desk", href: "/sales", anyOf: ["invoice.view", "cashmemo.view"], badgeKey: "openOrders" },
+      { id: "sales-new", label: "Record Cash Memo", href: "/sales/new", perm: "cashmemo.create" },
       { id: "orders", label: "Order Book", href: "/orders", perm: "order.view" },
-      { id: "challans", label: "Delivery Challans", href: "/challans", perm: "order.view" },
+      { id: "challans", label: "Delivery Challans", href: "/challans", perm: "challan.view" },
       { id: "receipts", label: "Collections", href: "/receipts", perm: "receipt.record" },
       { id: "customers", label: "Customers & Stores", href: "/customers", perm: "customer.manage" },
       { id: "credit", label: "Credit Management", href: "/credit", perm: "customer.manage" },
@@ -66,7 +69,7 @@ export const NAV: NavGroup[] = [
       { id: "bom", label: "BOM / Recipes", href: "/bom", perm: "bom.view" },
       { id: "production", label: "Production Runs", href: "/production", perm: "production.run" },
       { id: "production-jobs", label: "Jobs", href: "/production/jobs", perm: "production.run" },
-      { id: "costing", label: "Process Costing", href: "/costing", perm: "report.view_all" },
+      { id: "costing", label: "Process Costing", href: "/costing", perm: "report.costing" },
     ],
   },
   {
@@ -77,9 +80,9 @@ export const NAV: NavGroup[] = [
       { id: "expenses", label: "Expenses & Petty Cash", href: "/expenses", perm: "accounting.manage" },
       { id: "assets", label: "Fixed Assets", href: "/assets", perm: "accounting.manage" },
       { id: "loans", label: "Loans & EMI", href: "/loans", perm: "accounting.manage" },
-      { id: "gst", label: "GST Reports", href: "/gst", perm: "report.view_all" },
-      { id: "trialbalance", label: "Trial Balance", href: "/trial-balance", perm: "report.view_all" },
-      { id: "reports", label: "P&L / Balance Sheet", href: "/reports", perm: "report.view_all" },
+      { id: "gst", label: "GST Reports", href: "/gst", perm: "report.gst" },
+      { id: "trialbalance", label: "Trial Balance", href: "/trial-balance", perm: "report.trial_balance" },
+      { id: "reports", label: "P&L / Balance Sheet", href: "/reports", perm: "report.pnl" },
       { id: "bank", label: "Bank Reconciliation", href: "/bank", perm: "bank.reconcile" },
       { id: "documents", label: "Documents", href: "/documents" },
     ],

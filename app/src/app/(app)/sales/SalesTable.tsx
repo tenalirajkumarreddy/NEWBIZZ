@@ -23,11 +23,29 @@ const STATUS_LABEL: Record<string, string> = {
 // Register filters for the Sales Desk (§4.8): free-text over invoice/customer/
 // store plus a status filter and a quick "outstanding only" toggle. Purely
 // client-side over the already-loaded page; the register is bounded to 200 rows.
-export function SalesTable({ invoices }: { invoices: InvoiceListRow[] }) {
+export function SalesTable({
+  invoices,
+  canViewInvoices,
+  canViewCashMemos,
+  canRecordPayment,
+}: {
+  invoices: InvoiceListRow[];
+  canViewInvoices: boolean;
+  canViewCashMemos: boolean;
+  canRecordPayment: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [openOnly, setOpenOnly] = useState(false);
-  const [docType, setDocType] = useState<"all" | "official" | "cash">("all");
+  const [docType, setDocType] = useState<"all" | "official" | "cash">(
+    canViewInvoices && canViewCashMemos
+      ? "all"
+      : canViewInvoices
+        ? "official"
+        : canViewCashMemos
+          ? "cash"
+          : "all",
+  );
 
   const officialCount = useMemo(() => invoices.filter((i) => i.isOfficial).length, [invoices]);
   const cashCount = invoices.length - officialCount;
@@ -49,11 +67,10 @@ export function SalesTable({ invoices }: { invoices: InvoiceListRow[] }) {
     });
   }, [invoices, query, status, openOnly, docType]);
 
-  const TABS: { key: "all" | "official" | "cash"; label: string; count: number }[] = [
-    { key: "all", label: "All", count: invoices.length },
-    { key: "official", label: "Tax invoices", count: officialCount },
-    { key: "cash", label: "Cash memos", count: cashCount },
-  ];
+  const TABS: { key: "all" | "official" | "cash"; label: string; count: number }[] = [];
+  if (canViewInvoices && canViewCashMemos) TABS.push({ key: "all", label: "All", count: invoices.length });
+  if (canViewInvoices) TABS.push({ key: "official", label: "Tax invoices", count: officialCount });
+  if (canViewCashMemos) TABS.push({ key: "cash", label: "Cash memos", count: cashCount });
 
   return (
     <>
@@ -187,7 +204,7 @@ export function SalesTable({ invoices }: { invoices: InvoiceListRow[] }) {
                       <Link href={`/invoices/${inv.id}`}>
                         <Button variant="ghost" size="sm">View</Button>
                       </Link>
-                      {open && (
+                      {open && canRecordPayment && (
                         <Link href={`/receipts/new?invoice=${inv.id}`}>
                           <Button variant="secondary" size="sm">Payment</Button>
                         </Link>

@@ -17,10 +17,12 @@ export function SalesDeskActions({
   stores,
   items,
   homeState,
+  canRecordSale,
 }: {
   stores: StoreOption[];
   items: ItemOption[];
   homeState: string | null;
+  canRecordSale: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState<null | "sale" | "order">(null);
@@ -33,7 +35,7 @@ export function SalesDeskActions({
         <Button variant="secondary" size="sm" onClick={() => setOpen("order")}>
           New order
         </Button>
-        <Button variant="primary" size="sm" onClick={() => setOpen("sale")}>
+        <Button variant="primary" size="sm" onClick={() => setOpen("sale")} disabled={!canRecordSale}>
           Record sale
         </Button>
       </div>

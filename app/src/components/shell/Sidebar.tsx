@@ -25,6 +25,7 @@ export function Sidebar({
     ...group,
     items: group.items.filter((it) => {
       if (it.roles) return claims.is_admin || claims.roles.some((r) => it.roles!.includes(r));
+      if (it.anyOf) return it.anyOf.some((p) => can(claims, p));
       if (it.perm) return can(claims, it.perm);
       return true;
     }),

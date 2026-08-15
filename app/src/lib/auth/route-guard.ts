@@ -29,6 +29,10 @@ interface RouteRule {
    * carry a single permission code (e.g. /admin/users for admin + manager).
    */
   roles?: string[];
+  /** ANY-match alternative: holds if the user holds ANY of these permission codes
+   *  (admin always passes). Used when a route has no single code every role
+   *  shares (e.g. the Sales Desk register: invoice.view OR cashmemo.view). */
+  anyOf?: string[];
 }
 
 // Longest prefixes first so more specific routes beat their parents.
@@ -41,25 +45,25 @@ const RULES: RouteRule[] = [
   { prefix: "/admin/users/roles", perm: "roles.manage" },
   { prefix: "/admin/users", roles: ["manager"] },
   { prefix: "/credit-notes", perm: "creditnote.view" },
-  { prefix: "/trial-balance", perm: "report.view_all" },
+  { prefix: "/trial-balance", perm: "report.trial_balance" },
   { prefix: "/purchasing", perm: "purchase.view" },
   { prefix: "/commissions", perm: "commission.view" },
   { prefix: "/production", perm: "production.run" },
   { prefix: "/customers", perm: "customer.manage" },
   { prefix: "/suppliers", perm: "supplier.view" },
   { prefix: "/receipts", perm: "receipt.record" },
-  { prefix: "/challans", perm: "order.view" },
+  { prefix: "/challans", perm: "challan.view" },
   { prefix: "/payroll", perm: "hr.view" },
   { prefix: "/expenses", perm: "accounting.manage" },
   { prefix: "/invoices", perm: "invoice.view" },
   { prefix: "/vouchers", perm: "journal.post" },
   { prefix: "/journal", perm: "journal.view" },
-  { prefix: "/reports", perm: "report.view_all" },
+  { prefix: "/reports", perm: "report.pnl" },
   { prefix: "/assets", perm: "accounting.manage" },
   { prefix: "/loans", perm: "accounting.manage" },
   { prefix: "/bank", perm: "bank.reconcile" },
-  { prefix: "/gst", perm: "report.view_all" },
-  { prefix: "/costing", perm: "report.view_all" },
+  { prefix: "/gst", perm: "report.gst" },
+  { prefix: "/costing", perm: "report.costing" },
   { prefix: "/fleet", perm: "field.view" },
   { prefix: "/routes", perm: "field.view" },
   { prefix: "/crm", perm: "crm.view" },
@@ -67,7 +71,8 @@ const RULES: RouteRule[] = [
   { prefix: "/items", perm: "item.view" },
   { prefix: "/pricing", perm: "pricing.manage" },
   { prefix: "/bom", perm: "bom.view" },
-  { prefix: "/sales", perm: "invoice.view" },
+  { prefix: "/sales/new", anyOf: ["invoice.create", "cashmemo.create"] },
+  { prefix: "/sales", anyOf: ["invoice.view", "cashmemo.view"] },
   { prefix: "/orders", perm: "order.view" },
   { prefix: "/credit", perm: "customer.manage" },
   { prefix: "/whatsapp", perm: "customer.manage" },
@@ -85,9 +90,15 @@ export function canAccessPath(claims: AppClaims, pathname: string): boolean {
     (r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/"),
   );
   if (!rule) return true;
-  if (rule.perm) return can(claims, rule.perm);
   if (rule.roles) {
     return claims.is_admin || claims.roles.some((r) => rule.roles!.includes(r));
   }
+  if (rule.anyOf) return hasAny(claims, rule.anyOf);
+  if (rule.perm) return can(claims, rule.perm);
   return true;
+}
+
+/** ANY-match helper: admin passes, or any listed code grants access. */
+function hasAny(claims: AppClaims, perms: string[]): boolean {
+  return perms.some((p) => can(claims, p));
 }
