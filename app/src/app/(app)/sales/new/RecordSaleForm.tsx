@@ -120,7 +120,7 @@ export function RecordSaleForm({
         if (onDone) {
           onDone(res.invoiceId);
         } else {
-          router.push(`/invoices/${res.invoiceId}`);
+          router.push(isOfficial ? `/invoices/${res.invoiceId}` : `/sales/receipt/${res.invoiceId}`);
           router.refresh();
         }
       } else {
