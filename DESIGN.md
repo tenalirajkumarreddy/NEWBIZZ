@@ -1,6 +1,6 @@
 # NEWBIZZ Design System
 
-> Water-bottle manufacturing management system — light tactical operations console.
+> Water-bottle manufacturing management system — light tactical operations console..
 
 - **Design Variance:** 8 (asymmetric, fractional grids, purposeful whitespace)
 - **Motion Intensity:** 6 (fluid CSS transitions, spring physics, staggered reveals)
