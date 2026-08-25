@@ -38,10 +38,12 @@ export type Decision =
 export function QuickAttachDialog({
   claims,
   staged,
+  updateStaged,
   onClose,
 }: {
   claims: AppClaims;
   staged: StagedFile[];
+  updateStaged: (index: number, patch: Partial<Pick<StagedFile, "title" | "tags" | "visibility">>) => void;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -250,6 +252,41 @@ export function QuickAttachDialog({
           {active && active.rejection && (
             <div className="rounded-lg border border-line bg-red-wash px-3 py-2 text-[12px] font-medium text-red">
               {active.rejection}
+            </div>
+          )}
+
+          {!reviewing && active && !active.rejection && !saving && (
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-4">Title</span>
+                <input
+                  value={active.title}
+                  onChange={(e) => updateStaged(activeIdx, { title: e.target.value })}
+                  className="h-8 rounded-lg border border-line bg-white px-2.5 text-[12px] text-ink outline-none focus:border-brand"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-4">Tags</span>
+                <input
+                  value={active.tags}
+                  placeholder="tags, comma, separated"
+                  onChange={(e) => updateStaged(activeIdx, { tags: e.target.value })}
+                  className="h-8 rounded-lg border border-line bg-white px-2.5 text-[12px] text-ink outline-none focus:border-brand"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-4">Visibility</span>
+                <select
+                  value={active.visibility}
+                  onChange={(e) =>
+                    updateStaged(activeIdx, { visibility: e.target.value as StagedFile["visibility"] })
+                  }
+                  className="h-8 rounded-lg border border-line bg-white px-2 text-[12px] text-ink outline-none focus:border-brand"
+                >
+                  <option value="internal">Internal</option>
+                  <option value="restricted">Restricted</option>
+                </select>
+              </label>
             </div>
           )}
 

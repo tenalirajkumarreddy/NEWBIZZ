@@ -60,6 +60,13 @@ export function QuickAttachProvider({ claims, children }: { claims: AppClaims; c
 
   const openPicker = useCallback(() => inputRef.current?.click(), []);
 
+  const updateStaged = useCallback(
+    (index: number, patch: Partial<Pick<StagedFile, "title" | "tags" | "visibility">>) => {
+      setStaged((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+    },
+    [],
+  );
+
   useEffect(() => {
     let depth = 0;
     const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes("Files");
@@ -118,7 +125,12 @@ export function QuickAttachProvider({ claims, children }: { claims: AppClaims; c
       )}
 
       {staged.length > 0 && (
-        <QuickAttachDialog claims={claims} staged={staged} onClose={() => setStaged([])} />
+        <QuickAttachDialog
+          claims={claims}
+          staged={staged}
+          updateStaged={updateStaged}
+          onClose={() => setStaged([])}
+        />
       )}
     </QuickAttachContext.Provider>
   );
