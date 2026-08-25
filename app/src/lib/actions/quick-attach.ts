@@ -153,6 +153,9 @@ export interface PickerOption {
   id: string;
   label: string;
   sub?: string | null;
+  /** Parent-customer id for customer_stores options — recordReceipt needs
+   *  BOTH customer_id and store_id, so the store option carries both raw ids. */
+  customerId?: string | null;
 }
 
 async function pick(table: string, columns: string[], query: string, select: string,
@@ -181,8 +184,14 @@ export async function pickSuppliers(query: string) {
 }
 
 export async function pickCustomerStores(query: string) {
-  return pick("customer_stores", ["code", "name"], query, "id, code, name, customer:customers(name)",
-    (r) => ({ id: r.id, label: r.name ?? r.code, sub: r.customer?.name ?? r.code }));
+  return pick("customer_stores", ["code", "name"], query,
+    "id, code, name, customer:customers(id, name)",
+    (r) => ({
+      id: r.id,
+      label: r.name ?? r.code,
+      sub: r.customer?.name ?? r.code,
+      customerId: r.customer?.id ?? null,
+    }));
 }
 
 export async function pickItems(query: string) {

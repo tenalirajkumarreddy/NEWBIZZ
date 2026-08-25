@@ -26,7 +26,7 @@ import { CreatePanel } from "./panels/CreatePanel";
 
 export type Decision =
   | { kind: "link"; typeKey: QuickTypeKey; targetId: string; targetLabel: string }
-  | { kind: "create"; typeKey: QuickTypeKey }
+  | { kind: "create"; typeKey: QuickTypeKey; entityType: string; entityId: string }
   | { kind: "plain"; typeKey: "plain" };
 
 export function QuickAttachDialog({
@@ -76,8 +76,17 @@ export function QuickAttachDialog({
   }
 
   // Commit a decision for the active file — or, with "apply to all" checked,
-  // stamp it onto every still-undecided file at once.
+  // stamp it onto every still-undecided file at once. A created record is
+  // bound to the one file it was made for, so apply-to-all never clones an
+  // entity: it switches itself off and the rest are decided per file.
   const commit = (d: Decision) => {
+    if (applyAll && d.kind === "create") {
+      setApplyAll(false);
+      toast.info("Create applies per file");
+      record(d);
+      advance();
+      return;
+    }
     record(d);
     if (applyAll) applyToRemaining(d); else advance();
   };
@@ -179,8 +188,8 @@ export function QuickAttachDialog({
                 onLinked={(targetId, targetLabel) => {
                   commit({ kind: "link", typeKey: chosenType.key, targetId, targetLabel });
                 }}
-                onCreate={() => {
-                  commit({ kind: "create", typeKey: chosenType.key });
+                onCreate={(entityType, entityId) => {
+                  commit({ kind: "create", typeKey: chosenType.key, entityType, entityId });
                 }}
               />
             </div>
@@ -210,8 +219,8 @@ export function QuickAttachDialog({
   );
 }
 
-// DecidePanel — link/create choice. Task 5 fills the panels; until then the
-// buttons render but the panels show their landing states.
+// DecidePanel — link/create choice, hosting the real LinkPanel search and
+// the per-type CreatePanel forms.
 function DecidePanel({
   typeKey, canLink, canCreate, onLinked, onCreate,
 }: {
@@ -219,7 +228,7 @@ function DecidePanel({
   canLink: boolean;
   canCreate: boolean;
   onLinked: (targetId: string, targetLabel: string) => void;
-  onCreate: () => void;
+  onCreate: (entityType: string, entityId: string) => void;
 }) {
   const [mode, setMode] = useState<"link" | "create" | null>(null);
   if (!canLink && !canCreate) return null;
@@ -238,7 +247,7 @@ function DecidePanel({
         )}
       </div>
       {mode === "link" && <LinkPanel typeKey={typeKey} onPicked={onLinked} />}
-      {mode === "create" && <CreatePanel typeKey={typeKey} onCreated={(_, __) => { onCreate(); }} />}
+      {mode === "create" && <CreatePanel typeKey={typeKey} onCreated={onCreate} />}
     </div>
   );
 }
