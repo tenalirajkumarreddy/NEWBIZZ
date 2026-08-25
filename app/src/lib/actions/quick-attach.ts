@@ -39,6 +39,7 @@ async function searchTable(
     .or(columns.map((c) => `${c}.ilike.${needle}`).join(","))
     .order("created_at", { ascending: false })
     .limit(LIMIT);
+  if (res.error) throw res.error;
   return res.data ?? [];
 }
 
@@ -89,7 +90,7 @@ export async function searchLinkTargets(
         hits = [
           ...grns.map((r) => ({ id: r.id, title: r.grn_no, subtitle: `GRN · ${r.grn_date ?? ""}` })),
           ...pos.map((r) => ({ id: r.id, title: r.po_no, subtitle: `Purchase Order · ${r.po_date ?? ""}` })),
-        ];
+        ].slice(0, LIMIT);
         break;
       }
       case "supplier_payment": {
@@ -166,6 +167,7 @@ async function pick(table: string, columns: string[], query: string, select: str
       if (orExpr) q = q.or(orExpr);
     }
     const res = await q;
+    if (res.error) throw res.error;
     return { ok: true, options: (res.data ?? []).map(render) };
   } catch (e: any) {
     console.error(`[action:pick:${table}]`, e?.message);
