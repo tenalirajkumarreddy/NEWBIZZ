@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { AppClaims } from "@/lib/auth/claims";
 import { can } from "@/lib/auth/claims";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
@@ -124,8 +124,10 @@ export function QuickAttachDialog({
   }
 
   // Save one file: build its FormData (entity binding per decision kind) and
-  // call uploadDocument. Returns whether it succeeded; failures record the
-  // server messages for the chip's Retry row.
+  // call uploadDocument. Returns whether it succeeded; failures — both typed
+  // {ok:false} results and thrown server-action errors (network failure
+  // rejects rather than returning) — are recorded as this file's error so
+  // the remaining files still attempt.
   async function saveOne(i: number): Promise<boolean> {
     const s = staged[i];
     const d = decisions[i];
@@ -138,37 +140,68 @@ export function QuickAttachDialog({
     fd.set("visibility", s.visibility);
     if (d.kind === "link") { fd.set("entityType", d.targetEntity); fd.set("entityId", d.targetId); }
     if (d.kind === "create") { fd.set("entityType", d.entityType); fd.set("entityId", d.entityId); }
-    const res = await uploadDocument(fd);
-    if (!res.ok) {
+    try {
+      const res = await uploadDocument(fd);
+      if (!res.ok) {
+        setSaveState((p) => ({ ...p, [i]: "error" }));
+        setSaveError((p) => ({ ...p, [i]: res.errors.map((e) => e.message).join(" ") }));
+        return false;
+      }
+      setSaveState((p) => ({ ...p, [i]: "done" }));
+      return true;
+    } catch (e: any) {
       setSaveState((p) => ({ ...p, [i]: "error" }));
-      setSaveError((p) => ({ ...p, [i]: res.errors.map((e) => e.message).join(" ") }));
+      setSaveError((p) => ({ ...p, [i]: e?.message ?? "Upload failed." }));
       return false;
     }
-    setSaveState((p) => ({ ...p, [i]: "done" }));
-    return true;
+  }
+
+  // One upload in flight across Retry and Attach: a synchronous ref mutex is
+  // checked-and-set before either entry point proceeds, and `saving` mirrors
+  // it for the UI (Cancel/Attach disabled). A second click during a slow
+  // retry or save is refused instead of queueing a duplicate upload.
+  const busyRef = useRef(false);
+
+  async function retryOne(i: number): Promise<void> {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setSaving(true);
+    try {
+      await saveOne(i);
+    } finally {
+      busyRef.current = false;
+      setSaving(false);
+    }
   }
 
   // Sequential save loop over the savable files. Already-done files are
   // skipped so a post-retry Attach never re-uploads them. Close only when
   // every savable file succeeded — otherwise stay open with the errors.
+  // finally guarantees saving clears even if something above throws.
   async function finish() {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setSaving(true);
-    const already = savableIdx.filter((i) => saveState[i] === "done");
-    const todo = savableIdx.filter((i) => saveState[i] !== "done");
-    setSaveState({
-      ...Object.fromEntries(already.map((i) => [i, "done" as const])),
-      ...Object.fromEntries(todo.map((i) => [i, "queued" as const])),
-    });
-    let okCount = already.length;
-    for (const i of todo) {
-      if (await saveOne(i)) okCount++;
-    }
-    setSaving(false);
-    if (okCount === savableIdx.length) {
-      toast.success(`Attached ${okCount} file${okCount === 1 ? "" : "s"}`);
-      onClose();
-    } else {
-      toast.error(`${savableIdx.length - okCount} file(s) failed — retry below.`);
+    try {
+      const already = savableIdx.filter((i) => saveState[i] === "done");
+      const todo = savableIdx.filter((i) => saveState[i] !== "done");
+      setSaveState({
+        ...Object.fromEntries(already.map((i) => [i, "done" as const])),
+        ...Object.fromEntries(todo.map((i) => [i, "queued" as const])),
+      });
+      let okCount = already.length;
+      for (const i of todo) {
+        if (await saveOne(i)) okCount++;
+      }
+      if (okCount === savableIdx.length) {
+        toast.success(`Attached ${okCount} file${okCount === 1 ? "" : "s"}`);
+        onClose();
+      } else {
+        toast.error(`${savableIdx.length - okCount} file(s) failed — retry below.`);
+      }
+    } finally {
+      busyRef.current = false;
+      setSaving(false);
     }
   }
 
@@ -208,7 +241,7 @@ export function QuickAttachDialog({
                 <span className="min-w-0 text-[12px] font-medium text-red">
                   <span className="font-semibold">{s.file.name}</span> — {saveError[i]}
                 </span>
-                <Button variant="secondary" size="sm" onClick={() => void saveOne(i)}>Retry</Button>
+                <Button variant="secondary" size="sm" disabled={saving} onClick={() => void retryOne(i)}>Retry</Button>
               </div>
             ) : null,
           )}
