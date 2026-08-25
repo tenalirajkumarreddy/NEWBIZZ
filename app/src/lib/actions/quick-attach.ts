@@ -199,9 +199,32 @@ export async function pickItems(query: string) {
     (r) => ({ id: r.id, label: r.name ?? r.sku, sub: r.sku }));
 }
 
-export async function pickExpenseAccounts() {
-  return pick("chart_of_accounts", [], "", "code, name",
-    (r) => ({ id: r.code, label: `${r.code} · ${r.name}` }));
+export async function pickExpenseAccounts(): Promise<{
+  ok: boolean;
+  options?: PickerOption[];
+  error?: string;
+}> {
+  // Mirrors the canonical expense-entry picker (listExpenseAccounts in
+  // lib/data/expenses.ts, used by /expenses/new): postable expense-type
+  // ledger accounts only, active, ordered by code — so a payable/equity/
+  // asset account can never be booked as an expense charge.
+  try {
+    const supabase = createClient();
+    const res = await supabase
+      .from("chart_of_accounts")
+      .select("code, name")
+      .eq("type", "expense")
+      .eq("is_postable", true)
+      .eq("status", "active")
+      .order("code")
+      .limit(50);
+    if (res.error) throw res.error;
+    return { ok: true, options: ((res.data ?? []) as { code: string; name: string }[])
+      .map((r) => ({ id: r.code, label: `${r.code} · ${r.name}` })) };
+  } catch (e: any) {
+    console.error("[action:pick:chart_of_accounts]", e?.message);
+    return { ok: false, error: e?.message ?? "Lookup failed." };
+  }
 }
 
 export async function pickPaymentMethods() {
