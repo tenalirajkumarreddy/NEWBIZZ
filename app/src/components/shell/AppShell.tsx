@@ -8,6 +8,7 @@ import { Topbar } from "./Topbar";
 import { StatusBar } from "./StatusBar";
 import { TokenVersionWatcher } from "@/components/auth/TokenVersionWatcher";
 import { ToastProvider } from "@/components/ui";
+import { QuickAttachProvider } from "./QuickAttachProvider";
 
 // The frame every signed-in page renders inside. CSS grid (matches the locked
 // refer_UI.html .app grid exactly):
@@ -43,43 +44,47 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div
-      className="grid h-[100dvh] overflow-hidden bg-bg"
-      style={{
-        gridTemplateColumns: "240px 1fr",
-        gridTemplateRows: "60px minmax(0, 1fr) 28px",
-      }}
-    >
-      {/* Keeps cached claims honest without trusting them for auth. */}
-      <TokenVersionWatcher claimVersion={claims.token_version} />
+    <ToastProvider>
+      <QuickAttachProvider claims={claims}>
+        <div
+          className="grid h-[100dvh] overflow-hidden bg-bg"
+          style={{
+            gridTemplateColumns: "240px 1fr",
+            gridTemplateRows: "60px minmax(0, 1fr) 28px",
+          }}
+        >
+          {/* Keeps cached claims honest without trusting them for auth. */}
+          <TokenVersionWatcher claimVersion={claims.token_version} />
 
-      <div className="col-span-2">
-        <Topbar
-          displayName={displayName}
-          phone={phone}
-          roleLabel={roleLabel}
-          warehouses={warehouses}
-          currentWarehouse={currentWarehouse}
-          currentFy={currentFy}
-          financialYears={financialYears}
-          canManageSettings={canManageSettings}
-        />
-      </div>
+          <div className="col-span-2">
+            <Topbar
+              displayName={displayName}
+              phone={phone}
+              roleLabel={roleLabel}
+              warehouses={warehouses}
+              currentWarehouse={currentWarehouse}
+              currentFy={currentFy}
+              financialYears={financialYears}
+              canManageSettings={canManageSettings}
+            />
+          </div>
 
-      <aside className="min-h-0">
-        <Sidebar claims={claims} badges={badges} />
-      </aside>
+          <aside className="min-h-0">
+            <Sidebar claims={claims} badges={badges} />
+          </aside>
 
-      <main className="min-h-0 overflow-y-auto">
-        <ToastProvider>{children}</ToastProvider>
-      </main>
+          <main className="min-h-0 overflow-y-auto">
+            {children}
+          </main>
 
-      <div className="col-span-2">
-        <StatusBar
-          branchLabel={currentWarehouse ? `${currentWarehouse.name} · ${currentWarehouse.code}` : "No warehouse"}
-          fyLabel={currentFy ? `FY ${currentFy.code}` : "FY —"}
-        />
-      </div>
-    </div>
+          <div className="col-span-2">
+            <StatusBar
+              branchLabel={currentWarehouse ? `${currentWarehouse.name} · ${currentWarehouse.code}` : "No warehouse"}
+              fyLabel={currentFy ? `FY ${currentFy.code}` : "FY —"}
+            />
+          </div>
+        </div>
+      </QuickAttachProvider>
+    </ToastProvider>
   );
 }
