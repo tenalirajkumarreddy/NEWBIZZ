@@ -36,8 +36,7 @@ export interface DocumentsPage {
   pageSize: number;
 }
 
-export const ALLOWED_MIME_PREFIXES = ["pdf", "image/jpeg", "image/png", "image/webp", "msword", "officedocument"];
-export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+export { ALLOWED_MIME_PREFIXES, MAX_FILE_BYTES } from "@/lib/documents-limits";
 
 /** Human label column (or fallback) for each attachable entity type. */
 const ENTITY_LABEL_LOOKUPS: Record<string, { table: string; column: string } | null> = {
@@ -51,10 +50,15 @@ const ENTITY_LABEL_LOOKUPS: Record<string, { table: string; column: string } | n
   supplier_bill: { table: "supplier_bills", column: "bill_no" },
   challan: { table: "delivery_challans", column: "challan_no" },
   credit_note: { table: "credit_notes", column: "credit_note_no" },
-  bank_account: { table: "bank_accounts", column: "account_name" },
+  bank_account: { table: "bank_accounts", column: "name" },
   worker: { table: "workers", column: "full_name" },
   production_run: { table: "production_runs", column: "run_no" },
   sales_order: { table: "sales_orders", column: "order_no" },
+  expense: { table: "expenses", column: "expense_no" },
+  customer_receipt: { table: "customer_receipts", column: "receipt_no" },
+  purchase_order: { table: "purchase_orders", column: "po_no" },
+  purchase_receipt: { table: "purchase_receipts", column: "grn_no" },
+  supplier_payment: { table: "supplier_payments", column: "payment_no" },
 };
 
 /**

@@ -30,6 +30,10 @@ const KIND_LABELS: Record<string, string> = {
   bom: "BOM",
   production_run: "Production Run",
   sales_order: "Sales Order",
+  customer_receipt: "Customer Receipt",
+  purchase_order: "Purchase Order",
+  purchase_receipt: "GRN",
+  supplier_payment: "Supplier Payment",
 };
 
 /**
