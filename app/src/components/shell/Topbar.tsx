@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NotificationsBell } from "./NotificationsBell";
 import { GlobalSearch } from "./GlobalSearch";
+import { useQuickAttach } from "./QuickAttachProvider";
 import type { BranchRow } from "@/lib/data/branches";
 import type { FinancialYearRow } from "@/lib/data/types";
 import type { FyRow } from "@/lib/data/settings";
@@ -35,6 +36,7 @@ export function Topbar({
   canManageSettings: boolean;
 }) {
   const initials = deriveInitials(displayName, phone);
+  const quick = useQuickAttach();
 
   return (
     <header className="flex h-full items-center gap-3 border-b border-line bg-surface px-6">
@@ -60,6 +62,17 @@ export function Topbar({
         canManageSettings={canManageSettings}
       />
       <FySelector financialYears={financialYears} currentFy={currentFy} />
+
+      {/* Quick attach — ＋ opens the drop-to-attach popup (manual file pick). */}
+      <button
+        type="button"
+        onClick={() => quick.openPicker()}
+        aria-label="Attach a file"
+        title="Attach a file"
+        className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-[16px] font-semibold leading-none text-ink transition-colors hover:border-brand hover:text-brand"
+      >
+        +
+      </button>
 
       {/* Notifications */}
       <NotificationsBell />
