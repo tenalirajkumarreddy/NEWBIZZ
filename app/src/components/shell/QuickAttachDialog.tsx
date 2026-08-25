@@ -211,7 +211,14 @@ export function QuickAttachDialog({
 
   return (
     <>
-      <Dialog open onClose={() => setConfirmCancel(true)} title="Attach files" size="lg">
+      <Dialog
+        open
+        onClose={() => {
+          if (!busyRef.current) setConfirmCancel(true);
+        }}
+        title="Attach files"
+        size="lg"
+      >
         <div className="flex flex-col gap-4">
           {/* Stage chips */}
           <div className="flex flex-wrap gap-2">
@@ -365,7 +372,9 @@ export function QuickAttachDialog({
       <ConfirmDialog
         open={confirmCancel}
         onClose={() => setConfirmCancel(false)}
-        onConfirm={onClose}
+        onConfirm={() => {
+          if (!busyRef.current) onClose();
+        }}
         title="Discard these files?"
         description={
           Object.values(saveState).some((st) => st === "done")
