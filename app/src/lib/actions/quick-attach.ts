@@ -18,6 +18,10 @@ export interface LinkHit {
   id: string;
   title: string;
   subtitle: string | null;
+  /** documents.entity_type this hit's table maps to — carried so the save
+   *  engine can bind the upload without re-deriving the table (the
+   *  purchase_grn search spans both purchase_receipts and purchase_orders). */
+  entity: string;
 }
 
 const LIMIT = 8;
@@ -65,6 +69,7 @@ export async function searchLinkTargets(
           id: r.id,
           title: r.expense_no,
           subtitle: `₹${Number(r.amount).toLocaleString("en-IN")} · ${r.expense_date ?? ""}${r.note ? ` · ${String(r.note).slice(0, 40)}` : ""}`,
+          entity: "expense",
         }));
         break;
       }
@@ -79,6 +84,7 @@ export async function searchLinkTargets(
           id: r.id,
           title: r.bill_no ?? r.supplier_bill_no,
           subtitle: `${r.supplier?.name ?? ""} · ₹${Number(r.grand_total ?? 0).toLocaleString("en-IN")} · ${r.bill_date ?? ""}`,
+          entity: "supplier_bill",
         }));
         break;
       }
@@ -88,8 +94,8 @@ export async function searchLinkTargets(
           searchTable("purchase_receipts", ["grn_no"], n, "id, grn_no, grn_date"),
         ]);
         hits = [
-          ...grns.map((r) => ({ id: r.id, title: r.grn_no, subtitle: `GRN · ${r.grn_date ?? ""}` })),
-          ...pos.map((r) => ({ id: r.id, title: r.po_no, subtitle: `Purchase Order · ${r.po_date ?? ""}` })),
+          ...grns.map((r) => ({ id: r.id, title: r.grn_no, subtitle: `GRN · ${r.grn_date ?? ""}`, entity: "purchase_receipt" })),
+          ...pos.map((r) => ({ id: r.id, title: r.po_no, subtitle: `Purchase Order · ${r.po_date ?? ""}`, entity: "purchase_order" })),
         ].slice(0, LIMIT);
         break;
       }
@@ -104,6 +110,7 @@ export async function searchLinkTargets(
           id: r.id,
           title: r.payment_no,
           subtitle: `₹${Number(r.amount).toLocaleString("en-IN")} · ${r.payment_date ?? ""}${r.reference ? ` · ${r.reference}` : ""}`,
+          entity: "supplier_payment",
         }));
         break;
       }
@@ -118,6 +125,7 @@ export async function searchLinkTargets(
           id: r.id,
           title: r.receipt_no,
           subtitle: `₹${Number(r.amount).toLocaleString("en-IN")} · ${r.receipt_date ?? ""}${r.reference ? ` · ${r.reference}` : ""}`,
+          entity: "customer_receipt",
         }));
         break;
       }
@@ -132,6 +140,7 @@ export async function searchLinkTargets(
           id: r.id,
           title: r.name ?? r.bank_name,
           subtitle: `Bank A/C${r.account_no ? ` ····${String(r.account_no).slice(-4)}` : ""}`,
+          entity: "bank_account",
         }));
         break;
       }

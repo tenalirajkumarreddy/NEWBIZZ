@@ -13,7 +13,7 @@ import { searchLinkTargets, type LinkHit, type QuickTypeKey } from "@/lib/action
 
 export function LinkPanel({ typeKey, onPicked }: {
   typeKey: QuickTypeKey;
-  onPicked: (targetId: string, targetLabel: string) => void;
+  onPicked: (hit: LinkHit) => void;
 }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<LinkHit[]>([]);
@@ -53,7 +53,7 @@ export function LinkPanel({ typeKey, onPicked }: {
             <li key={h.id}>
               <button
                 type="button"
-                onClick={() => onPicked(h.id, h.title)}
+                onClick={() => onPicked(h)}
                 className="block w-full px-3 py-2 text-left transition-colors hover:bg-fill"
               >
                 <span className="flex items-center justify-between gap-2">

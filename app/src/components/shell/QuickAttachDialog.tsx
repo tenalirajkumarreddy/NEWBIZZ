@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import type { StagedFile } from "./QuickAttachProvider";
 import { visibleTypesForClaims, type QuickType } from "@/lib/quick-attach/registry";
-import type { QuickTypeKey } from "@/lib/actions/quick-attach";
+import { uploadDocument } from "@/lib/actions/documents";
+import type { LinkHit, QuickTypeKey } from "@/lib/actions/quick-attach";
 import { LinkPanel } from "./panels/LinkPanel";
 import { CreatePanel } from "./panels/CreatePanel";
 
@@ -20,12 +21,17 @@ import { CreatePanel } from "./panels/CreatePanel";
 //   type  → permission-filtered tiles; multi-file shows "apply to all"
 //   decide→ Link (search + pick) | Create (module form) | plain (no-op)
 //
-// Nothing uploads from here directly: Task 6 wires the save engine that
-// runs module creates then uploadDocument() per file.
+// Attach runs the save engine: each decided file is uploaded sequentially
+// via uploadDocument(), bound to its linked or created record (plain
+// files land in the vault unbound). Per-file status chips track
+// queued → working → done/error, with Retry for failures; the dialog
+// closes only when every savable file succeeded.
 // ---------------------------------------------------------------------
 
+type SaveStatus = "queued" | "working" | "done" | "error";
+
 export type Decision =
-  | { kind: "link"; typeKey: QuickTypeKey; targetId: string; targetLabel: string }
+  | { kind: "link"; typeKey: QuickTypeKey; targetEntity: string; targetId: string; targetLabel: string }
   | { kind: "create"; typeKey: QuickTypeKey; entityType: string; entityId: string }
   | { kind: "plain"; typeKey: "plain" };
 
@@ -45,11 +51,17 @@ export function QuickAttachDialog({
   const [decisions, setDecisions] = useState<Record<number, Decision>>({});
   const [applyAll, setApplyAll] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<Record<number, SaveStatus>>({});
+  const [saveError, setSaveError] = useState<Record<number, string>>({});
 
   const types = useMemo(() => visibleTypesForClaims((p) => can(claims, p)), [claims]);
   const active = staged[activeIdx];
-  const doneCount = Object.keys(decisions).length;
-  const allDecided = doneCount === staged.length;
+  // Rejected files are unsavable — they neither need nor receive decisions,
+  // and success is measured against the savable files only.
+  const savableIdx = staged.flatMap((s, i) => (s.rejection ? [] : [i]));
+  const doneCount = savableIdx.filter((i) => decisions[i]).length;
+  const allDecided = savableIdx.length > 0 && doneCount === savableIdx.length;
 
   function record(d: Decision) {
     setDecisions((prev) => ({ ...prev, [activeIdx]: d }));
@@ -101,10 +113,63 @@ export function QuickAttachDialog({
     setStep("decide");
   }
 
-  function finish() {
-    // Task 6 replaces this with the real save engine.
-    toast.success("Save engine lands in the next task");
-    onClose();
+  function chipStatus(i: number, s: StagedFile): string {
+    switch (saveState[i]) {
+      case "queued": return " · queued";
+      case "working": return " · working…";
+      case "done": return " · done ✓";
+      case "error": return " · error !";
+    }
+    return decisions[i] ? " · decided" : s.rejection ? " · rejected" : "";
+  }
+
+  // Save one file: build its FormData (entity binding per decision kind) and
+  // call uploadDocument. Returns whether it succeeded; failures record the
+  // server messages for the chip's Retry row.
+  async function saveOne(i: number): Promise<boolean> {
+    const s = staged[i];
+    const d = decisions[i];
+    if (!s || !d || s.rejection) return false;
+    setSaveState((p) => ({ ...p, [i]: "working" }));
+    const fd = new FormData();
+    fd.set("file", s.file);
+    fd.set("title", s.title.trim());
+    fd.set("tags", s.tags);
+    fd.set("visibility", s.visibility);
+    if (d.kind === "link") { fd.set("entityType", d.targetEntity); fd.set("entityId", d.targetId); }
+    if (d.kind === "create") { fd.set("entityType", d.entityType); fd.set("entityId", d.entityId); }
+    const res = await uploadDocument(fd);
+    if (!res.ok) {
+      setSaveState((p) => ({ ...p, [i]: "error" }));
+      setSaveError((p) => ({ ...p, [i]: res.errors.map((e) => e.message).join(" ") }));
+      return false;
+    }
+    setSaveState((p) => ({ ...p, [i]: "done" }));
+    return true;
+  }
+
+  // Sequential save loop over the savable files. Already-done files are
+  // skipped so a post-retry Attach never re-uploads them. Close only when
+  // every savable file succeeded — otherwise stay open with the errors.
+  async function finish() {
+    setSaving(true);
+    const already = savableIdx.filter((i) => saveState[i] === "done");
+    const todo = savableIdx.filter((i) => saveState[i] !== "done");
+    setSaveState({
+      ...Object.fromEntries(already.map((i) => [i, "done" as const])),
+      ...Object.fromEntries(todo.map((i) => [i, "queued" as const])),
+    });
+    let okCount = already.length;
+    for (const i of todo) {
+      if (await saveOne(i)) okCount++;
+    }
+    setSaving(false);
+    if (okCount === savableIdx.length) {
+      toast.success(`Attached ${okCount} file${okCount === 1 ? "" : "s"}`);
+      onClose();
+    } else {
+      toast.error(`${savableIdx.length - okCount} file(s) failed — retry below.`);
+    }
   }
 
   const reviewing = activeIdx >= staged.length;
@@ -127,11 +192,26 @@ export function QuickAttachDialog({
                 <span className="block truncate text-[12px] font-semibold text-ink">{s.file.name}</span>
                 <span className="block text-[10px] text-ink-4">
                   {(s.file.size / 1024).toFixed(0)} KB
-                  {decisions[i] ? " · decided" : s.rejection ? " · rejected" : ""}
+                  {chipStatus(i, s)}
                 </span>
               </button>
             ))}
           </div>
+
+          {/* Save failures — message + Retry re-running just that upload */}
+          {staged.map((s, i) =>
+            saveState[i] === "error" && saveError[i] ? (
+              <div
+                key={`save-err-${i}`}
+                className="flex items-center justify-between gap-2 rounded-lg border border-line bg-red-wash px-3 py-2"
+              >
+                <span className="min-w-0 text-[12px] font-medium text-red">
+                  <span className="font-semibold">{s.file.name}</span> — {saveError[i]}
+                </span>
+                <Button variant="secondary" size="sm" onClick={() => void saveOne(i)}>Retry</Button>
+              </div>
+            ) : null,
+          )}
 
           {/* Active file body */}
           {active && active.rejection && (
@@ -185,8 +265,14 @@ export function QuickAttachDialog({
                 typeKey={chosenType.key}
                 canLink={chosenType.canLink}
                 canCreate={chosenType.canCreate}
-                onLinked={(targetId, targetLabel) => {
-                  commit({ kind: "link", typeKey: chosenType.key, targetId, targetLabel });
+                onLinked={(hit) => {
+                  commit({
+                    kind: "link",
+                    typeKey: chosenType.key,
+                    targetEntity: hit.entity,
+                    targetId: hit.id,
+                    targetLabel: hit.title,
+                  });
                 }}
                 onCreate={(entityType, entityId) => {
                   commit({ kind: "create", typeKey: chosenType.key, entityType, entityId });
@@ -197,10 +283,10 @@ export function QuickAttachDialog({
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-line pt-3">
-            <span className="text-[11px] text-ink-4">{doneCount}/{staged.length} decided</span>
+            <span className="text-[11px] text-ink-4">{doneCount}/{savableIdx.length} decided</span>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setConfirmCancel(true)}>Cancel</Button>
-              <Button variant="primary" disabled={!allDecided} onClick={finish}>Attach</Button>
+              <Button variant="ghost" disabled={saving} onClick={() => setConfirmCancel(true)}>Cancel</Button>
+              <Button variant="primary" loading={saving} disabled={!allDecided || saving} onClick={finish}>Attach</Button>
             </div>
           </div>
         </div>
@@ -211,7 +297,11 @@ export function QuickAttachDialog({
         onClose={() => setConfirmCancel(false)}
         onConfirm={onClose}
         title="Discard these files?"
-        description="Nothing has been uploaded yet."
+        description={
+          Object.values(saveState).some((st) => st === "done")
+            ? "Files already uploaded stay in the vault; anything else is discarded."
+            : "Nothing has been uploaded yet."
+        }
         confirmLabel="Discard"
         danger
       />
@@ -227,7 +317,7 @@ function DecidePanel({
   typeKey: QuickTypeKey;
   canLink: boolean;
   canCreate: boolean;
-  onLinked: (targetId: string, targetLabel: string) => void;
+  onLinked: (hit: LinkHit) => void;
   onCreate: (entityType: string, entityId: string) => void;
 }) {
   const [mode, setMode] = useState<"link" | "create" | null>(null);
