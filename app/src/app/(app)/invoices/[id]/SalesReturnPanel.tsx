@@ -22,16 +22,20 @@ export function SalesReturnPanel({
   lines,
   returnedByLine,
   interstate,
+  autoOpen,
+  onClose,
 }: {
   invoiceId: string;
   invoiceNo: string;
   lines: InvoiceLine[];
   returnedByLine: Record<string, number>;
   interstate: boolean;
+  autoOpen?: boolean;
+  onClose?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen ?? false);
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [narration, setNarration] = useState("");
@@ -118,6 +122,8 @@ export function SalesReturnPanel({
   if (!anyReturnable) return null;
 
   if (!open) {
+    // Don't render anything in controlled mode — the parent shows the button
+    if (autoOpen !== undefined) return null;
     return (
       <div className="flex justify-end">
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
@@ -203,7 +209,7 @@ export function SalesReturnPanel({
           <Button variant="ghost" size="sm" onClick={fillAll} disabled={pending}>
             Return all
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => { setDraft({}); setNarration(""); setOpen(false); }} disabled={pending}>
+          <Button variant="ghost" size="sm" onClick={() => { setDraft({}); setNarration(""); setOpen(false); onClose?.(); }} disabled={pending}>
             Cancel
           </Button>
           <Button variant="primary" size="sm" onClick={onSubmit} loading={pending} disabled={previewTotal <= 0}>
