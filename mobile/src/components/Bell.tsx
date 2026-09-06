@@ -23,7 +23,7 @@ export function Bell({
   const pulse = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
-    <Pressable onPress={onPress} hitSlop={8} style={s.hit}>
+    <Pressable onPress={onPress} hitSlop={11} style={s.hit}>
       <BellIcon size={22} color={tokens.color.ink2} />
       {unreadCount > 0 ? (
         <View style={s.badgeWrap}>

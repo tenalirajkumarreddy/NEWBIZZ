@@ -3,6 +3,14 @@ import { tokens } from "@/theme/tokens";
 import { PackageOpen } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 
+/**
+ * Empty state card for lists/screens with no content.
+ *
+ * Prop contract (per Task 4 spec, downstream consumers):
+ * - `actionLabel?: string` — label of the optional action button.
+ * - `onAction?: () => void` — callback fired when the action button is pressed.
+ * The action button renders only when both `actionLabel` and `onAction` are provided.
+ */
 export function EmptyState({
   icon: Icon = PackageOpen,
   title,

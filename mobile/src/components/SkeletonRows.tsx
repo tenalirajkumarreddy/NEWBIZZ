@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { tokens } from "@/theme/tokens";
 
 export function SkeletonRows({ rows = 3 }: { rows?: number }) {
@@ -8,6 +8,9 @@ export function SkeletonRows({ rows = 3 }: { rows?: number }) {
 
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.4, { duration: 700 }), -1, true);
+    return () => {
+      cancelAnimation(opacity);
+    };
   }, [opacity]);
 
   const pulse = useAnimatedStyle(() => ({ opacity: opacity.value }));

@@ -13,7 +13,7 @@ export function BottomNav({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.wrap, { paddingBottom: insets.bottom }]}>
+    <View style={[s.wrap, { paddingBottom: insets.bottom, height: 62 + insets.bottom }]}>
       <View style={s.row}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -70,7 +70,6 @@ export function BottomNav({
 
 const s = StyleSheet.create({
   wrap: {
-    height: 62,
     backgroundColor: "rgba(255,255,255,0.94)",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: tokens.color.line,
