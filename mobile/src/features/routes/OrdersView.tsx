@@ -181,7 +181,7 @@ const s = StyleSheet.create({
   wrap: { gap: tokens.space.md },
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
   chip: {
-    minHeight: 36,
+    minHeight: 44,
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.full,
     borderWidth: 1,

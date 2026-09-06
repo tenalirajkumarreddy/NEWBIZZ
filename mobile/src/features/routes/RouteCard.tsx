@@ -113,7 +113,7 @@ export function RouteCard({
                   </View>
                 </View>
                 <View style={s.storeActions}>
-                  {can("field.routes") ? (
+                  {can("field.routes") && sessionId !== "" ? (
                     <MiniAction icon={Footprints} label="Visit" onPress={() => setVisitTarget(st)} />
                   ) : null}
                   {can("cashmemo.create") ? (
