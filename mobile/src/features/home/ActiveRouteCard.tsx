@@ -155,7 +155,7 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   endBtn: {
-    minHeight: 36, paddingHorizontal: tokens.space.lg, borderRadius: tokens.radius.md,
+    minHeight: 44, paddingHorizontal: tokens.space.lg, borderRadius: tokens.radius.md,
     backgroundColor: tokens.color.redWash, alignItems: "center", justifyContent: "center",
   },
   endTxt: { color: tokens.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },

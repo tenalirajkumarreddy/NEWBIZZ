@@ -20,6 +20,7 @@ export function RevenueCard() {
 
   const sales = kpis.data?.salesTotal ?? 0;
   const collected = kpis.data?.collectedTotal ?? 0;
+  const invoiceCount = kpis.data?.invoiceCount ?? 0;
   const cash = split.data?.cash ?? 0;
   const upi = split.data?.upi ?? 0;
   const errored = kpis.isError || split.isError;
@@ -49,6 +50,8 @@ export function RevenueCard() {
           <Text style={s.colValue}>{moneyCompact(collected)}</Text>
         </View>
       </View>
+
+      <Text style={s.delta}>{invoiceCount} invoices today</Text>
 
       <View style={s.legend}>
         <View style={s.legendItem}>
@@ -100,7 +103,12 @@ const s = StyleSheet.create({
     marginTop: 2, fontVariant: ["tabular-nums"],
   },
   divider: { width: 1, height: 34, backgroundColor: tokens.color.white15, marginHorizontal: tokens.space.lg },
-  legend: { flexDirection: "row", gap: tokens.space.lg, marginTop: tokens.space.lg },
+  delta: {
+    color: "#6ee7b7", fontFamily: tokens.font.sansSemi,
+    fontSize: tokens.size.xs, marginTop: tokens.space.sm,
+    fontVariant: ["tabular-nums"],
+  },
+  legend: { flexDirection: "row", gap: tokens.space.lg, marginTop: tokens.space.sm },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   legendTxt: {

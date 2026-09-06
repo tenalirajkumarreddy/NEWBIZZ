@@ -13,7 +13,10 @@ import { roleLabel } from "@/lib/claims";
 import { friendlyError } from "@/lib/rpc";
 import { gotoTab } from "@/lib/tabBus";
 import { useOrders, useTodayKpis, type OrderRow } from "@/data/sales";
+import { useActiveSession } from "@/data/routes";
+import { useStockHoldings } from "@/data/holdings";
 import { qk } from "@/data/keys";
+import { moneyCompact } from "@/lib/format";
 import { RevenueCard } from "@/features/home/RevenueCard";
 import { VanStockCard } from "@/features/home/VanStockCard";
 import { ActiveRouteCard } from "@/features/home/ActiveRouteCard";
@@ -62,6 +65,10 @@ export default function HomeScreen() {
   const qc = useQueryClient();
   const kpis = useTodayKpis();
   const orders = useOrders("confirmed");
+  const session = useActiveSession();
+  const holdings = useStockHoldings();
+  const sessionId = session.data?.id ?? "";
+  const routeId = session.data?.route_id ?? "";
   const fetching = useIsFetching();
 
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
@@ -80,6 +87,11 @@ export default function HomeScreen() {
       qc.invalidateQueries({ queryKey: qk.orders("confirmed") }),
       qc.invalidateQueries({ queryKey: qk.stores() }),
       qc.invalidateQueries({ queryKey: qk.activeSession() }),
+      ...(session.data ? [
+        qc.invalidateQueries({ queryKey: qk.visited(sessionId) }),
+        qc.invalidateQueries({ queryKey: qk.routeStores(routeId) }),
+      ] : []),
+      qc.invalidateQueries({ queryKey: qk.routes() }),
     ]);
   }
 
@@ -100,13 +112,13 @@ export default function HomeScreen() {
           <SkeletonRows rows={2} />
         ) : (
           <View style={s.tiles}>
-            <StatTile label="Invoices" value={String(kpis.data?.invoiceCount ?? 0)} icon={FileText} tone="brand" />
-            <StatTile label="Receipts" value={String(kpis.data?.receiptCount ?? 0)} icon={ReceiptText} tone="grn" />
+            <StatTile label="Sales" value={moneyCompact(kpis.data?.salesTotal ?? 0)} icon={FileText} tone="brand" />
+            <StatTile label="Collections" value={moneyCompact(kpis.data?.collectedTotal ?? 0)} icon={ReceiptText} tone="grn" />
             <StatTile label="Orders" value={String(pendingTotal)} icon={ShoppingCart} tone="amb" />
           </View>
         )}
 
-        <VanStockCard />
+        {holdings.data && holdings.data.length > 0 ? <VanStockCard /> : null}
         <ActiveRouteCard />
         <NextStopCard />
 

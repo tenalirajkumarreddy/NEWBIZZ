@@ -163,13 +163,13 @@ export function NextStopCard() {
   }
 
   function navigate() {
-    const lat = store.lat ?? coords?.lat;
-    const lng = store.lng ?? coords?.lng;
-    const q = lat != null && lng != null ? `${lat},${lng}` : encodeURIComponent(store.name);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${q}`,
-      android: `geo:0,0?q=${q}`,
-    });
+    const hasCoords = store.lat != null && store.lng != null;
+    const q = hasCoords
+      ? `${store.lat},${store.lng}`
+      : encodeURIComponent([store.name, store.area].filter(Boolean).join(", "));
+    const url = hasCoords
+      ? Platform.select({ ios: `maps:0,0?q=${q}`, android: `geo:0,0?q=${q}` })
+      : `https://maps.google.com/?q=${q}`;
     if (url) void Linking.openURL(url);
   }
 
@@ -249,7 +249,7 @@ const s = StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm, marginTop: tokens.space.lg },
   btn: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    minHeight: 36, paddingHorizontal: tokens.space.md,
+    minHeight: 44, paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.md,
   },
   btnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
