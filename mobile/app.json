@@ -43,8 +43,7 @@
         {
           "locationWhenInUsePermission": "Allow NEWBIZZ to record visit locations."
         }
-      ],
-      "expo-splash-screen"
+      ]
     ],
     "extra": {
       "router": {
