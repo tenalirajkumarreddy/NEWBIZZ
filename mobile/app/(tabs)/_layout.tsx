@@ -7,6 +7,7 @@ import {
 import type { LucideIcon } from "lucide-react-native";
 import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/lib/session";
+import { onGotoTab } from "@/lib/tabBus";
 import { tokens } from "@/theme/tokens";
 
 import HomeScreen from "./home";
@@ -77,6 +78,16 @@ export default function TabsLayout() {
     }
     setActive(id);
   }
+
+  useEffect(() => {
+    return onGotoTab((id) => {
+      if (id === "sell") {
+        Toast.show({ type: "info", text1: "Coming soon" });
+        return;
+      }
+      setActive(id);
+    });
+  }, []);
 
   return (
     <View style={s.root}>

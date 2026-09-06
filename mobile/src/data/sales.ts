@@ -55,6 +55,36 @@ export function useTodayKpis() {
   });
 }
 
+export interface TodaySplit {
+  cash: number;
+  upi: number;
+}
+
+export function useTodaySplit() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.todaySplit(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<TodaySplit> => {
+      const { data, error } = await supabase
+        .from("customer_receipts")
+        .select("mode, amount")
+        .eq("receipt_date", todayIST())
+        .eq("status", "posted")
+        .eq("collected_by", user!.id);
+      if (error) throw error;
+      const split: TodaySplit = { cash: 0, upi: 0 };
+      for (const r of data ?? []) {
+        const mode = r.mode as Enums<"receipt_mode">;
+        const amt = Number((r as any).amount ?? 0);
+        if (mode === "cash") split.cash += amt;
+        else if (mode === "upi") split.upi += amt;
+      }
+      return split;
+    },
+  });
+}
+
 export function useOrders(status?: string) {
   const { user } = useSession();
   return useQuery({

@@ -4,6 +4,7 @@ export const qk = {
   ledger: (customerId: string) => ["ledger", customerId] as const,
   items: (storeId?: string) => (storeId ? (["items", storeId] as const) : (["items"] as const)),
   today: () => ["today"] as const,
+  todaySplit: () => ["todaySplit"] as const,
   orders: (status?: string) => ["orders", status ?? "all"] as const,
   routes: () => ["routes"] as const,
   routeStores: (routeId: string) => ["routeStores", routeId] as const,
