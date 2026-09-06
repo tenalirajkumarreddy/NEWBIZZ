@@ -24,3 +24,7 @@ export function can(claims: AppClaims, perm: string): boolean {
   if (claims.roles.includes("admin")) return true;
   return claims.perms.includes(perm);
 }
+
+export function roleLabel(claims: AppClaims): string {
+  return claims.roles.includes("agent") ? "Field agent" : "Manager";
+}

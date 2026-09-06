@@ -1,4 +1,4 @@
-import { parseClaims, can } from "../claims";
+import { parseClaims, can, roleLabel } from "../claims";
 
 const user = (claims: object) => ({
   app_metadata: claims,
@@ -16,5 +16,10 @@ describe("parseClaims", () => {
   });
   it("missing perm denies", () => {
     expect(can(parseClaims(user({ roles: ["agent"], perms: ["order.view"] })), "order.approve")).toBe(false);
+  });
+  it("role label reflects agent role", () => {
+    expect(roleLabel(parseClaims(user({ roles: ["agent"] })))).toBe("Field agent");
+    expect(roleLabel(parseClaims(user({ roles: ["manager"] })))).toBe("Manager");
+    expect(roleLabel(parseClaims(user({})))).toBe("Manager");
   });
 });
