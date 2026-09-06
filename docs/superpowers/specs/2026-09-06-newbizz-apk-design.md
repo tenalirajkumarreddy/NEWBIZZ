@@ -57,22 +57,29 @@ mobile/                       # new Expo app at repo root
 - All money/stock writes go through **existing security-definer RPCs**: `place_order()`, `post_invoice()`, `record_receipt()`, `next_number()`, and the new handover/QR RPCs below. RLS + `has_permission()` enforce authorization — the APK is just another trusted client.
 - Role branching from custom access-token claims (`roles`, `perms`, `user_status`) — same claims as web.
 
-## 4. New database migrations (the only backend work)
+## 4. Backend: zero new migrations (verified against live DB)
 
-### 4.1 `store_qr_codes` (mirror of reference app)
-- Columns: `id uuid pk`, `store_id uuid → customer_stores (unique)`, `upi_id text unique`, `payee_name text`, `raw_data text`, timestamps.
-- RLS: read for authenticated users; write via admin permission (`users_admin` / settings perms).
-- RPC `resolve_store_by_upi(p_upi_id text)` → security definer returning the store row (joined customer/store_type/route names) the caller's RLS permits.
+The Supabase project `wmpxwpubfxpexybqnynz` already exposes everything the APK needs:
 
-### 4.2 `handovers` (cash settlement between staff)
-- Columns: `id`, `display_id`, `user_id (sender) → users`, `handed_to → users`, `cash_amount numeric ≥ 0`, `upi_amount numeric ≥ 0`, `status enum('awaiting_confirmation','confirmed','rejected','cancelled')`, `notes`, timestamps, `confirmed_by`, `cancelled_by`.
-- Guard RPCs (all write `audit_log`):
-  - `create_handover(p_handed_to, p_cash_amount, p_upi_amount, p_notes)` — rejects self/zero; checks sender holding balance (`staff_cash_holding()`) minus pending handovers; one pending per sender+recipient+day.
-  - `confirm_handover(p_handover_id)` / `reject_handover` / `cancel_handover` — status transitions with role checks (recipient confirms/rejects; sender cancels own pending).
-- RPC `staff_cash_holding(p_user_id)` — cash receipts recorded by user (from receipts/collect RPC data) minus confirmed+pending handovers.
+| Capability | Existing surface (verified) |
+|---|---|
+| QR store lookup | `resolve_store_qr(p_code) → jsonb` (store, customer, outstanding, open challans, permission flags `can_sell/can_collect/can_visit/can_manage`) |
+| QR registration | `link_store_qr(p_store_id, p_code, p_label) → uuid` (needs `customer.manage`) |
+| Visits | `record_visit(p_store_id, p_lat, p_lng, p_visit_type, p_duration_min)` — auto-opens a route session if none active |
+| Handovers | `transfers` table + `create_transfer(p_header, p_lines)` (`type:'cash'`, `from_user_id`, optional `to_user_id` or `deposit_account:'1120'`), `respond_transfer(p_id, p_accept)`, `cancel_transfer(p_id)` |
+| Custody balance | `my_transfers_and_custody(p_from, p_to)` → rows incl. `cash_in_hand` |
+| Money writes | `place_order(p_header, p_lines)`, `post_invoice(p_header, p_lines)` (credit-limit enforced internally via `check_credit_limit`), `post_invoice_from_order(p_order, p_lines, p_is_official, p_date)`, `record_receipt(p_header, p_allocations)` (header: `customer_id, amount, mode, deposit_account('2140' = agent custody), collected_by, store_id, notes`; modes `cash/upi/bank/cheque/card/adjustment`) |
+| Reads | `search_customers(p_query, p_kind, p_status, p_limit)`, `store_outstanding(p_store)`, `customer_activity(p_customer, p_from, p_to, p_store)`, `customer_outstanding(p_customer)`, `get_ar_aging(p_branch)`, `resolve_price_list(p_store)` |
+| Sessions/visits tables | `route_sessions` (status `pending/active/paused/completed/cancelled`, `agent_id`, `stores_planned/completed`), `visits` (visit_type `fulfill_order/collect_payment/record_sale/mark_visited`) |
+| Notifications | `mark_notifications_read(p_ids)`, `archive_notifications(p_ids)`; `notifications` table w/ `status` unread/read |
+| Permissions | `has_permission(p_code)` via claims; codes incl. `cashmemo.create, receipt.record, order.create, order.approve, order.cancel, field.routes, cash.transfer, stock.transfer, customer.manage` |
+
+Receipts recorded by an agent go to `deposit_account '2140'` (user custody, `party_type=user`) — matching the handover model. `payment_methods` seed: `cash:user_cash`, `upi_agent:user_cash`, `upi_company:bank`, …
+
+Sale flow money split: `post_invoice` books the full AR; the cash/UPI part collected on the spot is posted as an immediate `record_receipt` allocated to the new invoice (exact web parity, keeps Invariant 1/3 intact).
 
 ### 4.3 QR registration UX
-- Admin screen **in the APK (More → Store QRs)** and/or web later: list stores without QR, generate/register UPI id (manual entry of existing UPI id or generated placeholder `newbizz@store-{display_id}`), and render a printable QR (`react-native-qrcode-svg`) that the shop displays. Scan flow links `upi_id → store`.
+- APK screen **More → Store QRs** (gated `customer.manage`): list stores, `link_store_qr()` with a generated code (e.g. `NB-{store_code}`), render printable QR (`react-native-qrcode-svg`). `resolve_store_qr` accepts either the raw code or a URL ending in `/s/{code}`.
 
 ## 5. Design system (theme tokens)
 

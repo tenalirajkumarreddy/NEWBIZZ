@@ -1860,6 +1860,8 @@ export type Database = {
           image_url: string | null
           is_primary: boolean
           kind: Database["public"]["Enums"]["customer_kind"]
+          lat: number | null
+          lng: number | null
           name: string
           phone: string | null
           pincode: string | null
@@ -1884,6 +1886,8 @@ export type Database = {
           image_url?: string | null
           is_primary?: boolean
           kind?: Database["public"]["Enums"]["customer_kind"]
+          lat?: number | null
+          lng?: number | null
           name: string
           phone?: string | null
           pincode?: string | null
@@ -1908,6 +1912,8 @@ export type Database = {
           image_url?: string | null
           is_primary?: boolean
           kind?: Database["public"]["Enums"]["customer_kind"]
+          lat?: number | null
+          lng?: number | null
           name?: string
           phone?: string | null
           pincode?: string | null
@@ -2413,6 +2419,35 @@ export type Database = {
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_releases: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          released_at: string
+          released_by: string
+        }
+        Insert: {
+          entity_id: string
+          entity_type: string
+          released_at?: string
+          released_by: string
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          released_at?: string
+          released_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_releases_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -5931,6 +5966,51 @@ export type Database = {
           },
         ]
       }
+      store_qr_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          store_id: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          store_id: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_qr_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_qr_codes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "customer_stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_bill_lines: {
         Row: {
           bill_id: string
@@ -7694,6 +7774,10 @@ export type Database = {
         }
         Returns: string
       }
+      document_is_released: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: boolean
+      }
       effective_price: {
         Args: { p_item: string; p_price_list: string; p_qty?: number }
         Returns: number
@@ -7838,6 +7922,10 @@ export type Database = {
           type: Database["public"]["Enums"]["license_type"]
         }[]
       }
+      link_store_qr: {
+        Args: { p_code: string; p_label?: string; p_store_id: string }
+        Returns: string
+      }
       link_store_to_customer: {
         Args: { p_customer: string; p_store: string }
         Returns: string
@@ -7862,6 +7950,32 @@ export type Database = {
       month_bounds: {
         Args: { p_month: string }
         Returns: Record<string, unknown>
+      }
+      my_activity: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          action: string
+          at: string
+          entity: string
+          entity_id: string
+          summary: string
+        }[]
+      }
+      my_transfers_and_custody: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          amount: number
+          cash_in_hand: number
+          created_at: string
+          from_user_id: string
+          note: string
+          responded_at: string
+          status: string
+          to_user_id: string
+          transfer_id: string
+          transfer_no: string
+          type: string
+        }[]
       }
       next_device_index: { Args: { p_device_id: string }; Returns: number }
       next_entity_code: { Args: { p_entity_type: string }; Returns: string }
@@ -8138,11 +8252,25 @@ export type Database = {
         Args: { p_invoice: string; p_lines: Json; p_opts?: Json }
         Returns: string
       }
+      record_visit: {
+        Args: {
+          p_duration_min?: number
+          p_lat?: number
+          p_lng?: number
+          p_store_id: string
+          p_visit_type?: string
+        }
+        Returns: string
+      }
       refresh_read_models: { Args: never; Returns: undefined }
       register_cheque: { Args: { p_header: Json }; Returns: string }
       reject_expense: {
         Args: { p_id: string; p_reason?: string }
         Returns: string
+      }
+      release_documents: {
+        Args: { p_from: string; p_to: string; p_types: string[] }
+        Returns: number
       }
       resolve_bom_child: {
         Args: { p_line: Database["public"]["Tables"]["bom_lines"]["Row"] }
@@ -8151,6 +8279,7 @@ export type Database = {
       resolve_price_list: { Args: { p_store: string }; Returns: string }
       resolve_price_list_for_portal: { Args: never; Returns: string }
       resolve_recipients: { Args: { p_code: string }; Returns: string[] }
+      resolve_store_qr: { Args: { p_code: string }; Returns: Json }
       respond_transfer: {
         Args: { p_accept: boolean; p_id: string }
         Returns: string
@@ -8672,12 +8801,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8701,11 +8830,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8726,11 +8855,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8751,11 +8880,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8768,11 +8897,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
