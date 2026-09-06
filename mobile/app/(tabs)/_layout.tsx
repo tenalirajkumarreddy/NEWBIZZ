@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { View, StyleSheet } from "react-native";
 import Toast from "react-native-toast-message";
 import {
@@ -63,6 +63,10 @@ export default function TabsLayout() {
   const tabs = isAgent ? AGENT_TABS : MANAGER_TABS;
   const screens = isAgent ? AGENT_SCREENS : MANAGER_SCREENS;
   const [active, setActive] = useState(isAgent ? "home" : "dash");
+
+  useEffect(() => {
+    setActive(isAgent ? "home" : "dash");
+  }, [isAgent]);
 
   const Active = screens[active] ?? screens[tabs[0].id];
 
