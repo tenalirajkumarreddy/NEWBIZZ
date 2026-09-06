@@ -116,7 +116,7 @@ Patterns (from Aqua-Prime audit, recolored to cyan):
    **Collect** variant: outstanding card, cash+UPI+notes, new-balance summary, `record_receipt()`.
 5. **Stores** — search + route/type filter selects; StoreCard list w/ 5 actions; **FAB** → Add-store wizard (customer new/existing → store details → GPS capture + photo → review).
 6. **Store Profile** (stack) — hero card w/ photo, badges, outstanding, Navigate/Call; quick actions; pricing list (effective price w/ source tag); **ledger** (merged sales+receipts reverse-chron, running balance old→new coloring).
-7. **History** — Balance overview grid (Today sales / Today collections / Transferred today / **Net holding balance**); Submit-handover sheet (recipient select, amount, notes → `create_handover`); segmented views: **Activity** (day-grouped record cards, tap → drill-down w/ receipt; same-day edit/return where permission allows) · **Handovers** (sent/received cards w/ Confirm/Reject/Cancel) · **Expenses** (read-only v1 list if module present).
+7. **History** — Balance overview grid (Today sales / Today collections / Transferred today / **Net holding balance**); Submit-handover sheet (recipient select, amount, notes → `create_handover`); segmented views: **Activity** (day-grouped record cards, tap → drill-down w/ receipt; same-day edit/return where permission allows) · **Handovers** (sent/received cards w/ Confirm/Reject/Cancel) · **Expenses** (read-only list of the user's expense claims — the expenses module already exists on web).
 8. **Notifications** (stack) — recent notifications w/ read state.
 9. **Profile** (stack) — user, role, claims summary, sign out.
 
