@@ -1,6 +1,5 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
 import * as Font from "expo-font";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -17,7 +16,6 @@ export default function RootLayout() {
     Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold,
     JetBrainsMono_400Regular, JetBrainsMono_700Bold,
   });
-  useEffect(() => { void loaded; }, [loaded]);
   if (!loaded) return null;
   return (
     <QueryClientProvider client={qc}>

@@ -19,10 +19,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+      })
+      .catch(() => {
+        setSession(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -35,8 +42,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     loading,
     can: (perm) => canPerm(claims, perm),
     signOut: async () => {
-    await supabase.auth.signOut();
-  },
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        setSession(null);
+      }
+    },
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
