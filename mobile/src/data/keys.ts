@@ -1,0 +1,18 @@
+export const qk = {
+  stores: (routeId?: string) => ["stores", routeId ?? "all"] as const,
+  store: (id: string) => ["store", id] as const,
+  ledger: (customerId: string) => ["ledger", customerId] as const,
+  items: (storeId?: string) => (storeId ? (["items", storeId] as const) : (["items"] as const)),
+  today: () => ["today"] as const,
+  orders: (status?: string) => ["orders", status ?? "all"] as const,
+  routes: () => ["routes"] as const,
+  routeStores: (routeId: string) => ["routeStores", routeId] as const,
+  activeSession: () => ["activeSession"] as const,
+  visited: (sessionId: string) => ["visited", sessionId] as const,
+  visitedToday: (sessionId: string) => ["visited", sessionId] as const,
+  custody: () => ["custody"] as const,
+  notifications: () => ["notifications"] as const,
+  unread: () => ["unread"] as const,
+  holdings: () => ["stockHoldings"] as const,
+  qr: (code: string) => ["qr", code] as const,
+};
