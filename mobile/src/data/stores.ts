@@ -52,3 +52,17 @@ export function useStoreDetail(id: string) {
     staleTime: 0,
   });
 }
+
+export function useCustomerOutstanding(customerId: string | null | undefined) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.customerOutstanding(customerId ?? ""),
+    enabled: !!user?.id && !!customerId,
+    queryFn: async (): Promise<number> => {
+      const n = await supabase.rpc("customer_outstanding", { p_customer: customerId! });
+      if (n.error) throw n.error;
+      return Number(n.data ?? 0);
+    },
+    staleTime: 0,
+  });
+}

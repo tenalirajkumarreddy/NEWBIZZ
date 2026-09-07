@@ -1,6 +1,6 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { View, StyleSheet } from "react-native";
-import Toast from "react-native-toast-message";
+import { useRouter } from "expo-router";
 import {
   Home, Map, ScanLine, Users, History, LayoutDashboard, ClipboardCheck, Plus, Menu,
 } from "lucide-react-native";
@@ -60,10 +60,12 @@ const MANAGER_SCREENS: Record<string, ComponentType> = {
 
 export default function TabsLayout() {
   const { claims } = useSession();
+  const router = useRouter();
   const isAgent = claims.roles.includes("agent");
   const tabs = isAgent ? AGENT_TABS : MANAGER_TABS;
   const screens = isAgent ? AGENT_SCREENS : MANAGER_SCREENS;
   const [active, setActive] = useState(isAgent ? "home" : "dash");
+  const pushingSell = useRef(false);
 
   useEffect(() => {
     setActive(isAgent ? "home" : "dash");
@@ -71,9 +73,18 @@ export default function TabsLayout() {
 
   const Active = screens[active] ?? screens[tabs[0].id];
 
+  function openSell() {
+    if (pushingSell.current) return;
+    pushingSell.current = true;
+    router.push("/record?mode=sale");
+    setTimeout(() => {
+      pushingSell.current = false;
+    }, 600);
+  }
+
   function onChange(id: string) {
     if (id === "sell") {
-      Toast.show({ type: "info", text1: "Coming soon" });
+      openSell();
       return;
     }
     setActive(id);
@@ -82,11 +93,12 @@ export default function TabsLayout() {
   useEffect(() => {
     return onGotoTab((id) => {
       if (id === "sell") {
-        Toast.show({ type: "info", text1: "Coming soon" });
+        openSell();
         return;
       }
       setActive(id);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -21,7 +21,9 @@ export default function RootLayout() {
     <QueryClientProvider client={qc}>
       <SessionProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="record" options={{ presentation: "fullScreenModal" }} />
+        </Stack>
         <Toast />
       </SessionProvider>
     </QueryClientProvider>

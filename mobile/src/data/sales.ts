@@ -136,3 +136,80 @@ export async function postInvoiceFromOrder(orderId: string, isOfficial: boolean)
 export async function recordReceipt(header: JsonHeader, allocations: JsonLine[] = []): Promise<string> {
   return rpc<string>("record_receipt", { p_header: header, p_allocations: allocations });
 }
+
+export interface OpenInvoice {
+  id: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  grandTotal: number;
+  amountPaid: number;
+  balance: number;
+}
+
+export function useOpenInvoices(customerId: string | null | undefined) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.openInvoices(customerId ?? ""),
+    enabled: !!user?.id && !!customerId,
+    queryFn: async (): Promise<OpenInvoice[]> => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id, invoice_no, invoice_date, grand_total, amount_paid")
+        .eq("customer_id", customerId!)
+        .in("status", ["posted", "part_paid"])
+        .order("invoice_date", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? [])
+        .map((r) => {
+          const grandTotal = Number(r.grand_total ?? 0);
+          const amountPaid = Number(r.amount_paid ?? 0);
+          return {
+            id: r.id,
+            invoiceNo: r.invoice_no,
+            invoiceDate: r.invoice_date,
+            grandTotal,
+            amountPaid,
+            balance: Math.max(0, grandTotal - amountPaid),
+          };
+        })
+        .filter((r) => r.balance > 0.005);
+    },
+  });
+}
+
+export function useOrder(orderId: string | null | undefined) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.order(orderId ?? ""),
+    enabled: !!user?.id && !!orderId,
+    queryFn: async (): Promise<OrderRow | null> => {
+      const { data, error } = await supabase
+        .from("sales_orders")
+        .select(`id, order_no, order_date, status, store_id, notes, created_at,
+                 store:customer_stores(name),
+                 lines:sales_order_lines(item_id, qty, unit_price, item:items(name))`)
+        .eq("id", orderId!)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        orderNo: data.order_no,
+        orderDate: data.order_date,
+        status: data.status,
+        storeId: data.store_id,
+        storeName: data.store?.name ?? null,
+        notes: data.notes,
+        lines: (data.lines ?? []).map((l: any) => ({
+          itemId: l.item_id,
+          qty: Number(l.qty ?? 0),
+          unitPrice: Number(l.unit_price ?? 0),
+          itemName: l.item?.name ?? null,
+        })),
+      };
+    },
+    staleTime: 0,
+  });
+}
