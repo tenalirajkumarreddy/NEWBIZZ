@@ -80,6 +80,22 @@ export function useActiveSession() {
   });
 }
 
+export function useActiveSessionsCount() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.activeSessionsCount(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from("route_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active");
+      if (error) throw new RpcError(error.message, error.code);
+      return count ?? 0;
+    },
+  });
+}
+
 export function useVisitedToday(sessionId: string) {
   const { user } = useSession();
   return useQuery({

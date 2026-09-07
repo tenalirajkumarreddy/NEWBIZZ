@@ -4,6 +4,7 @@ import { useSession } from "@/lib/session";
 import { todayIST } from "@/lib/format";
 import { rpc } from "@/lib/rpc";
 import type { Enums } from "@/lib/db-types";
+import { isoDaysAgo } from "./transfers";
 import { qk } from "./keys";
 
 export type JsonHeader = Record<string, unknown>;
@@ -51,6 +52,116 @@ export function useTodayKpis() {
         invoiceCount: (inv.data ?? []).length,
         receiptCount: (rcpt.data ?? []).filter((r: any) => r.collected_by === uid).length,
       };
+    },
+  });
+}
+
+export interface AgingRow {
+  customerId: string;
+  customerName: string;
+  invoiceId: string;
+  invoiceNo: string | null;
+  invoiceDate: string | null;
+  outstanding: number;
+  ageDays: number;
+  bucket: string | null;
+}
+
+export function useArAging() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.aging(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<AgingRow[]> => {
+      const rows = await rpc<
+        {
+          customer_id: string | null;
+          invoice_id: string | null;
+          invoice_no: string | null;
+          invoice_date: string | null;
+          outstanding: number | null;
+          age_days: number | null;
+          bucket: string | null;
+        }[]
+      >("get_ar_aging", {});
+      const open = (rows ?? [])
+        .filter((r) => !!r.customer_id && !!r.invoice_id)
+        .map((r) => ({
+          customerId: r.customer_id!,
+          customerName: "Unknown",
+          invoiceId: r.invoice_id!,
+          invoiceNo: r.invoice_no,
+          invoiceDate: r.invoice_date,
+          outstanding: Number(r.outstanding ?? 0),
+          ageDays: Number(r.age_days ?? 0),
+          bucket: r.bucket,
+        }))
+        .filter((r) => r.outstanding > 0.005);
+      const ids = [...new Set(open.map((r) => r.customerId))];
+      if (ids.length > 0) {
+        const { data, error } = await supabase.from("customers").select("id, name").in("id", ids);
+        if (error) throw error;
+        const names = new Map<string, string>((data ?? []).map((c) => [c.id, c.name]));
+        for (const r of open) r.customerName = names.get(r.customerId) ?? "Unknown";
+      }
+      return open.sort((a, b) => b.ageDays - a.ageDays || b.outstanding - a.outstanding);
+    },
+    staleTime: 60_000,
+  });
+}
+
+export interface WeeklyDay {
+  date: string;
+  label: string;
+  total: number;
+  isToday: boolean;
+}
+
+export function useWeeklySales() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.weekly(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<WeeklyDay[]> => {
+      const today = todayIST();
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("invoice_date, grand_total")
+        .neq("status", "void")
+        .gte("invoice_date", isoDaysAgo(6));
+      if (error) throw error;
+      const byDay = new Map<string, number>();
+      const daysTmp: WeeklyDay[] = [];
+      const labels = ["S", "M", "T", "W", "T", "F", "S"];
+      for (let i = 6; i >= 0; i--) {
+        const date = isoDaysAgo(i);
+        const dow = new Date(`${date}T00:00:00`).getDay();
+        byDay.set(date, 0);
+        daysTmp.push({ date, label: labels[dow], total: 0, isToday: date === today });
+      }
+      for (const r of data ?? []) {
+        const key = String(r.invoice_date ?? "").slice(0, 10);
+        if (byDay.has(key)) byDay.set(key, (byDay.get(key) ?? 0) + Number(r.grand_total ?? 0));
+      }
+      return daysTmp.map((d) => ({ ...d, total: byDay.get(d.date) ?? 0 }));
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useTodayCollectionsTotal() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.todayCollections(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from("customer_receipts")
+        .select("amount")
+        .eq("receipt_date", todayIST())
+        .eq("status", "posted");
+      if (error) throw error;
+      return (data ?? []).reduce((s: number, r: any) => s + Number(r.amount ?? 0), 0);
     },
   });
 }
