@@ -45,10 +45,12 @@ function MiniAction({
 }
 
 export function StoreCard({
-  store, canVisit, sessionId,
+  store, canVisit, canSale, canCollect, sessionId,
 }: {
   store: StoreRow;
   canVisit: boolean;
+  canSale: boolean;
+  canCollect: boolean;
   sessionId: string;
 }) {
   const router = useRouter();
@@ -121,18 +123,22 @@ export function StoreCard({
         </View>
 
         <View style={s.actions}>
-          <MiniAction
-            icon={IndianRupee}
-            label="Sale"
-            tone="grn"
-            onPress={() => router.push(`/record?mode=sale&storeId=${store.id}`)}
-          />
-          <MiniAction
-            icon={HandCoins}
-            label="Collect"
-            tone="amb"
-            onPress={() => router.push(`/record?mode=collect&storeId=${store.id}`)}
-          />
+          {canSale ? (
+            <MiniAction
+              icon={IndianRupee}
+              label="Sale"
+              tone="grn"
+              onPress={() => router.push(`/record?mode=sale&storeId=${store.id}`)}
+            />
+          ) : null}
+          {canCollect ? (
+            <MiniAction
+              icon={HandCoins}
+              label="Collect"
+              tone="amb"
+              onPress={() => router.push(`/record?mode=collect&storeId=${store.id}`)}
+            />
+          ) : null}
           {canVisit && sessionId ? (
             <MiniAction
               icon={Footprints}

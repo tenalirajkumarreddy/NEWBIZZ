@@ -96,6 +96,8 @@ export function StoresTabBody({ showRouteFilter }: { showRouteFilter: boolean })
               key={st.id}
               store={st}
               canVisit={can("field.routes")}
+              canSale={can("cashmemo.create")}
+              canCollect={can("receipt.record")}
               sessionId={sessionId}
             />
           ))}

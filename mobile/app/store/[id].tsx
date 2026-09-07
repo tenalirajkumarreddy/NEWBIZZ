@@ -353,7 +353,7 @@ const s = StyleSheet.create({
   actMain: { flex: 1, minWidth: 0 },
   actTop: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   actRef: {
-    flex: 1, color: tokens.color.ink, fontFamily: tokens.font.sansSemi,
+    flex: 1, color: tokens.color.ink, fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
   },
   actAmount: {
