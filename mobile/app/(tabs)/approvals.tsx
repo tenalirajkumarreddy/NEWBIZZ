@@ -26,6 +26,7 @@ export default function ApprovalsScreen() {
   const fetching = useIsFetching();
   const confirmed = useOrders("confirmed");
   const approved = useOrders("approved");
+  const openOrders = useOrders();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detail, setDetail] = useState<OrderRow | null>(null);
 
@@ -72,7 +73,12 @@ export default function ApprovalsScreen() {
             tone="amb"
             icon={ClipboardList}
           />
-          <StatTile label="Open orders" value={String(ordersOpen(ordersAll(confirmed, approved)))} tone="brand" icon={FileText} />
+          <StatTile
+            label="Open orders"
+            value={String(openOrders.isLoading ? "…" : (openOrders.data ?? []).length)}
+            tone="brand"
+            icon={FileText}
+          />
         </View>
 
 
@@ -145,10 +151,6 @@ function orderTotal(order: OrderRow): number {
 
 function ordersAll(confirmed: { data?: OrderRow[] }, approved: { data?: OrderRow[] }): OrderRow[] {
   return [...(confirmed.data ?? []), ...(approved.data ?? [])];
-}
-
-function ordersOpen(rows: OrderRow[]): number {
-  return rows.length;
 }
 
 
