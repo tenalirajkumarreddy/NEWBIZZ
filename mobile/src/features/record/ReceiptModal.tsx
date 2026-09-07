@@ -13,6 +13,7 @@ export interface ReceiptResult {
   receiptFailed: boolean;
   receiptError: string | null;
   advanceNote: string | null;
+  estimateNote?: string | null;
 }
 
 export function ReceiptModal({
@@ -50,6 +51,7 @@ export function ReceiptModal({
           tone={result.balance > 0 ? "red" : "grn"}
         />
         {result.advanceNote ? <Text style={s.note}>{result.advanceNote}</Text> : null}
+        {result.estimateNote ? <Text style={s.note}>{result.estimateNote}</Text> : null}
         {result.receiptFailed ? (
           <View style={s.warn}>
             <Text style={s.warnTxt}>

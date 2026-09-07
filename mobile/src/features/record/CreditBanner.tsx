@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet } from "react-native";
-import { AlertTriangle, ShieldAlert } from "lucide-react-native";
+import { AlertTriangle, LoaderCircle, ShieldAlert } from "lucide-react-native";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
 
 export type CreditState =
   | { level: "none" }
   | { level: "loading" }
+  | { level: "unavailable" }
   | { level: "ok"; outstanding: number; limit: number }
   | { level: "warn"; outstanding: number; limit: number; after: number; pct: number }
   | { level: "exceeded"; outstanding: number; limit: number; after: number };
@@ -25,7 +26,35 @@ export function computeCreditState(
 }
 
 export function CreditBanner({ state }: { state: CreditState }) {
-  if (state.level === "none" || state.level === "loading" || state.level === "ok") return null;
+  if (state.level === "none" || state.level === "ok") return null;
+
+  if (state.level === "loading") {
+    return (
+      <View style={[s.banner, s.amber]}>
+        <LoaderCircle size={16} color={tokens.color.amb} />
+        <View style={s.txtWrap}>
+          <Text style={[s.title, { color: tokens.color.amb }]}>Checking credit limit…</Text>
+          <Text style={[s.msg, { color: tokens.color.amb }]}>
+            Credit check is still loading — submit unlocks once it resolves.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (state.level === "unavailable") {
+    return (
+      <View style={[s.banner, s.amber]}>
+        <ShieldAlert size={16} color={tokens.color.amb} />
+        <View style={s.txtWrap}>
+          <Text style={[s.title, { color: tokens.color.amb }]}>Credit check unavailable</Text>
+          <Text style={[s.msg, { color: tokens.color.amb }]}>
+            Could not load the customer&apos;s outstanding. The server will still enforce the credit limit.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   if (state.level === "exceeded") {
     return (
@@ -37,6 +66,7 @@ export function CreditBanner({ state }: { state: CreditState }) {
             Outstanding {moneyINR(state.outstanding)} + this sale&apos;s credit portion would reach{" "}
             {moneyINR(state.after)} against a limit of {moneyINR(state.limit)}.
           </Text>
+          <Text style={s.basis}>Sale value is a GST-inclusive estimate.</Text>
         </View>
       </View>
     );
@@ -50,6 +80,7 @@ export function CreditBanner({ state }: { state: CreditState }) {
         <Text style={[s.msg, { color: tokens.color.amb }]}>
           Outstanding is {Math.round(state.pct * 100)}% of the {moneyINR(state.limit)} limit.
         </Text>
+        <Text style={s.basis}>Sale value is a GST-inclusive estimate.</Text>
       </View>
     </View>
   );
@@ -68,4 +99,5 @@ const s = StyleSheet.create({
   txtWrap: { flex: 1, gap: 2 },
   title: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   msg: { fontFamily: tokens.font.sans, fontSize: tokens.size.xs, lineHeight: 17 },
+  basis: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, lineHeight: 16 },
 });

@@ -24,6 +24,7 @@ import { parseMoney, round2 } from "@/features/record/fields";
 import { postInvoice, recordReceipt, useOrder, type JsonLine } from "@/data/sales";
 import { useSellableItems } from "@/data/catalog";
 import { useStoreDetail, useCustomerOutstanding } from "@/data/stores";
+import { supabase } from "@/lib/supabase";
 import { qk } from "@/data/keys";
 import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
@@ -199,6 +200,19 @@ export default function RecordScreen() {
     [lines],
   );
 
+  // Server adds GST per line on top of these (tax-exclusive) prices — mirror that
+  // locally so the credit gate judges the post-tax exposure.
+  const postTaxTotal = useMemo(
+    () =>
+      round2(
+        lines.reduce((sum, l) => {
+          const gst = items.find((i) => i.id === l.itemId)?.gstRate ?? 0;
+          return sum + l.qty * l.unitPrice * (1 + gst / 100);
+        }, 0),
+      ),
+    [lines, items],
+  );
+
   const cashNum = useMemo(() => {
     const n = parseMoney(cash);
     return Number.isNaN(n) ? 0 : n;
@@ -209,21 +223,27 @@ export default function RecordScreen() {
   }, [upi]);
   const collected = round2(cashNum + upiNum);
 
-  const creditState: CreditState = useMemo(
-    () =>
-      computeCreditState(
-        Number(customer?.credit_limit ?? 0),
-        outstandingQ.data ?? 0,
-        cartTotal,
-        collected,
-      ),
-    [customer?.credit_limit, outstandingQ.data, cartTotal, collected],
-  );
+  const creditState: CreditState = useMemo(() => {
+    const limit = Number(customer?.credit_limit ?? 0);
+    if (!(limit > 0)) return { level: "none" };
+    if (outstandingQ.isLoading) return { level: "loading" };
+    if (outstandingQ.isError) return { level: "unavailable" };
+    return computeCreditState(limit, outstandingQ.data ?? 0, postTaxTotal, collected);
+  }, [
+    outstandingQ.isLoading,
+    outstandingQ.isError,
+    outstandingQ.data,
+    customer?.credit_limit,
+    postTaxTotal,
+    collected,
+  ]);
 
   const creditBlocked = creditState.level === "exceeded" && !can("credit.override");
   const canOverride = creditState.level === "exceeded" && can("credit.override");
+  const creditGateOpen = creditState.level !== "loading";
 
-  const saleReady = !!storeId && lines.length > 0 && cartTotal > 0 && cashNum >= 0 && upiNum >= 0;
+  const saleReady =
+    !!storeId && lines.length > 0 && cartTotal > 0 && cashNum >= 0 && upiNum >= 0 && creditGateOpen;
 
   async function invalidateAfterSuccess(store: string | null) {
     await Promise.all([
@@ -271,6 +291,23 @@ export default function RecordScreen() {
       let receiptFailed = false;
       let receiptError: string | null = null;
       let postedCollected = 0;
+
+      // Server computes GST + rounding into grand_total — use it for the receipt
+      // instead of the pre-tax cart estimate. Falls back to the estimate if the
+      // fetch fails.
+      let serverTotal: number | null = null;
+      try {
+        const g = await supabase
+          .from("invoices")
+          .select("grand_total")
+          .eq("id", invoiceId)
+          .single();
+        if (g.error) throw g.error;
+        const n = Number(g.data?.grand_total);
+        if (Number.isFinite(n) && n > 0) serverTotal = round2(n);
+      } catch {
+        serverTotal = null;
+      }
 
       if (cashNum > 0) {
         try {
@@ -329,12 +366,16 @@ export default function RecordScreen() {
       setReceipt({
         kind: "sale",
         invoiceRef: invoiceId,
-        invoiceTotal: cartTotal,
+        invoiceTotal: serverTotal ?? cartTotal,
         collected: postedCollected,
-        balance: round2(cartTotal - postedCollected),
+        balance: round2((serverTotal ?? cartTotal) - postedCollected),
         receiptFailed,
         receiptError,
         advanceNote: null,
+        estimateNote:
+          serverTotal == null
+            ? "Invoice total is a pre-tax estimate — the server total (with GST) may be slightly higher."
+            : null,
       });
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
