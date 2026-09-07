@@ -8,6 +8,7 @@ import { SkeletonRows } from "@/components/SkeletonRows";
 import { EmptyState } from "@/components/EmptyState";
 import { useStores } from "@/data/stores";
 import { linkStoreQr } from "@/data/qr";
+import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 
@@ -48,11 +49,11 @@ export function LinkQrSheet({
     try {
       await linkStoreQr(selected.id, code);
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ["qr"] }),
-        qc.invalidateQueries({ queryKey: ["stores"] }),
+        qc.invalidateQueries({ queryKey: qk.qr(code) }),
+        qc.invalidateQueries({ queryKey: qk.stores() }),
       ]);
       Toast.show({ type: "success", text1: "Code linked", text2: `${selected.name} - ${code}` });
-      onClose();
+      close();
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not link code", text2: friendlyError(e) });
     } finally {

@@ -72,7 +72,6 @@ export default function ScanScreen() {
     const code = parseQrPayload(raw);
     if (!code) {
       Toast.show({ type: "error", text1: "Not a valid store code" });
-      bumpReset();
       return;
     }
     setResolving(true);
@@ -183,7 +182,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: tokens.radius.full,
   },
   segBtnOn: {

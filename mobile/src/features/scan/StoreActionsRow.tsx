@@ -8,7 +8,7 @@ import * as Haptics from "expo-haptics";
 import {
   Navigation, IndianRupee, HandCoins, Footprints, Store as StoreIcon,
 } from "lucide-react-native";
-import { recordVisit } from "@/data/routes";
+import { recordVisit, useActiveSession } from "@/data/routes";
 import type { ResolvedStore } from "@/data/qr";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
@@ -49,6 +49,7 @@ export function StoreActionsRow({
 }) {
   const router = useRouter();
   const qc = useQueryClient();
+  const session = useActiveSession();
   const [busy, setBusy] = useState(false);
   const storeId = store.store_id ?? "";
 
@@ -72,8 +73,9 @@ export function StoreActionsRow({
       }
       await recordVisit(storeId, lat, lng);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      const sessionId = session.data?.id;
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ["visited"] }),
+        ...(sessionId ? [qc.invalidateQueries({ queryKey: qk.visited(sessionId) })] : []),
         qc.invalidateQueries({ queryKey: qk.today() }),
       ]);
       Toast.show({ type: "success", text1: "Visit recorded", text2: store.store_name });
