@@ -15,6 +15,7 @@ export const qk = {
   visited: (sessionId: string) => ["visited", sessionId] as const,
   visitedToday: (sessionId: string) => ["visited", sessionId] as const,
   custody: () => ["custody"] as const,
+  activity: () => ["activity"] as const,
   notifications: () => ["notifications"] as const,
   unread: () => ["unread"] as const,
   holdings: () => ["stockHoldings"] as const,

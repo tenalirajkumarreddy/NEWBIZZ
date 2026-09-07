@@ -1,6 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { rpc, RpcError } from "@/lib/rpc";
 import { todayIST } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/session";
+import { qk } from "./keys";
 
 export interface CustodyRow {
   transfer_id: string;
@@ -25,6 +28,20 @@ export async function myCustody(from?: string, to?: string): Promise<CustodyRow[
   return rpc<CustodyRow[]>("my_transfers_and_custody", {
     p_from: from ?? isoDaysAgo(30),
     p_to: to ?? todayIST(),
+  });
+}
+
+/**
+ * Transfer rows plus the live custody balance (cash_in_hand is repeated on
+ * every row by the RPC — it is the current balance, so the most recent row
+ * carries it).
+ */
+export function useMyCustody() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.custody(),
+    enabled: !!user?.id,
+    queryFn: () => myCustody(),
   });
 }
 
