@@ -12,26 +12,27 @@ buildscript {
   }
 }
 
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
 // Force CMake 3.30.5 for all native builds (library modules AND app).
 // AGP defaults to CMake 3.22.1, whose bundled ninja fails on this repo's
 // long paths (deep node_modules sources exceed Windows MAX_PATH 260 for
 // object files) and whose CONFIGURE_DEPENDS glob verification loops
 // ("manifest 'build.ninja' still dirty after 100 tries") on Windows.
 // CMake 3.30.5 ships a long-path-aware ninja.
+// NOTE: this block is wiped by `expo prebuild --clean` and must be re-added.
 subprojects {
   pluginManager.withPlugin("com.android.library") {
     android.externalNativeBuild.cmake.version = "3.30.5"
   }
   pluginManager.withPlugin("com.android.application") {
     android.externalNativeBuild.cmake.version = "3.30.5"
-  }
-}
-
-allprojects {
-  repositories {
-    google()
-    mavenCentral()
-    maven { url 'https://www.jitpack.io' }
   }
 }
 

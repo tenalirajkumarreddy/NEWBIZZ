@@ -50,7 +50,7 @@ devices that installed a previous release.
 
 ```
 cd mobile
-npm install
+npm install --legacy-peer-deps
 npx expo prebuild -p android --no-install   # only when app.json/plugins changed
 cd android
 .\gradlew assembleRelease

@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# release keystores must NEVER be committed; Expo's public debug keystore is OK
+*.keystore
+!android/app/debug.keystore
+
 # Metro
 .metro-health-check*
 
