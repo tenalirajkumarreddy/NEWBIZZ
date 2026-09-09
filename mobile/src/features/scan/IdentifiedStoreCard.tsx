@@ -235,7 +235,7 @@ const s = StyleSheet.create({
     borderRadius: tokens.radius.md,
     paddingHorizontal: tokens.space.sm,
   },
-  amberBtnPrimary: { backgroundColor: tokens.color.amb },
+  amberBtnPrimary: { backgroundColor: tokens.color.ambD },
   amberBtnGhost: {
     backgroundColor: tokens.color.surface,
     borderWidth: 1,

@@ -6934,6 +6934,7 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_url: string | null
           branch_id: string | null
           created_at: string
           email: string | null
@@ -6945,6 +6946,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           branch_id?: string | null
           created_at?: string
           email?: string | null
@@ -6956,6 +6958,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           branch_id?: string | null
           created_at?: string
           email?: string | null
@@ -8363,6 +8366,7 @@ export type Database = {
       }
       stock_qty_for_portal: { Args: { p_item: string }; Returns: number }
       store_outstanding: { Args: { p_store: string }; Returns: number }
+      submit_my_expense: { Args: { p_header: Json }; Returns: string }
       supplier_opening_balance: {
         Args: {
           p_amount: number

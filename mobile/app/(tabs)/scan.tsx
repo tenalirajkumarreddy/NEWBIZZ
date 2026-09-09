@@ -7,6 +7,7 @@ import { ScanLine, MapPin, IndianRupee, HandCoins, Footprints } from "lucide-rea
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
+import { Sheet } from "@/components/Sheet";
 import { QrViewport } from "@/features/scan/QrViewport";
 import { IdentifiedStoreCard, UnlinkedCodeCard } from "@/features/scan/IdentifiedStoreCard";
 import { NearbyStores } from "@/features/scan/NearbyStores";
@@ -105,6 +106,7 @@ export default function ScanScreen() {
   }
 
   const showIdentified = resolved != null && resolved.found && !!resolved.store_id;
+  const resultOpen = showIdentified || notFoundCode != null;
 
   return (
     <Screen onRefresh={onRefresh}>
@@ -116,55 +118,59 @@ export default function ScanScreen() {
         {mode === "qr" ? (
           <>
             <QrViewport
-              paused={resolving || resolved != null || sheetCode != null || notFoundCode != null}
+              paused={resolving || resultOpen || sheetCode != null}
               resolving={resolving}
               onScan={(raw) => void handleScan(raw)}
               resetKey={resetKey}
             />
+            {!resultOpen ? <QuickActions /> : null}
+          </>
+        ) : (
+          <NearbyStores
+            refreshKey={resetKey}
+            onOpen={(store) => {
+              setResolved(store);
+              bumpReset();
+            }}
+          />
+        )}
+      </View>
 
-            {showIdentified ? (
-              <>
-                <IdentifiedStoreCard store={resolved!} onAfterVisit={resetScan} />
-                <ScanAnotherButton label="Scan another code" onPress={resetScan} />
-              </>
-            ) : notFoundCode ? (
-              <>
+      {/* Scan result pops up as a sheet - no scrolling needed; dismissing
+          resumes the scanner automatically. */}
+      <Sheet
+        visible={resultOpen}
+        onClose={resetScan}
+        title={showIdentified ? "Store details" : "No store found"}
+      >
+        {showIdentified ? (
+          <View style={s.sheetBody}>
+            <IdentifiedStoreCard store={resolved!} onAfterVisit={resetScan} />
+            <ScanAnotherButton label="Scan another code" onPress={resetScan} />
+          </View>
+        ) : notFoundCode ? (
+          <View style={s.sheetBody}>
                 <UnlinkedCodeCard
                   code={notFoundCode}
                   payee={notFoundPayee}
                   canManage={can("customer.manage")}
-                  onLink={() => setSheetCode(notFoundCode)}
+                  onLink={() => {
+                    // close the result sheet so only the link sheet is on top
+                    const c = notFoundCode;
+                    setNotFoundCode(null);
+                    setNotFoundPayee(null);
+                    setSheetCode(c);
+                  }}
                   onCreate={() => {
                     const c = notFoundCode;
                     resetScan();
                     router.push(`/stores?add=1&qrCode=${encodeURIComponent(c)}`);
                   }}
                 />
-                <ScanAnotherButton label="Scan another code" onPress={resetScan} />
-              </>
-            ) : (
-              <QuickActions />
-            )}
-          </>
-        ) : (
-          <>
-            {showIdentified ? (
-              <>
-                <IdentifiedStoreCard store={resolved!} onAfterVisit={resetScan} />
-                <ScanAnotherButton label="Back to nearby list" onPress={resetScan} />
-              </>
-            ) : (
-              <NearbyStores
-                refreshKey={resetKey}
-                onOpen={(store) => {
-                  setResolved(store);
-                  bumpReset();
-                }}
-              />
-            )}
-          </>
-        )}
-      </View>
+            <ScanAnotherButton label="Scan another code" onPress={resetScan} />
+          </View>
+        ) : null}
+      </Sheet>
 
       <LinkQrSheet visible={sheetCode != null} code={sheetCode ?? ""} onClose={resetScan} />
     </Screen>
@@ -246,6 +252,7 @@ const s = StyleSheet.create({
   },
   segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   segTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  sheetBody: { gap: tokens.space.md },
   quickWrap: { flexDirection: "row", gap: tokens.space.sm },
   quickBtn: {
     flex: 1,
