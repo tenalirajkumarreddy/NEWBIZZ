@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { parseClaims, can as canPerm, type AppClaims } from "./claims";
+import { parseAccessToken, can as canPerm, type AppClaims } from "./claims";
 
 interface SessionCtx {
   session: Session | null;
@@ -34,7 +34,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const claims = parseClaims(session?.user);
+  // Custom claims live in the JWT's app_metadata (injected by the access
+  // token hook at mint/refresh), NOT in the persisted user record — decode
+  // the token, never session.user.app_metadata.
+  const claims = parseAccessToken(session?.access_token);
   const value: SessionCtx = {
     session,
     user: session?.user ?? null,
