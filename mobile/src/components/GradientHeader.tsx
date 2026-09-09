@@ -1,4 +1,3 @@
-// mobile/src/components/GradientHeader.tsx
 import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,9 +18,9 @@ export function GradientHeader({
     >
       <View style={s.row}>
         <View style={s.logo}><Text style={s.logoTxt}>N</Text></View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>{title}</Text>
-          {subtitle ? <Text style={s.sub}>{subtitle}</Text> : null}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.title} numberOfLines={1}>{title}</Text>
+          {subtitle ? <Text style={s.sub} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
         {right}
       </View>

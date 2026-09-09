@@ -20,7 +20,7 @@ export function StatTile({
           </View>
         ) : null}
       </View>
-      <Text style={s.value}>{value}</Text>
+      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{value}</Text>
       {delta ? <Text style={[s.delta, { color: delta.startsWith("▲") ? tokens.color.grn : delta.startsWith("▼") ? tokens.color.red : tokens.color.ink4 }]}>{delta}</Text> : null}
     </View>
   );

@@ -42,12 +42,12 @@ export function RevenueCard() {
       <View style={s.cols}>
         <View style={s.col}>
           <Text style={s.colLabel}>Sales</Text>
-          <Text style={s.colValue}>{moneyCompact(sales)}</Text>
+          <Text style={s.colValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{moneyCompact(sales)}</Text>
         </View>
         <View style={s.divider} />
         <View style={s.col}>
           <Text style={s.colLabel}>Collected</Text>
-          <Text style={s.colValue}>{moneyCompact(collected)}</Text>
+          <Text style={s.colValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{moneyCompact(collected)}</Text>
         </View>
       </View>
 

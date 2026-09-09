@@ -24,7 +24,7 @@ export function Bell({
 
   return (
     <Pressable onPress={onPress} hitSlop={11} style={s.hit}>
-      <BellIcon size={22} color={tokens.color.ink2} />
+      <BellIcon size={22} color="#ffffff" />
       {unreadCount > 0 ? (
         <View style={s.badgeWrap}>
           <Animated.View style={[s.badge, pulse]}>

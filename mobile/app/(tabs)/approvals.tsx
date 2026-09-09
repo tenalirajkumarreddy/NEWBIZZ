@@ -173,7 +173,7 @@ function OrderCard({
           <Text style={st.orderNo}>{order.orderNo}</Text>
           <Text style={st.storeName} numberOfLines={1}>{order.storeName ?? "Unknown store"} · {order.orderDate}</Text>
         </View>
-        <Text style={st.total}>{moneyINR(total)}</Text>
+        <Text style={st.total} numberOfLines={1}>{moneyINR(total)}</Text>
       </View>
       <View style={st.preview}>
         {lines.slice(0, 2).map((l, i) => (
@@ -264,6 +264,7 @@ const st = StyleSheet.create({
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
+    maxWidth: 110,
   },
   preview: { gap: 2 },
   previewLine: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },

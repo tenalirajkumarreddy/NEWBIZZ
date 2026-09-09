@@ -13,12 +13,13 @@ function istDay(iso: string): string {
 }
 
 export function BalanceOverview({
-  salesTotal, collectedTotal, onHandover, onDeposit,
+  salesTotal, collectedTotal, onHandover, onDeposit, onExpense,
 }: {
   salesTotal: number;
   collectedTotal: number;
   onHandover: () => void;
   onDeposit: () => void;
+  onExpense: () => void;
 }) {
   const qc = useQueryClient();
   const { can } = useSession();
@@ -37,6 +38,7 @@ export function BalanceOverview({
 
   const showHandover = can("cash.transfer");
   const showDeposit = can("cash.deposit");
+  const showExpense = can("expense.submit") || can("expense.manage");
 
   return (
     <View style={s.card}>
@@ -88,6 +90,17 @@ export function BalanceOverview({
           ) : null}
         </View>
       ) : null}
+
+      {showExpense ? (
+        <Pressable
+          onPress={onExpense}
+          style={({ pressed }) => [s.btn, s.expenseBtn, pressed && { opacity: 0.9 }]}
+          accessibilityLabel="Submit expense"
+        >
+          <Wallet size={15} color={tokens.color.amb} />
+          <Text style={[s.btnTxt, { color: tokens.color.amb }]}>Submit expense</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -104,6 +117,11 @@ const s = StyleSheet.create({
   grid: { gap: tokens.space.sm },
   row: { flexDirection: "row", gap: tokens.space.sm },
   btns: { flexDirection: "row", gap: tokens.space.sm },
+  expenseBtn: {
+    backgroundColor: tokens.color.ambWash,
+    borderWidth: 1,
+    borderColor: "rgba(217,119,6,0.25)",
+  },
   btn: {
     flex: 1,
     minHeight: 44,

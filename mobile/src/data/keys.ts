@@ -20,6 +20,7 @@ export const qk = {
   visitedToday: (sessionId: string) => ["visited", sessionId] as const,
   custody: () => ["custody"] as const,
   activity: () => ["activity"] as const,
+  expenses: () => ["expenses"] as const,
   notifications: () => ["notifications"] as const,
   unread: () => ["unread"] as const,
   holdings: () => ["stockHoldings"] as const,

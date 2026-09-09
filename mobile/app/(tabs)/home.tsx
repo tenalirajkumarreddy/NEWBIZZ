@@ -25,22 +25,6 @@ import { tokens } from "@/theme/tokens";
 
 const MAX_PENDING_ROWS = 5;
 
-function greeting(): string {
-  const hour = Number(
-    new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "numeric", hour12: false })
-      .format(new Date()),
-  );
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-function firstName(name: string | null | undefined, email: string | null | undefined): string {
-  if (name) return name.trim().split(/\s+/)[0];
-  if (email) return email.split("@")[0];
-  return "Agent";
-}
-
 function OrderRowItem({ order }: { order: OrderRow }) {
   return (
     <PressCard onPress={() => gotoTab("routes")} style={s.orderCard}>
@@ -71,11 +55,6 @@ export default function HomeScreen() {
   const routeId = session.data?.route_id ?? "";
   const fetching = useIsFetching();
 
-  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const name = firstName(
-    typeof meta.full_name === "string" ? meta.full_name : null,
-    user?.email ?? null,
-  );
   const pendingTotal = orders.data?.length ?? 0;
   const pending = (orders.data ?? []).slice(0, MAX_PENDING_ROWS);
 
@@ -98,7 +77,7 @@ export default function HomeScreen() {
   return (
     <Screen refreshing={fetching > 0} onRefresh={onRefresh}>
       <GradientHeader
-        title={`${greeting()}, ${name}`}
+        title="Dashboard"
         subtitle={roleLabel(claims)}
         right={<HeaderRight />}
       />
