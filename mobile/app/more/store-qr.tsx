@@ -82,7 +82,10 @@ export default function StoreQrAdminScreen() {
     if (!selected || linking) return;
     setLinking(true);
     try {
-      const code = `NB-${(selected.code ?? selectedId!.slice(0, 8)).toUpperCase()}`;
+      // QR payloads must be scanner-safe: uppercase alnum + dash/underscore
+      // only (spaces break parseQrPayload and many scanner apps).
+      const base = (selected.code ?? selectedId!.slice(0, 8)).toUpperCase().replace(/[^A-Z0-9\-_]/g, "");
+      const code = `NB-${base || selectedId!.slice(0, 8).toUpperCase()}`;
       const linked = await linkStoreQr(selected.id, code);
       await Promise.all([
         qc.invalidateQueries({ queryKey: qk.qr(linked) }),

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -11,8 +12,23 @@ import { useSession } from "@/lib/session";
 
 export default function StoresScreen() {
   const { can } = useSession();
+  // Deep-link from the scanner's "no store found" popup:
+  // /stores?add=1&qrCode=<code> opens the add wizard and auto-links the QR
+  // after the store is created.
+  const params = useLocalSearchParams<{ add?: string; qrCode?: string }>();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const consumed = useRef(false);
   const { refreshing, onRefresh } = useStoresRefresh();
+
+  useEffect(() => {
+    if (consumed.current) return;
+    if (params.add === "1") {
+      consumed.current = true;
+      setLinkCode(typeof params.qrCode === "string" ? params.qrCode : null);
+      setWizardOpen(true);
+    }
+  }, [params.add, params.qrCode]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -25,9 +41,19 @@ export default function StoresScreen() {
         <StoresTabBody showRouteFilter />
       </Screen>
       {can("customer.manage") ? (
-        <AddStoreFab onPress={() => setWizardOpen(true)} />
+        <AddStoreFab onPress={() => {
+          setLinkCode(null);
+          setWizardOpen(true);
+        }} />
       ) : null}
-      <AddStoreWizard visible={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <AddStoreWizard
+        visible={wizardOpen}
+        linkCode={linkCode}
+        onClose={() => {
+          setWizardOpen(false);
+          setLinkCode(null);
+        }}
+      />
     </View>
   );
 }

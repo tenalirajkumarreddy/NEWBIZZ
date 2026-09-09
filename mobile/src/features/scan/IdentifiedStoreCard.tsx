@@ -1,10 +1,33 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import { TriangleAlert, Link2 } from "lucide-react-native";
+import { View, Text, StyleSheet, Pressable, Linking, Alert, Image } from "react-native";
+import { TriangleAlert, Link2, Store as StoreIcon, Phone, ImageOff } from "lucide-react-native";
 import { StatusBadge } from "@/components/StatusBadge";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
 import { StoreActionsRow } from "./StoreActionsRow";
 import type { ResolvedStore } from "@/data/qr";
+
+function StorePhoto({ uri }: { uri: string | null | undefined }) {
+  if (uri) {
+    return (
+      <View style={s.photoWrap}>
+        <Pressable
+          onPress={() => {
+            if (uri) void Linking.openURL(uri);
+          }}
+          accessibilityLabel="Open store photo"
+        >
+          <Image source={{ uri }} style={s.photo} resizeMode="cover" accessible accessibilityLabel="Store photo" />
+        </Pressable>
+      </View>
+    );
+  }
+  return (
+    <View style={[s.photoWrap, s.photoFallback]}>
+      <ImageOff size={18} color={tokens.color.ink4} />
+      <Text style={s.photoFallbackTxt}>No photo</Text>
+    </View>
+  );
+}
 
 export function IdentifiedStoreCard({
   store, onAfterVisit,
@@ -14,18 +37,43 @@ export function IdentifiedStoreCard({
 }) {
   const outstanding = store.outstanding;
   const hasDues = outstanding != null && outstanding > 0;
+  const phone = store.phone ?? null;
+
+  function call() {
+    if (!phone) return;
+    void Linking.openURL(`tel:${phone}`);
+  }
+
+  function confirmCall() {
+    if (!phone) return;
+    Alert.alert("Call store", `Call ${store.store_name ?? "store"} at ${phone}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Call", onPress: call },
+    ]);
+  }
 
   return (
     <View style={s.card}>
       <View style={s.headRow}>
-        <View style={s.chip}>
-          <Text style={s.chipTxt}>{(store.store_name ?? "S").slice(0, 1).toUpperCase()}</Text>
-        </View>
+        <StorePhoto uri={store.image_url ?? null} />
         <View style={s.headMain}>
           <Text style={s.name} numberOfLines={1}>{store.store_name}</Text>
           <Text style={s.sub} numberOfLines={1}>
             {[store.customer_name, store.area].filter(Boolean).join(" · ")}
           </Text>
+          {store.contact_name ? (
+            <Text style={s.contact} numberOfLines={1}>Contact: {store.contact_name}</Text>
+          ) : null}
+          {phone ? (
+            <Pressable
+              onPress={confirmCall}
+              accessibilityLabel={`Call ${phone}`}
+              style={({ pressed }) => [s.callBtn, pressed && { opacity: 0.8 }]}
+            >
+              <Phone size={12} color={tokens.color.grn} />
+              <Text style={[s.callTxt, { color: tokens.color.grn }]} numberOfLines={1}>{phone}</Text>
+            </Pressable>
+          ) : null}
         </View>
         <StatusBadge label="Store identified" tone="grn" dot />
       </View>
@@ -52,34 +100,43 @@ export function IdentifiedStoreCard({
 }
 
 export function UnlinkedCodeCard({
-  code, canManage, onLink,
+  code, canManage, onLink, onCreate,
 }: {
   code: string;
   canManage: boolean;
   onLink: () => void;
+  onCreate: () => void;
 }) {
   return (
     <View style={[s.card, s.amberCard]}>
       <View style={s.amberIcon}>
         <TriangleAlert size={22} color={tokens.color.amb} />
       </View>
-      <Text style={s.amberTitle}>Code not linked</Text>
-      <Text style={s.amberMsg}>
-        This code is not linked to any store yet.
-      </Text>
+      <Text style={s.amberTitle}>No store found</Text>
+      <Text style={s.amberMsg}>This QR code is not assigned to any store yet.</Text>
       <Text style={s.amberCode}>{code}</Text>
       {canManage ? (
-        <Pressable
-          onPress={onLink}
-          accessibilityLabel="Link this code to a store"
-          style={({ pressed }) => [s.linkBtn, pressed && { opacity: 0.85 }]}
-        >
-          <View style={s.linkBtnInner}>
-            <Link2 size={15} color={tokens.color.surface} />
-            <Text style={s.linkBtnTxt}>Link to a store</Text>
-          </View>
-        </Pressable>
-      ) : null}
+        <View style={s.amberActions}>
+          <Pressable
+            onPress={onCreate}
+            accessibilityLabel="Create a new store for this code"
+            style={({ pressed }) => [s.amberBtn, s.amberBtnPrimary, pressed && { opacity: 0.85 }]}
+          >
+            <StoreIcon size={15} color="#ffffff" />
+            <Text style={s.amberBtnTxtOn}>Create store</Text>
+          </Pressable>
+          <Pressable
+            onPress={onLink}
+            accessibilityLabel="Assign this code to an existing store"
+            style={({ pressed }) => [s.amberBtn, s.amberBtnGhost, pressed && { opacity: 0.85 }]}
+          >
+            <Link2 size={15} color={tokens.color.amb} />
+            <Text style={s.amberBtnTxtOff}>Assign store</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Text style={s.amberHint}>Ask your manager to link this code.</Text>
+      )}
     </View>
   );
 }
@@ -94,15 +151,29 @@ const s = StyleSheet.create({
     ...tokens.shadow.card,
   },
   headRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
-  chip: {
-    width: 40, height: 40, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
-    alignItems: "center", justifyContent: "center",
+  photoWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: tokens.radius.md,
+    overflow: "hidden",
+    backgroundColor: tokens.color.fill,
   },
-  chipTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
-  headMain: { flex: 1 },
+  photo: { width: 56, height: 56 },
+  photoFallback: { alignItems: "center", justifyContent: "center", gap: 2 },
+  photoFallbackTxt: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: 9 },
+  headMain: { flex: 1, minWidth: 0 },
   name: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   sub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  contact: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
+  callBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+    alignSelf: "flex-start",
+    minHeight: 24,
+  },
+  callTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, fontVariant: ["tabular-nums"] },
   statRow: {
     flexDirection: "row", alignItems: "center", gap: tokens.space.md,
     marginTop: tokens.space.md,
@@ -141,11 +212,32 @@ const s = StyleSheet.create({
     color: tokens.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
     marginTop: tokens.space.sm, fontVariant: ["tabular-nums"],
   },
-  linkBtn: { alignSelf: "stretch", marginTop: tokens.space.lg },
-  linkBtnInner: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: tokens.space.sm,
-    minHeight: 44, borderRadius: tokens.radius.md, backgroundColor: tokens.color.amb,
-    paddingHorizontal: tokens.space.lg,
+  amberActions: {
+    alignSelf: "stretch",
+    flexDirection: "row",
+    gap: tokens.space.sm,
+    marginTop: tokens.space.lg,
   },
-  linkBtnTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  amberBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 46,
+    borderRadius: tokens.radius.md,
+    paddingHorizontal: tokens.space.sm,
+  },
+  amberBtnPrimary: { backgroundColor: tokens.color.amb },
+  amberBtnGhost: {
+    backgroundColor: tokens.color.surface,
+    borderWidth: 1,
+    borderColor: "rgba(217,119,6,0.4)",
+  },
+  amberBtnTxtOn: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  amberBtnTxtOff: { color: tokens.color.amb, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  amberHint: {
+    color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs,
+    marginTop: tokens.space.lg, textAlign: "center",
+  },
 });

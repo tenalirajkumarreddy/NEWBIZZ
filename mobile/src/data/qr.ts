@@ -11,6 +11,9 @@ export interface ResolvedStore {
   store_name?: string;
   customer_name?: string;
   area?: string;
+  phone?: string | null;
+  contact_name?: string | null;
+  image_url?: string | null;
   lat?: number | null;
   lng?: number | null;
   outstanding?: number;

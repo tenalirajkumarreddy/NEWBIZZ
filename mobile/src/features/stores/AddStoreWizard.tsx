@@ -10,6 +10,7 @@ import { Sheet } from "@/components/Sheet";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { useRoutes } from "@/data/routes";
+import { linkStoreQr } from "@/data/qr";
 import { supabase } from "@/lib/supabase";
 import { rpc, friendlyError, RpcError } from "@/lib/rpc";
 import type { Database } from "@/lib/db-types";
@@ -69,10 +70,12 @@ function RoutePick({
 }
 
 export function AddStoreWizard({
-  visible, onClose,
+  visible, onClose, linkCode,
 }: {
   visible: boolean;
   onClose: () => void;
+  /** Scanned QR code to auto-link to the newly created store (optional). */
+  linkCode?: string | null;
 }) {
   const qc = useQueryClient();
   const routesQ = useRoutes();
@@ -247,7 +250,27 @@ export function AddStoreWizard({
 
       await qc.invalidateQueries({ queryKey: ["stores"] });
       await qc.invalidateQueries({ queryKey: ["routes"] });
-      Toast.show({ type: "success", text1: "Store created", text2: storeName.trim() });
+
+      // Best-effort: auto-link the scanned QR code that started this flow.
+      if (linkCode) {
+        try {
+          await linkStoreQr(newStoreId, linkCode);
+          await qc.invalidateQueries({ queryKey: ["storeQrCodes", newStoreId] });
+          Toast.show({
+            type: "success",
+            text1: "Store created",
+            text2: `${storeName.trim()} - QR ${linkCode} linked`,
+          });
+        } catch (linkErr) {
+          Toast.show({
+            type: "info",
+            text1: "Store created",
+            text2: `QR link failed: ${friendlyError(linkErr)}. Link it from store QR admin.`,
+          });
+        }
+      } else {
+        Toast.show({ type: "success", text1: "Store created", text2: storeName.trim() });
+      }
       onClose();
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not create store", text2: friendlyError(e) });

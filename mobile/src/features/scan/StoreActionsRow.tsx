@@ -6,7 +6,7 @@ import Toast from "react-native-toast-message";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import {
-  Navigation, IndianRupee, HandCoins, Footprints, Store as StoreIcon,
+  Navigation, IndianRupee, HandCoins, Footprints, Store as StoreIcon, Phone,
 } from "lucide-react-native";
 import { recordVisit, useActiveSession } from "@/data/routes";
 import type { ResolvedStore } from "@/data/qr";
@@ -122,6 +122,14 @@ export function StoreActionsRow({
       ) : null}
       {store.can_manage && storeId ? (
         <ActionBtn icon={StoreIcon} label="Profile" onPress={() => router.push(`/store/${storeId}`)} />
+      ) : null}
+      {store.phone ? (
+        <ActionBtn
+          icon={Phone}
+          label="Call"
+          tone="grn"
+          onPress={() => void Linking.openURL(`tel:${store.phone}`)}
+        />
       ) : null}
       <ActionBtn icon={Navigation} label="Navigate" onPress={navigate} />
     </View>

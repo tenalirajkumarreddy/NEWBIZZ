@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
-import { ScanLine, MapPin } from "lucide-react-native";
+import { ScanLine, MapPin, IndianRupee, HandCoins, Footprints } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -10,9 +11,9 @@ import { QrViewport } from "@/features/scan/QrViewport";
 import { IdentifiedStoreCard, UnlinkedCodeCard } from "@/features/scan/IdentifiedStoreCard";
 import { NearbyStores } from "@/features/scan/NearbyStores";
 import { LinkQrSheet } from "@/features/scan/LinkQrSheet";
+import { useSession } from "@/lib/session";
 import { parseQrPayload } from "@/lib/qrparse";
 import { resolveStoreQr } from "@/data/qr";
-import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { qk } from "@/data/keys";
 import { tokens } from "@/theme/tokens";
@@ -50,11 +51,13 @@ function SegmentedToggle({ value, onChange }: { value: Mode; onChange: (v: Mode)
 
 export default function ScanScreen() {
   const qc = useQueryClient();
+  const router = useRouter();
   const { can } = useSession();
   const [mode, setMode] = useState<Mode>("qr");
   const [resolving, setResolving] = useState(false);
   const [resolved, setResolved] = useState<ResolvedStore | null>(null);
   const [sheetCode, setSheetCode] = useState<string | null>(null);
+  const [notFoundCode, setNotFoundCode] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
 
   function bumpReset() {
@@ -64,11 +67,12 @@ export default function ScanScreen() {
   function resetScan() {
     setResolved(null);
     setSheetCode(null);
+    setNotFoundCode(null);
     bumpReset();
   }
 
   async function handleScan(raw: string) {
-    if (resolving || sheetCode) return;
+    if (resolving || sheetCode || notFoundCode) return;
     const code = parseQrPayload(raw);
     if (!code) {
       Toast.show({ type: "error", text1: "Not a valid store code" });
@@ -78,7 +82,13 @@ export default function ScanScreen() {
     setResolved(null);
     try {
       const store = await resolveStoreQr(code);
-      setResolved(store);
+      if (store.found && store.store_id) {
+        setResolved(store);
+      } else {
+        // Unassigned QR: offer to create a store for it or link it to an
+        // existing store (customer.manage holders only see the actions).
+        setNotFoundCode(code);
+      }
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not resolve code", text2: friendlyError(e) });
       bumpReset();
@@ -92,7 +102,6 @@ export default function ScanScreen() {
   }
 
   const showIdentified = resolved != null && resolved.found && !!resolved.store_id;
-  const showUnlinked = resolved != null && !showIdentified;
 
   return (
     <Screen onRefresh={onRefresh}>
@@ -104,7 +113,7 @@ export default function ScanScreen() {
         {mode === "qr" ? (
           <>
             <QrViewport
-              paused={resolving || resolved != null || sheetCode != null}
+              paused={resolving || resolved != null || sheetCode != null || notFoundCode != null}
               resolving={resolving}
               onScan={(raw) => void handleScan(raw)}
               resetKey={resetKey}
@@ -115,16 +124,23 @@ export default function ScanScreen() {
                 <IdentifiedStoreCard store={resolved!} onAfterVisit={resetScan} />
                 <ScanAnotherButton label="Scan another code" onPress={resetScan} />
               </>
-            ) : showUnlinked ? (
+            ) : notFoundCode ? (
               <>
                 <UnlinkedCodeCard
-                  code={resolved!.code}
+                  code={notFoundCode}
                   canManage={can("customer.manage")}
-                  onLink={() => setSheetCode(resolved!.code)}
+                  onLink={() => setSheetCode(notFoundCode)}
+                  onCreate={() => {
+                    const c = notFoundCode;
+                    resetScan();
+                    router.push(`/stores?add=1&qrCode=${encodeURIComponent(c)}`);
+                  }}
                 />
                 <ScanAnotherButton label="Scan another code" onPress={resetScan} />
               </>
-            ) : null}
+            ) : (
+              <QuickActions />
+            )}
           </>
         ) : (
           <>
@@ -148,6 +164,41 @@ export default function ScanScreen() {
 
       <LinkQrSheet visible={sheetCode != null} code={sheetCode ?? ""} onClose={resetScan} />
     </Screen>
+  );
+}
+
+/** Always-available actions: open the record flow and pick the store there. */
+function QuickActions() {
+  const router = useRouter();
+  const { can } = useSession();
+
+  const actions: { key: string; label: string; icon: typeof IndianRupee; tone: "grn" | "amb" | "brand"; href: string; show: boolean }[] = [
+    { key: "sale", label: "Record sale", icon: IndianRupee, tone: "grn", href: "/record?mode=sale", show: can("cashmemo.create") || can("order.create") },
+    { key: "collect", label: "Record collection", icon: HandCoins, tone: "amb", href: "/record?mode=collect", show: can("receipt.record") || can("invoice.payment") },
+    { key: "visit", label: "Mark visit", icon: Footprints, tone: "brand", href: "/mark-visit", show: can("field.routes") },
+  ];
+  const visible = actions.filter((a) => a.show);
+  if (visible.length === 0) return null;
+
+  return (
+    <View style={s.quickWrap}>
+      {visible.map((a) => {
+        const Icon = a.icon;
+        const wash = { brand: tokens.color.brandWash, grn: tokens.color.grnWash, amb: tokens.color.ambWash }[a.tone];
+        const fg = { brand: tokens.color.brand, grn: tokens.color.grn, amb: tokens.color.amb }[a.tone];
+        return (
+          <Pressable
+            key={a.key}
+            onPress={() => router.push(a.href as never)}
+            accessibilityLabel={a.label}
+            style={({ pressed }) => [s.quickBtn, { backgroundColor: wash }, pressed && { opacity: 0.85 }]}
+          >
+            <Icon size={16} color={fg} />
+            <Text style={[s.quickTxt, { color: fg }]} numberOfLines={1}>{a.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -191,6 +242,18 @@ const s = StyleSheet.create({
   },
   segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   segTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  quickWrap: { flexDirection: "row", gap: tokens.space.sm },
+  quickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 48,
+    borderRadius: tokens.radius.md,
+    paddingHorizontal: tokens.space.xs,
+  },
+  quickTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   rescan: {
     flexDirection: "row",
     alignItems: "center",
