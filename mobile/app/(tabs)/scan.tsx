@@ -58,6 +58,7 @@ export default function ScanScreen() {
   const [resolved, setResolved] = useState<ResolvedStore | null>(null);
   const [sheetCode, setSheetCode] = useState<string | null>(null);
   const [notFoundCode, setNotFoundCode] = useState<string | null>(null);
+  const [notFoundPayee, setNotFoundPayee] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
 
   function bumpReset() {
@@ -68,26 +69,28 @@ export default function ScanScreen() {
     setResolved(null);
     setSheetCode(null);
     setNotFoundCode(null);
+    setNotFoundPayee(null);
     bumpReset();
   }
 
   async function handleScan(raw: string) {
     if (resolving || sheetCode || notFoundCode) return;
-    const code = parseQrPayload(raw);
-    if (!code) {
+    const parsed = parseQrPayload(raw);
+    if (!parsed) {
       Toast.show({ type: "error", text1: "Not a valid store code" });
       return;
     }
     setResolving(true);
     setResolved(null);
     try {
-      const store = await resolveStoreQr(code);
+      const store = await resolveStoreQr(parsed.code);
       if (store.found && store.store_id) {
         setResolved(store);
       } else {
-        // Unassigned QR: offer to create a store for it or link it to an
-        // existing store (customer.manage holders only see the actions).
-        setNotFoundCode(code);
+        // Unassigned QR (NEWBIZZ code, shop's UPI payment QR, anything):
+        // offer to create a store for it or link it to an existing store.
+        setNotFoundCode(parsed.code);
+        setNotFoundPayee(parsed.payee ?? null);
       }
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not resolve code", text2: friendlyError(e) });
@@ -128,6 +131,7 @@ export default function ScanScreen() {
               <>
                 <UnlinkedCodeCard
                   code={notFoundCode}
+                  payee={notFoundPayee}
                   canManage={can("customer.manage")}
                   onLink={() => setSheetCode(notFoundCode)}
                   onCreate={() => {

@@ -100,9 +100,10 @@ export function IdentifiedStoreCard({
 }
 
 export function UnlinkedCodeCard({
-  code, canManage, onLink, onCreate,
+  code, payee, canManage, onLink, onCreate,
 }: {
   code: string;
+  payee?: string | null;
   canManage: boolean;
   onLink: () => void;
   onCreate: () => void;
@@ -114,7 +115,8 @@ export function UnlinkedCodeCard({
       </View>
       <Text style={s.amberTitle}>No store found</Text>
       <Text style={s.amberMsg}>This QR code is not assigned to any store yet.</Text>
-      <Text style={s.amberCode}>{code}</Text>
+      {payee ? <Text style={s.amberPayee} numberOfLines={1}>{payee}</Text> : null}
+      <Text style={s.amberCode} numberOfLines={1}>{code}</Text>
       {canManage ? (
         <View style={s.amberActions}>
           <Pressable
@@ -211,6 +213,11 @@ const s = StyleSheet.create({
   amberCode: {
     color: tokens.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
     marginTop: tokens.space.sm, fontVariant: ["tabular-nums"],
+    maxWidth: "100%",
+  },
+  amberPayee: {
+    color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs,
+    marginTop: tokens.space.sm, textAlign: "center",
   },
   amberActions: {
     alignSelf: "stretch",
