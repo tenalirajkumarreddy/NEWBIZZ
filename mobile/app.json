@@ -17,7 +17,8 @@
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -44,6 +45,13 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Allow NEWBIZZ to record visit locations."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0891b2",
+          "mode": "production"
         }
       ]
     ],

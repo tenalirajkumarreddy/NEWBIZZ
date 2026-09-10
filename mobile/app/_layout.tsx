@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Font from "expo-font";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,11 +8,52 @@ import {
   Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
+import * as Notifications from "expo-notifications";
 import Toast from "react-native-toast-message";
-import { SessionProvider } from "@/lib/session";
+import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
+import {
+  registerPushToken, configureForegroundNotifications, tapDestination,
+} from "@/data/push";
+import { qk } from "@/data/keys";
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } });
+
+/** Registers the device push token once a session exists, handles taps. */
+function PushBridge() {
+  const { user } = useSession();
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    configureForegroundNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void registerPushToken();
+    // Refresh unread badge when a push lands while the app runs.
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      void qc.invalidateQueries({ queryKey: qk.unread() });
+      void qc.invalidateQueries({ queryKey: qk.notifications() });
+    });
+    return () => sub.remove();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((res) => {
+      const { actionUrl } = tapDestination(res);
+      if (actionUrl && actionUrl.startsWith("/")) {
+        const inTabs = segments[0] === "(tabs)";
+        if (inTabs) router.push(actionUrl as never);
+        else router.replace(actionUrl as never);
+      }
+    });
+    return () => sub.remove();
+  }, [router, segments]);
+
+  return null;
+}
 
 // Same splash-style view as the gate screen — shown while the stored theme
 // preference is loading so the route tree never flashes the wrong palette.
@@ -72,6 +113,7 @@ export default function RootLayout() {
     <QueryClientProvider client={qc}>
       <ThemeProvider>
         <SessionProvider>
+          <PushBridge />
           <ThemedStatusBar />
           <ThemeGate>
             <Stack screenOptions={{ headerShown: false }}>
