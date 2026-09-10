@@ -12,8 +12,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
+import Svg, { Path, Rect } from "react-native-svg";
 import { supabase } from "@/lib/supabase";
 import { friendlyError } from "@/lib/rpc";
+import { googleSignIn } from "@/data/googleAuth";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -25,9 +27,33 @@ export default function Login() {
   const [stage, setStage] = useState<"phone" | "otp">("phone");
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const e164 = `+91${phone}`;
-  const busy = sending || verifying;
+  const busy = sending || verifying || googleBusy;
+
+  async function googleSignInFlow() {
+    if (googleBusy) return;
+    setGoogleBusy(true);
+    try {
+      const res = await googleSignIn();
+      if (res.ok) {
+        router.replace("/(tabs)/home");
+        return;
+      }
+      if (res.orphan) {
+        Toast.show({
+          type: "info",
+          text1: "Google email not linked",
+          text2: "Log in with your phone number, then link Google from your profile.",
+        });
+      } else if (res.error) {
+        Toast.show({ type: "error", text1: "Google sign-in failed", text2: res.error });
+      }
+    } finally {
+      setGoogleBusy(false);
+    }
+  }
 
   async function sendOtp() {
     if (phone.length !== 10 || busy) return;
@@ -142,8 +168,48 @@ export default function Login() {
             </Pressable>
           </>
         )}
+        <View style={s.dividerRow}>
+          <View style={s.dividerLine} />
+          <Text style={s.dividerTxt}>OR</Text>
+          <View style={s.dividerLine} />
+        </View>
+        <Pressable
+          onPress={() => void googleSignInFlow()}
+          disabled={busy}
+          accessibilityLabel="Continue with Google"
+          style={({ pressed }) => [s.googleBtn, (pressed || busy) && { opacity: 0.85 }]}
+        >
+          <GoogleGlyph />
+          <Text style={s.googleTxt}>Continue with Google</Text>
+        </Pressable>
+        <Text style={s.googleHint}>Google works only after you link it from your profile.</Text>
       </KeyboardAvoidingView>
     </ScrollView>
+  );
+}
+
+function GoogleGlyph() {
+  const { palette: t } = useTheme();
+  return (
+    <Svg width={16} height={16} viewBox="0 0 48 48">
+      <Path
+        fill="#4285F4"
+        d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"
+      />
+      <Path
+        fill="#34A853"
+        d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M11.69 28.18c-.44-1.32-.69-2.73-.69-4.18s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.96 13.22l7.38 5.73C12.13 13.15 17.6 9.5 24 9.5z"
+      />
+      <Rect width={0} height={0} fill={t.color.surface} />
+    </Svg>
   );
 }
 
@@ -256,6 +322,38 @@ const useStyles = () => {
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: tokens.space.sm,
+  },
+  dividerRow: {
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md,
+    marginTop: tokens.space.lg,
+    marginBottom: tokens.space.xs,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(148,163,184,0.25)" },
+  dividerTxt: { color: "rgba(148,163,184,0.7)", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
+  googleBtn: {
+    alignSelf: "stretch",
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: tokens.space.sm,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.35)",
+    backgroundColor: "rgba(148,163,184,0.08)",
+    marginTop: tokens.space.sm,
+  },
+  googleTxt: { color: "rgba(148,163,184,0.95)", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  googleHint: {
+    alignSelf: "stretch",
+    color: "rgba(148,163,184,0.6)",
+    fontFamily: tokens.font.sans,
+    fontSize: tokens.size.eyebrow,
+    textAlign: "center",
     marginTop: tokens.space.sm,
   },
   ghostTxt: {

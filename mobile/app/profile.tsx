@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   View, Text, Pressable, Alert, StyleSheet, ScrollView, TextInput, Image, ActivityIndicator, Linking,
 } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import { roleLabel } from "@/lib/claims";
 import { supabase } from "@/lib/supabase";
 import { friendlyError } from "@/lib/rpc";
 import { dateIST } from "@/lib/format";
+import { googleLink, googleUnlink, googleIdentity } from "@/data/googleAuth";
 import { tokens } from "@/theme/tokens";
 import { useTheme, type ThemeMode } from "@/theme/ThemeContext";
 
@@ -271,6 +273,69 @@ export default function ProfileScreen() {
     }
   }
 
+  // ---- google link / unlink -------------------------------------------
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleState, setGoogleState] = useState<
+    | { status: "loading" }
+    | { status: "unlinked" }
+    | { status: "linked"; email: string; identity: { provider: string; id: string; user_id: string; identity_id: string } }
+  >({ status: "loading" });
+
+  const refreshGoogle = useCallback(async () => {
+    const info = await googleIdentity();
+    setGoogleState(
+      info.linked && info.identity
+        ? { status: "linked", email: info.email ?? info.identity.id, identity: info.identity }
+        : { status: "unlinked" },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (uid) void refreshGoogle();
+  }, [uid, refreshGoogle]);
+
+  async function onLinkGoogle() {
+    if (googleBusy) return;
+    setGoogleBusy(true);
+    try {
+      const res = await googleLink();
+      if (res.ok) {
+        await refreshGoogle();
+        Toast.show({ type: "success", text1: "Google linked", text2: "You can now sign in with Google" });
+      } else if (res.error) {
+        Toast.show({ type: "error", text1: "Could not link Google", text2: res.error });
+      }
+    } finally {
+      setGoogleBusy(false);
+    }
+  }
+
+  function onUnlinkGoogle() {
+    if (googleState.status !== "linked") return;
+    Alert.alert("Unlink Google", "Remove Google sign-in from this account?", [
+      { text: "Keep", style: "cancel" },
+      {
+        text: "Unlink",
+        style: "destructive",
+        onPress: () => {
+          void (async () => {
+            if (googleBusy) return;
+            setGoogleBusy(true);
+            try {
+              await googleUnlink(googleState.identity);
+              await refreshGoogle();
+              Toast.show({ type: "success", text1: "Google unlinked" });
+            } catch (e) {
+              Toast.show({ type: "error", text1: "Could not unlink Google", text2: friendlyError(e) });
+            } finally {
+              setGoogleBusy(false);
+            }
+          })();
+        },
+      },
+    ]);
+  }
+
   function onSignOut() {
     Alert.alert("Sign out", "Sign out of NEWBIZZ on this device?", [
       { text: "Stay", style: "cancel" },
@@ -421,6 +486,55 @@ export default function ProfileScreen() {
           <View style={s.noteRow}>
             <Info size={12} color={t.color.ink4} />
             <Text style={s.noteTxt}>Applies instantly across the app — “System” follows your device setting.</Text>
+          </View>
+        </View>
+
+        {/* ------- linked accounts (google) ------- */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>LINKED ACCOUNTS</Text>
+          <View style={s.googleRow}>
+            <View style={s.googleGlyphWrap}>
+              <GoogleGlyphSmall />
+            </View>
+            <View style={s.googleMain}>
+              <Text style={s.googleTitle} numberOfLines={1}>
+                {googleState.status === "loading"
+                  ? "Checking…"
+                  : googleState.status === "linked"
+                    ? googleState.email
+                    : "Google not linked"}
+              </Text>
+              <Text style={s.googleSub}>
+                {googleState.status === "linked"
+                  ? "You can sign in with this Google account"
+                  : "Link to also sign in with your Google email"}
+              </Text>
+            </View>
+            {googleState.status === "linked" ? (
+              <Pressable
+                onPress={onUnlinkGoogle}
+                disabled={busy || googleBusy}
+                accessibilityRole="button"
+                accessibilityLabel="Unlink Google account"
+                style={({ pressed }) => [s.unlinkBtn, (pressed || busy || googleBusy) && { opacity: 0.7 }]}
+              >
+                <Text style={s.unlinkTxt}>Unlink</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => void onLinkGoogle()}
+                disabled={busy || googleBusy}
+                accessibilityRole="button"
+                accessibilityLabel="Link Google account"
+                style={({ pressed }) => [s.linkBtn, (pressed || busy || googleBusy) && { opacity: 0.8 }]}
+              >
+                {googleBusy ? (
+                  <ActivityIndicator size="small" color={t.color.brand} />
+                ) : (
+                  <Text style={s.linkTxt}>Link</Text>
+                )}
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -664,6 +778,42 @@ const useStyles = () => {
     flexShrink: 1,
   },
   themeRow: { flexDirection: "row", gap: tokens.space.sm },
+  googleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md,
+    minHeight: 52,
+  },
+  googleGlyphWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: tokens.radius.md,
+    backgroundColor: t.color.fill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleMain: { flex: 1, minWidth: 0 },
+  googleTitle: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  googleSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
+  linkBtn: {
+    minHeight: 40,
+    paddingHorizontal: tokens.space.md,
+    borderRadius: tokens.radius.sm,
+    backgroundColor: t.color.brandWash,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  linkTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  unlinkBtn: {
+    minHeight: 40,
+    paddingHorizontal: tokens.space.md,
+    borderRadius: tokens.radius.sm,
+    borderWidth: 1,
+    borderColor: "rgba(220,38,38,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unlinkTxt: { color: t.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   themeBtn: {
     flex: 1,
     flexDirection: "row",
@@ -744,6 +894,29 @@ const useStyles = () => {
     };
   }, [palette]);
 };
+
+function GoogleGlyphSmall() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 48 48">
+      <Path
+        fill="#4285F4"
+        d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"
+      />
+      <Path
+        fill="#34A853"
+        d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M11.69 28.18c-.44-1.32-.69-2.73-.69-4.18s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.96 13.22l7.38 5.73C12.13 13.15 17.6 9.5 24 9.5z"
+      />
+    </Svg>
+  );
+}
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
