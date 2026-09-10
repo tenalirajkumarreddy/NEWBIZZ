@@ -43,3 +43,6 @@ yarn-error.*
 
 # generated native folders
 /ios
+
+# Firebase config - replace with the NEWBIZZ project's file (never Aqua Prime's)
+google-services.json
