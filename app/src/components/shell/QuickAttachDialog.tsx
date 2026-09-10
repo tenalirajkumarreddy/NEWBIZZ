@@ -228,7 +228,7 @@ export function QuickAttachDialog({
                 type="button"
                 onClick={() => { setActiveIdx(i); setChosenType(null); setStep("type"); }}
                 className={`max-w-[240px] rounded-lg border px-2.5 py-1.5 text-left transition-colors ${
-                  i === activeIdx ? "border-brand bg-fill" : "border-line bg-white hover:border-line-strong"
+                  i === activeIdx ? "border-brand bg-fill" : "border-line bg-white dark:bg-surface hover:border-line-strong"
                 }`}
               >
                 <span className="block truncate text-[12px] font-semibold text-ink">{s.file.name}</span>
@@ -269,7 +269,7 @@ export function QuickAttachDialog({
                 <input
                   value={active.title}
                   onChange={(e) => updateStaged(activeIdx, { title: e.target.value })}
-                  className="h-8 rounded-lg border border-line bg-white px-2.5 text-[12px] text-ink outline-none focus:border-brand"
+                  className="h-8 rounded-lg border border-line bg-white dark:bg-fill px-2.5 text-[12px] text-ink outline-none focus:border-brand"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -278,7 +278,7 @@ export function QuickAttachDialog({
                   value={active.tags}
                   placeholder="tags, comma, separated"
                   onChange={(e) => updateStaged(activeIdx, { tags: e.target.value })}
-                  className="h-8 rounded-lg border border-line bg-white px-2.5 text-[12px] text-ink outline-none focus:border-brand"
+                  className="h-8 rounded-lg border border-line bg-white dark:bg-fill px-2.5 text-[12px] text-ink outline-none focus:border-brand"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -288,7 +288,7 @@ export function QuickAttachDialog({
                   onChange={(e) =>
                     updateStaged(activeIdx, { visibility: e.target.value as StagedFile["visibility"] })
                   }
-                  className="h-8 rounded-lg border border-line bg-white px-2 text-[12px] text-ink outline-none focus:border-brand"
+                  className="h-8 rounded-lg border border-line bg-white dark:bg-fill px-2 text-[12px] text-ink outline-none focus:border-brand"
                 >
                   <option value="internal">Internal</option>
                   <option value="restricted">Restricted</option>
@@ -317,7 +317,7 @@ export function QuickAttachDialog({
                     key={t.key}
                     type="button"
                     onClick={() => chooseType(t)}
-                    className="flex items-start gap-2.5 rounded-lg border border-line bg-white p-3 text-left transition-colors hover:border-brand"
+                    className="flex items-start gap-2.5 rounded-lg border border-line bg-white dark:bg-surface p-3 text-left transition-colors hover:border-brand"
                   >
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-fill text-[10px] font-bold text-ink-3">
                       {t.glyph}

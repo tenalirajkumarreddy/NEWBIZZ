@@ -55,7 +55,7 @@ export function TimelineView({
         data.map((row) => {
           const maxVal = Math.max(...row.hours, 1);
           return (
-            <div key={`${row.deviceId}-${row.deviceIndex}`} className="rounded-xl border border-line bg-white">
+            <div key={`${row.deviceId}-${row.deviceIndex}`} className="rounded-xl border border-line bg-white dark:bg-surface">
               {/* Device header */}
               <div className="flex items-center gap-3 border-b border-line px-4 py-2.5">
                 <span className="font-mono text-[12px] font-semibold text-brand">

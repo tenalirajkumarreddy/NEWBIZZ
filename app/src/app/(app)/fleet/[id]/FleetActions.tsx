@@ -52,7 +52,7 @@ export function FleetActions({ vehicleId }: { vehicleId: string }) {
         {pollPending ? "Polling…" : "Refresh GPS"}
       </Button>
       {pollState && !pollState.ok && (
-        <p className="text-[13px] text-red-600">{pollState.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{pollState.error}</p>
       )}
       {pollState && pollState.ok && (
         <p className="text-[13px] text-grn-600">
@@ -65,7 +65,7 @@ export function FleetActions({ vehicleId }: { vehicleId: string }) {
         {deletePending ? "Deleting…" : "Delete"}
       </Button>
       {deleteState && !deleteState.ok && (
-        <p className="text-[13px] text-red-600">{deleteState.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{deleteState.error}</p>
       )}
     </div>
   );

@@ -63,7 +63,7 @@ export function WhatsAppTemplatesManager({ templates }: { templates: TemplateRow
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="h-9 w-full rounded-lg border border-line bg-white px-3 text-[13px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+              className="h-9 w-full rounded-lg border border-line bg-white dark:bg-fill px-3 text-[13px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option>Utility</option>
               <option>Marketing</option>
@@ -77,7 +77,7 @@ export function WhatsAppTemplatesManager({ templates }: { templates: TemplateRow
             onChange={(e) => setBody(e.target.value)}
             rows={2}
             placeholder="Hi {{1}}, your invoice {{2}} is ready."
-            className="min-h-[52px] w-full rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+            className="min-h-[52px] w-full rounded-lg border border-line bg-white dark:bg-fill px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           />
         </Field>
         <div className="flex items-center gap-2">

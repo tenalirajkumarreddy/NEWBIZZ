@@ -37,7 +37,7 @@ export function Field({ label, hint, error, required, htmlFor, className, childr
 
 // Shared control chrome so Input / Select / Textarea look identical.
 export const controlBase =
-  "w-full rounded-lg border bg-white text-[13px] text-ink placeholder:text-ink-4 " +
+  "w-full rounded-lg border bg-white dark:bg-fill text-[13px] text-ink placeholder:text-ink-4 " +
   "transition-colors focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand " +
   "disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-4";
 

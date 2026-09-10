@@ -83,13 +83,13 @@ export function CostingActions({
           const val = e.target.value;
           if (val) setMonth(`${val}-01`);
         }}
-        className="h-8 w-36 rounded-md border border-line bg-white px-2 text-[12px] font-mono text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="h-8 w-36 rounded-md border border-line bg-white dark:bg-fill px-2 text-[12px] font-mono text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
       />
       <label className="text-[11px] font-semibold text-ink-4">Stage</label>
       <select
         value={selectedStage}
         onChange={(e) => setSelectedStage(Number(e.target.value))}
-        className="h-8 rounded-md border border-line bg-white px-2 text-[12px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="h-8 rounded-md border border-line bg-white dark:bg-fill px-2 text-[12px] text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
       >
         <option value={1}>Stage 1 — Blowing</option>
         <option value={2}>Stage 2 — Filling</option>

@@ -145,7 +145,7 @@ export function PortalLoginFlow() {
               onChange={(e) => setNational(digitsOnly(e.target.value).slice(0, 10))}
               onKeyDown={(e) => e.key === "Enter" && sendCode()}
               placeholder="90000 00001"
-              className="w-full bg-white px-3 py-3 font-mono text-[15px] text-ink outline-none placeholder:text-ink-4"
+              className="w-full bg-white dark:bg-fill px-3 py-3 font-mono text-[15px] text-ink outline-none placeholder:text-ink-4"
             />
           </div>
           <p className="mt-2 text-[12px] text-ink-4">

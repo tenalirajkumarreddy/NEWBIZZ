@@ -32,7 +32,7 @@ export function SyncFleetButton() {
         {pending ? "Syncing…" : "Sync from Intangles"}
       </Button>
       {state && !state.ok && (
-        <p className="text-[13px] text-red-600">{state.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{state.error}</p>
       )}
       {state && state.ok && (
         <p className="text-[13px] text-grn-600">Synced {state.created} vehicles</p>

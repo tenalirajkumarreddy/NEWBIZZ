@@ -35,7 +35,7 @@ export function MonthPicker({ current }: { current: string }) {
     <select
       value={current}
       onChange={(e) => onChange(e.target.value)}
-      className="h-8 rounded-lg border border-line bg-white px-2.5 text-[12px] font-medium text-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+      className="h-8 rounded-lg border border-line bg-white dark:bg-fill px-2.5 text-[12px] font-medium text-ink transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>

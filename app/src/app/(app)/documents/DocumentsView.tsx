@@ -215,7 +215,7 @@ function PreviewDialog({ doc, onClose }: { doc: DocumentListItem | null; onClose
         <div className="flex flex-col gap-3">
           {url ? (
             isImage(doc.mimeType) || doc.mimeType === "application/pdf" ? (
-              <iframe src={url} className="h-[60vh] w-full rounded-lg border border-line bg-white" title={doc.title} />
+              <iframe src={url} className="h-[60vh] w-full rounded-lg border border-line bg-white dark:bg-surface" title={doc.title} />
             ) : (
               <div className="flex flex-col items-center gap-3 py-8 text-center">
                 <p className="text-[13px] text-ink-3">No inline preview for this file type.</p>

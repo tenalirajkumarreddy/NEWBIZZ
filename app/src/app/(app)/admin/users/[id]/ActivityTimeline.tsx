@@ -10,8 +10,8 @@ import { AUDIT_ACTION_LABELS, type AuditAction, type AuditRow } from "@/lib/data
 // newest first. "View all activity" jumps to the audit log pre-filtered.
 
 const ACTION_TONE: Record<AuditAction, string> = {
-  insert: "bg-slate-100 text-ink-3",
-  update: "bg-slate-100 text-ink-3",
+  insert: "bg-slate-100 dark:bg-slate-800/50 text-ink-3",
+  update: "bg-slate-100 dark:bg-slate-800/50 text-ink-3",
   delete: "bg-red-wash text-red",
   approve: "bg-grn-wash text-grn",
   reject: "bg-red-wash text-red",

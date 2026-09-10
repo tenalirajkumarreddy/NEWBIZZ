@@ -1,0 +1,789 @@
+
+> newbizz@0.1.0 dev
+> next dev
+
+  Γû▓ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+  - Experiments (use with caution):
+    ┬╖ instrumentationHook
+
+ Γ£ô Starting...
+ Γ£ô Compiled /instrumentation in 625ms (105 modules)
+[intangles-poller] Starting cron (every 60000 ms)
+ Γ£ô Ready in 3.4s
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+ Γùï Compiling /src/middleware ...
+ Γ£ô Compiled /src/middleware in 960ms (132 modules)
+ Γùï Compiling /login ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (106kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (253kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ Γ£ô Compiled /login in 6.2s (692 modules)
+ GET /login?next=%2F 200 in 6557ms
+ Γùï Compiling /portal ...
+ Γ£ô Compiled /portal in 1993ms (946 modules)
+[data:getPortalInvoices] permission denied for function portal_my_invoices
+[data:getPortalProfile] permission denied for function portal_my_profile
+ GET /portal 307 in 3298ms
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [AuthRetryableFetchError: fetch failed] {
+  __isAuthError: true,
+  name: 'AuthRetryableFetchError',
+  status: 0,
+  code: undefined
+}
+ [AuthRetryableFetchError: fetch failed] {
+  __isAuthError: true,
+  name: 'AuthRetryableFetchError',
+  status: 0,
+  code: undefined
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+[intangles-poller] error: fetch failed
+ [TypeError: fetch failed] {
+  cause:  [Error: getaddrinfo ENOTFOUND wmpxwpubfxpexybqnynz.supabase.co] {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'wmpxwpubfxpexybqnynz.supabase.co'
+}
+}
+ [AuthRetryableFetchError: fetch failed] {
+  __isAuthError: true,
+  name: 'AuthRetryableFetchError',
+  status: 0,
+  code: undefined
+}
+ [AuthRetryableFetchError: fetch failed] {
+  __isAuthError: true,
+  name: 'AuthRetryableFetchError',
+  status: 0,
+  code: undefined
+}
+ GET /login?next=%2F 200 in 135ms
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] error: fetch failed
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+ Γ£ô Compiled in 476ms (337 modules)
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+ Γ£ô Compiled in 378ms (337 modules)
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0
+[intangles-poller] OK ΓÇö inserted=2 tripsStarted=0 tripsEnded=0 refills=0 leaks=0

@@ -128,7 +128,7 @@ export function OverheadPoolSection({ pools }: { pools: OverheadPoolRow[] }) {
               <TR>
                 <TD>
                   <input
-                    className="h-7 w-full rounded border border-line bg-white px-2 text-[12px] text-ink focus:border-brand focus:outline-none"
+                    className="h-7 w-full rounded border border-line bg-white dark:bg-fill px-2 text-[12px] text-ink focus:border-brand focus:outline-none"
                     placeholder="Pool name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -138,7 +138,7 @@ export function OverheadPoolSection({ pools }: { pools: OverheadPoolRow[] }) {
                   <select
                     value={stage}
                     onChange={(e) => setStage(e.target.value)}
-                    className="h-7 rounded border border-line bg-white px-1 text-[12px] text-ink"
+                    className="h-7 rounded border border-line bg-white dark:bg-fill px-1 text-[12px] text-ink"
                   >
                     <option value="shared">Shared</option>
                     <option value="blowing">Blowing</option>
@@ -150,12 +150,12 @@ export function OverheadPoolSection({ pools }: { pools: OverheadPoolRow[] }) {
                     type="month"
                     value={periodMonth ? periodMonth.slice(0, 7) : ""}
                     onChange={(e) => setPeriodMonth(e.target.value ? `${e.target.value}-01` : "")}
-                    className="h-7 w-28 rounded border border-line bg-white px-1 text-[12px] font-mono text-ink"
+                    className="h-7 w-28 rounded border border-line bg-white dark:bg-fill px-1 text-[12px] font-mono text-ink"
                   />
                 </TD>
                 <TD>
                   <input
-                    className="h-7 w-20 rounded border border-line bg-white px-1 text-[12px] font-mono text-ink text-right"
+                    className="h-7 w-20 rounded border border-line bg-white dark:bg-fill px-1 text-[12px] font-mono text-ink text-right"
                     placeholder="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -165,7 +165,7 @@ export function OverheadPoolSection({ pools }: { pools: OverheadPoolRow[] }) {
                   <select
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
-                    className="h-7 rounded border border-line bg-white px-1 text-[12px] text-ink"
+                    className="h-7 rounded border border-line bg-white dark:bg-fill px-1 text-[12px] text-ink"
                   >
                     <option value="estimated">Estimated</option>
                     <option value="actual">Actual</option>
@@ -175,7 +175,7 @@ export function OverheadPoolSection({ pools }: { pools: OverheadPoolRow[] }) {
                   <select
                     value={driver}
                     onChange={(e) => setDriver(e.target.value)}
-                    className="h-7 rounded border border-line bg-white px-1 text-[12px] text-ink"
+                    className="h-7 rounded border border-line bg-white dark:bg-fill px-1 text-[12px] text-ink"
                   >
                     <option value="cases">Cases</option>
                     <option value="machine_hours">Machine Hours</option>

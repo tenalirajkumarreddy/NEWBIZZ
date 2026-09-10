@@ -94,7 +94,7 @@ export function LiveTimeline({
               const d = e.target.value;
               router.push(`/admin/production-devices?date=${d}`);
             }}
-            className="h-9 rounded-lg border border-line bg-white px-3 text-[13px] text-ink shadow-sm focus:border-brand focus:outline-none"
+            className="h-9 rounded-lg border border-line bg-white dark:bg-fill px-3 text-[13px] text-ink shadow-sm focus:border-brand focus:outline-none"
           />
           <span className="text-[12px] text-ink-3">
             {fmtCount(totalUnits)} units produced
@@ -105,7 +105,7 @@ export function LiveTimeline({
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-line bg-white px-3 text-[12px] font-medium text-ink shadow-sm transition-colors hover:bg-fill disabled:opacity-50"
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-line bg-white dark:bg-surface px-3 text-[12px] font-medium text-ink shadow-sm transition-colors hover:bg-fill disabled:opacity-50"
           >
             <svg
               className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}

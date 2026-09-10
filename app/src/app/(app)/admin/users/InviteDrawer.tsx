@@ -104,7 +104,7 @@ export function InviteDrawer({
                     "rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all",
                     on
                       ? cn(c.bg, c.text, "border-transparent")
-                      : "border-line bg-white text-ink-3 hover:text-ink hover:border-ink/20"
+                      : "border-line bg-white dark:bg-surface text-ink-3 hover:text-ink hover:border-ink/20"
                   )}
                 >
                   {r.name}

@@ -66,13 +66,13 @@ export function RouteActions({
         </Button>
       </form>
       {sessionState && !sessionState.ok && (
-        <p className="text-[13px] text-red-600">{sessionState.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{sessionState.error}</p>
       )}
       <Button type="button" variant="danger" size="sm" disabled={deletePending} onClick={handleDelete}>
         {deletePending ? "Deleting…" : "Delete"}
       </Button>
       {deleteState && !deleteState.ok && (
-        <p className="text-[13px] text-red-600">{deleteState.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{deleteState.error}</p>
       )}
     </div>
   );

@@ -47,13 +47,13 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <input
-        className="h-8 w-40 rounded-md border border-line bg-white px-2 text-[12px] font-mono text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="h-8 w-40 rounded-md border border-line bg-white dark:bg-fill px-2 text-[12px] font-mono text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
         placeholder="Item ID"
         value={itemId}
         onChange={(e) => setItemId(e.target.value)}
       />
       <input
-        className="h-8 w-16 rounded-md border border-line bg-white px-2 text-[12px] font-mono text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+        className="h-8 w-16 rounded-md border border-line bg-white dark:bg-fill px-2 text-[12px] font-mono text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
         placeholder="Priority"
         type="number"
         value={priority}

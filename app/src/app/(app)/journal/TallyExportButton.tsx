@@ -87,7 +87,7 @@ export function TallyExportButton({ from, to }: { from: string; to: string }) {
           </div>
 
           {error && <p className="text-[12px] font-medium text-red">{error}</p>}
-          {done && <p className="text-[12px] font-medium text-green-700">{done} — file downloaded.</p>}
+          {done && <p className="text-[12px] font-medium text-green-700 dark:text-emerald-300">{done} — file downloaded.</p>}
         </div>
       </Dialog>
     </>

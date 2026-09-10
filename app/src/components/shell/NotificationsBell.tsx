@@ -118,7 +118,7 @@ export function NotificationsBell() {
         aria-label="Notifications"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="relative grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+        className="relative grid h-8 w-8 place-items-center rounded-lg border border-line bg-white dark:bg-surface text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
       >
         <BellGlyph />
         {unread > 0 && (
@@ -190,7 +190,7 @@ export function NotificationsBell() {
                             </span>
                           )}
                           {categoryLabel(n.category) && (
-                            <span className="mt-1 inline-block rounded border border-line bg-white px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.05em] text-ink-3">
+                            <span className="mt-1 inline-block rounded border border-line bg-white dark:bg-fill px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.05em] text-ink-3">
                               {categoryLabel(n.category)}
                             </span>
                           )}

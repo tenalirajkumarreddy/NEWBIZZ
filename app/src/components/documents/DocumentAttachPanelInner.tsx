@@ -135,7 +135,7 @@ export function DocumentAttachPanelInner({
               setFile(e.target.files?.[0] ?? null);
               if (e.target.files?.[0] && !title) setTitle(e.target.files[0].name.replace(/\.[^.]+$/, ""));
             }}
-            className="min-w-0 flex-1 text-[12px] text-ink file:mr-2 file:rounded-md file:border-0 file:bg-white file:px-2.5 file:py-1 file:text-[11px] file:font-semibold file:text-ink"
+            className="min-w-0 flex-1 text-[12px] text-ink file:mr-2 file:rounded-md file:border-0 file:bg-white dark:file:bg-fill file:px-2.5 file:py-1 file:text-[11px] file:font-semibold file:text-ink"
           />
           <div className="flex items-center gap-2">
             <Select
@@ -240,7 +240,7 @@ function PreviewDialog({ doc, onClose }: { doc: DocumentListItem; onClose: () =>
       <div className="flex flex-col gap-3">
         {url ? (
           isImage(doc.mimeType) || doc.mimeType === "application/pdf" ? (
-            <iframe src={url} className="h-[60vh] w-full rounded-lg border border-line bg-white" title={doc.title} />
+            <iframe src={url} className="h-[60vh] w-full rounded-lg border border-line bg-white dark:bg-surface" title={doc.title} />
           ) : (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <p className="text-[13px] text-ink-3">No inline preview for this file type.</p>

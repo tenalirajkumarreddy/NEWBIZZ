@@ -15,7 +15,7 @@ export function PortalNav() {
         <Link
           key={l.href}
           href={l.href}
-          className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+          className="rounded-lg border border-line bg-white dark:bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
         >
           {l.label}
         </Link>

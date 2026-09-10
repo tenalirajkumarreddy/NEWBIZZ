@@ -69,7 +69,7 @@ export function Topbar({
         onClick={() => quick.openPicker()}
         aria-label="Attach a file"
         title="Attach a file"
-        className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-[16px] font-semibold leading-none text-ink transition-colors hover:border-brand hover:text-brand"
+        className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-white dark:bg-surface text-[16px] font-semibold leading-none text-ink transition-colors hover:border-brand hover:text-brand"
       >
         +
       </button>
@@ -110,7 +110,7 @@ function WarehouseSelector({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 items-center gap-2 rounded-lg border border-line bg-white px-2.5 text-left transition-colors hover:border-line-strong"
+        className="flex h-8 items-center gap-2 rounded-lg border border-line bg-white dark:bg-surface px-2.5 text-left transition-colors hover:border-line-strong"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -198,7 +198,7 @@ function FySelector({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 items-center gap-2 rounded-lg border border-line bg-white px-2.5 text-left transition-colors hover:border-line-strong"
+        className="flex h-8 items-center gap-2 rounded-lg border border-line bg-white dark:bg-surface px-2.5 text-left transition-colors hover:border-line-strong"
         aria-haspopup="menu"
         aria-expanded={open}
       >

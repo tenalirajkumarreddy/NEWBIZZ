@@ -73,7 +73,7 @@ export function VehicleForm() {
         </Field>
       </div>
       {state && !state.ok && (
-        <p className="text-[13px] text-red-600">{state.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{state.error}</p>
       )}
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>

@@ -102,7 +102,7 @@ export function ImportStatement({ accountId, accountType }: Props) {
                 {preview.slice(0, 20).map((r, i) => (
                   <tr key={i} className="border-b border-line last:border-0">
                     <td className="px-3 py-1 text-ink">{r.txnDate}</td>
-                    <td className={`px-3 py-1 text-right tabular-nums font-medium ${r.amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <td className={`px-3 py-1 text-right tabular-nums font-medium ${r.amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                       ₹{Math.abs(r.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       <span className="ml-1 text-[11px] text-ink-3">{r.amount >= 0 ? "Cr" : "Dr"}</span>
                     </td>

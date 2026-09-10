@@ -329,7 +329,7 @@ export function NewTransferPanel({
                       aria-label="Quantity"
                     />
                     {over && (
-                      <p className="mt-1 text-[11px] text-red-600">More than you hold.</p>
+                      <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">More than you hold.</p>
                     )}
                   </div>
                   <Button

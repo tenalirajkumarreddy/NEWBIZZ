@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRow } from "@/lib/data/users";
 import { Button, PageContainer, PageHeader, Panel } from "@/components/ui";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 type GoogleState =
   | { status: "loading" }
@@ -111,6 +112,13 @@ export function ProfilePage({ profile }: { profile: UserRow | null }) {
             </div>
           </div>
         </div>
+      </Panel>
+
+      <Panel
+        title="Appearance"
+        subtitle="Light, dark, or follow your system setting."
+      >
+        <ThemeToggle />
       </Panel>
 
       <Panel

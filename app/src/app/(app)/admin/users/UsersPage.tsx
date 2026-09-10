@@ -183,7 +183,7 @@ export function UsersPage({
               onClick={() => setTab(t.key)}
               className={cn(
                 "rounded-md px-3 py-1.5 text-[12px] font-medium transition-all",
-                tab === t.key ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink",
+                tab === t.key ? "bg-white dark:bg-fill text-ink shadow-sm" : "text-ink-3 hover:text-ink",
               )}
             >
               {t.label}

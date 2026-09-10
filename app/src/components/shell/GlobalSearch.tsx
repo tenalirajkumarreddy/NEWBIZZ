@@ -126,11 +126,11 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="ml-4 flex h-8 max-w-[420px] flex-1 items-center gap-2 rounded-lg border border-line bg-fill px-3 text-left text-[13px] text-ink-4 transition-colors hover:border-line-strong hover:bg-white"
+        className="ml-4 flex h-8 max-w-[420px] flex-1 items-center gap-2 rounded-lg border border-line bg-fill px-3 text-left text-[13px] text-ink-4 transition-colors hover:border-line-strong hover:bg-white dark:hover:bg-line-soft"
       >
         <SearchGlyph />
         <span className="flex-1 truncate">Search orders, parties, items.</span>
-        <kbd className="rounded border border-line bg-white px-1.5 font-mono text-[11px] text-ink-3">⌘K</kbd>
+        <kbd className="rounded border border-line bg-white dark:bg-fill px-1.5 font-mono text-[11px] text-ink-3">⌘K</kbd>
       </button>
 
       {open && (
@@ -153,7 +153,7 @@ export function GlobalSearch() {
                 className="flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-4"
                 aria-label="Global search"
               />
-              <kbd className="rounded border border-line bg-white px-1.5 font-mono text-[11px] text-ink-3">Esc</kbd>
+              <kbd className="rounded border border-line bg-white dark:bg-fill px-1.5 font-mono text-[11px] text-ink-3">Esc</kbd>
             </div>
 
             {/* Results */}

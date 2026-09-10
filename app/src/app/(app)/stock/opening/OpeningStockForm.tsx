@@ -183,7 +183,7 @@ export function OpeningStockForm({
                       ))}
                     </Select>
                     {isDupe && (
-                      <p className="mt-1 text-[12px] text-red-600">
+                      <p className="mt-1 text-[12px] text-red-600 dark:text-red-400">
                         This item is already on another line — merge them.
                       </p>
                     )}

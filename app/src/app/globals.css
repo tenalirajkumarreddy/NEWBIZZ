@@ -2,13 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design-token palette. Light values are copied verbatim from the locked
+ * prototype's :root block (see tailwind.config.ts); the `.dark` overrides are a
+ * deep slate-navy palette matching the mobile app (page #0b1220, surfaces
+ * #131c2e, cyan brand #0891b2 kept). Every token in the Tailwind config reads
+ * one of these variables, so `bg-surface`, `text-ink`, `border-line` etc. flip
+ * everywhere at once when the `dark` class lands on <html>.
+ */
 @layer base {
+  :root {
+    --nb-bg: 241 245 249; /* slate-100 */
+    --nb-surface: 255 255 255; /* white */
+    --nb-line: 226 232 240; /* slate-200 */
+    --nb-line-soft: 241 245 249; /* slate-100 */
+    --nb-ink: 15 23 42; /* slate-900 */
+    --nb-ink-2: 71 85 105; /* slate-600 */
+    --nb-ink-3: 100 116 139; /* slate-500 */
+    --nb-ink-4: 148 163 184; /* slate-400 */
+    --nb-brand: 8 145 178; /* cyan-600 */
+    --nb-brand-d: 14 116 144; /* cyan-700 */
+    --nb-brand-wash: 236 254 255; /* cyan-50 */
+    --nb-grn: 5 150 105; /* emerald-600 */
+    --nb-grn-wash: 240 253 244; /* emerald-50 */
+    --nb-red: 220 38 38; /* red-600 */
+    --nb-red-wash: 254 242 242; /* red-50 */
+    --nb-amb: 217 119 6; /* amber-600 */
+    --nb-amb-wash: 255 251 235; /* amber-50 */
+    --nb-fill: 248 250 252; /* slate-50 */
+    --nb-line-strong: 203 213 225; /* slate-300 */
+    --nb-body-ink: 30 41 59; /* slate-800 body ink */
+  }
+
+  .dark {
+    --nb-bg: 11 18 32; /* #0b1220 deep slate-navy page */
+    --nb-surface: 19 28 46; /* #131c2e card surface */
+    --nb-line: 38 50 69; /* slate-700/60 hairline over navy */
+    --nb-line-soft: 32 48 74; /* #20304a */
+    --nb-ink: 226 232 240; /* slate-100 primary text */
+    --nb-ink-2: 203 213 225; /* slate-300 secondary text */
+    --nb-ink-3: 148 163 184; /* slate-400 muted text */
+    --nb-ink-4: 100 116 139; /* slate-500 faint text */
+    --nb-brand: 8 145 178; /* cyan-600 kept */
+    --nb-brand-d: 14 116 144; /* cyan-700 hover */
+    --nb-brand-wash: 17 51 70; /* cyan wash over navy */
+    --nb-grn: 52 211 153; /* emerald-400 */
+    --nb-grn-wash: 18 51 43; /* emerald wash over navy */
+    --nb-red: 239 68 68; /* red-500 */
+    --nb-red-wash: 56 32 44; /* red wash over navy */
+    --nb-amb: 245 158 11; /* amber-500 */
+    --nb-amb-wash: 58 44 22; /* amber wash over navy */
+    --nb-fill: 26 37 55; /* #1a2537 input/control fill */
+    --nb-line-strong: 61 81 112; /* #3d5170 hover border */
+    --nb-body-ink: 203 213 225; /* slate-300 body ink */
+
+    color-scheme: dark;
+  }
+
   html {
     font-size: 16px;
   }
   body {
-    background: #f1f5f9; /* --bg */
-    color: #1e293b; /* slate-800 body ink (prototype uses this, not --ink) */
+    background: rgb(var(--nb-bg));
+    color: rgb(var(--nb-body-ink));
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     font-size: 14px;
     line-height: 1.5;
@@ -18,6 +74,9 @@
   .tnum {
     font-family: var(--font-jetbrains-mono), monospace;
     font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: rgb(var(--nb-brand) / 0.28);
   }
 }
 
@@ -36,6 +95,14 @@
   }
   .animate-in-pop {
     animation: nb-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Dark surfaces need heavier shadows to read as elevation. */
+  .dark .shadow-card {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  }
+  .dark .shadow-pop {
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
   }
 }
 
@@ -68,9 +135,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgb(var(--nb-line-strong));
   border-radius: 20px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgb(var(--nb-ink-4));
 }

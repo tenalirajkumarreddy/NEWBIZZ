@@ -181,7 +181,7 @@ export function DayRecordPanel({
                 );
               }
             }}
-            className="h-8 rounded-lg border border-line bg-white px-2.5 text-[12px] font-medium text-ink"
+            className="h-8 rounded-lg border border-line bg-white dark:bg-fill px-2.5 text-[12px] font-medium text-ink"
           >
             {shiftTemplates.map((s) => (
               <option key={s.id} value={s.id}>

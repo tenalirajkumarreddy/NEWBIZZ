@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 // Locked type system: Inter for all UI, JetBrains Mono for every number.
@@ -29,6 +30,12 @@ export const viewport: Viewport = {
   themeColor: "#0891b2",
 };
 
+// Applied before hydration (standard next-themes pattern, hand-rolled): read the
+// stored preference from localStorage and set the `dark` class on <html> so the
+// correct palette paints on the very first frame (no flash). Matches
+// ThemeProvider's resolution: explicit light/dark, else follow the OS.
+const themeInitScript = `(function(){try{var t=localStorage.getItem("nb.web.theme");var d=t==="dark"||(t==null||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})()`;
+
 export default function RootLayout({
   children,
 }: {
@@ -36,7 +43,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body>{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

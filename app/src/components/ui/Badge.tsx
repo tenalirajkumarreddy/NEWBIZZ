@@ -10,8 +10,8 @@ type Tone = "neutral" | "brand" | "grn" | "amb" | "red" | "slate";
 
 const TONES: Record<Tone, string> = {
   neutral: "bg-fill text-ink-3 ring-1 ring-inset ring-line",
-  slate: "bg-slate-100 text-ink-2 ring-1 ring-inset ring-line-strong",
-  brand: "bg-brand-wash text-brand-d ring-1 ring-inset ring-brand/20",
+  slate: "bg-slate-100 dark:bg-slate-800/50 text-ink-2 ring-1 ring-inset ring-line-strong",
+  brand: "bg-brand-wash text-brand-d dark:text-cyan-300 ring-1 ring-inset ring-brand/20",
   grn: "bg-grn-wash text-grn ring-1 ring-inset ring-grn/20",
   amb: "bg-amb-wash text-amb ring-1 ring-inset ring-amb/20",
   red: "bg-red-wash text-red ring-1 ring-inset ring-red/20",

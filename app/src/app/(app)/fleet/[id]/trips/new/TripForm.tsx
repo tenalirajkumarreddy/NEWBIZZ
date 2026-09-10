@@ -68,7 +68,7 @@ export function TripForm({
         <textarea name="notes" className="input-primary" rows={3} placeholder="Optional notes…" />
       </Field>
       {state && !state.ok && (
-        <p className="text-[13px] text-red-600">{state.error}</p>
+        <p className="text-[13px] text-red-600 dark:text-red-400">{state.error}</p>
       )}
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>

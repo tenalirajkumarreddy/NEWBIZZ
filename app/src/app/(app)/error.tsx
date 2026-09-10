@@ -27,7 +27,7 @@ export default function GlobalError({
               This section hit an unexpected error. Your data is safe — try again, or reload the
               page.
               {isDev && error.message && (
-                <span className="mt-2 block break-words font-mono text-[11px] text-red-700">
+                <span className="mt-2 block break-words font-mono text-[11px] text-red-700 dark:text-red-300">
                   {error.message}
                 </span>
               )}

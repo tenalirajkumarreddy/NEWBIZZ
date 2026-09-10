@@ -43,7 +43,7 @@ export default async function PendingPage() {
         <form action="/auth/signout" method="post" className="mt-6">
           <button
             type="submit"
-            className="h-10 w-full rounded-lg border border-line bg-white text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:bg-fill"
+            className="h-10 w-full rounded-lg border border-line bg-white dark:bg-surface text-[13px] font-semibold text-ink-2 transition-colors hover:border-line-strong hover:bg-fill"
           >
             Sign out
           </button>

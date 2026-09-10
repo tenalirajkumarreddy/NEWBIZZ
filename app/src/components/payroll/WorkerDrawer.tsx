@@ -125,7 +125,7 @@ export function WorkerDrawer({
                         <TD>
                           <span
                             className={`font-mono text-[12px] font-semibold ${
-                              l.amount >= 0 ? "text-green-600" : "text-red-500"
+                              l.amount >= 0 ? "text-green-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                             }`}
                           >
                             {l.amount >= 0 ? "+" : ""}
@@ -135,7 +135,7 @@ export function WorkerDrawer({
                         <TD>
                           <span
                             className={`font-mono text-[12px] ${
-                              l.runningBalance >= 0 ? "text-green-600" : "text-red-500"
+                              l.runningBalance >= 0 ? "text-green-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
                             }`}
                           >
                             <Money value={l.runningBalance} />

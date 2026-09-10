@@ -119,7 +119,7 @@ export function NewRunForm({ items }: { items: ItemListRow[] }) {
               <textarea
                 id="notes"
                 rows={2}
-                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                className="w-full rounded-lg border border-line bg-white dark:bg-fill px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Optional notes about this run…"

@@ -64,7 +64,7 @@ export function PayIntentForm({ defaultAmount }: { defaultAmount?: number }) {
                   className={`rounded-lg border px-3 py-2 text-[13px] font-semibold capitalize transition-colors ${
                     mode === m
                       ? "border-brand bg-brand-wash text-brand-d"
-                      : "border-line bg-white text-ink-2 hover:border-line-strong"
+                      : "border-line bg-white dark:bg-surface text-ink-2 hover:border-line-strong"
                   }`}
                 >
                   {m}

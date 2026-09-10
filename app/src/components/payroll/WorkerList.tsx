@@ -81,11 +81,11 @@ export function WorkerList({
           </div>
           <div className="rounded-lg border border-line bg-surface p-3.5 shadow-card">
             <p className="text-[11px] font-medium uppercase tracking-wider text-ink-3">Outstanding Pay</p>
-            <p className="mt-1 text-[22px] font-bold text-green-600">{rupeesCompact(totalOutstanding)}</p>
+            <p className="mt-1 text-[22px] font-bold text-green-600 dark:text-emerald-400">{rupeesCompact(totalOutstanding)}</p>
           </div>
           <div className="rounded-lg border border-line bg-surface p-3.5 shadow-card">
             <p className="text-[11px] font-medium uppercase tracking-wider text-ink-3">Advances</p>
-            <p className="mt-1 text-[22px] font-bold text-red-500">{rupeesCompact(totalAdvances)}</p>
+            <p className="mt-1 text-[22px] font-bold text-red-500 dark:text-red-400">{rupeesCompact(totalAdvances)}</p>
           </div>
         </div>
         {canManage && (
@@ -129,7 +129,7 @@ export function WorkerList({
                   <TD>
                     <span
                       className={`font-mono text-[13px] font-semibold ${
-                        w.balance < 0 ? "text-red-500" : "text-green-600"
+                        w.balance < 0 ? "text-red-500 dark:text-red-400" : "text-green-600 dark:text-emerald-400"
                       }`}
                     >
                       <Money value={w.balance} />

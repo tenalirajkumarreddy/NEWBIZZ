@@ -155,7 +155,7 @@ export function WhatsAppInbox({
   }
 
   return (
-    <div className="grid h-[calc(100vh-220px)] min-h-[480px] grid-cols-1 overflow-hidden rounded-xl border border-line bg-white md:grid-cols-[340px_1fr]">
+    <div className="grid h-[calc(100vh-220px)] min-h-[480px] grid-cols-1 overflow-hidden rounded-xl border border-line bg-white dark:bg-surface md:grid-cols-[340px_1fr]">
       {/* ---- conversation list ---- */}
       <div className="flex min-h-0 flex-col border-b border-line md:border-b-0 md:border-r">
         <div className="border-b border-line p-3">
@@ -330,7 +330,7 @@ export function WhatsAppInbox({
                 <button
                   onClick={() => setComposeMode("text")}
                   className={`flex-1 rounded-md px-2 py-1 text-[12px] font-semibold transition-colors ${
-                    composeMode === "text" ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+                    composeMode === "text" ? "bg-white dark:bg-line-soft text-ink shadow-sm" : "text-ink-3 hover:text-ink"
                   }`}
                 >
                   Text
@@ -338,7 +338,7 @@ export function WhatsAppInbox({
                 <button
                   onClick={() => setComposeMode("template")}
                   className={`flex-1 rounded-md px-2 py-1 text-[12px] font-semibold transition-colors ${
-                    composeMode === "template" ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+                    composeMode === "template" ? "bg-white dark:bg-line-soft text-ink shadow-sm" : "text-ink-3 hover:text-ink"
                   }`}
                 >
                   Template
@@ -358,7 +358,7 @@ export function WhatsAppInbox({
                     }}
                     rows={2}
                     placeholder="Type a message… (Enter to send)"
-                    className="min-h-[44px] flex-1 resize-none rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    className="min-h-[44px] flex-1 resize-none rounded-lg border border-line bg-white dark:bg-fill px-3 py-2 text-[13px] text-ink placeholder:text-ink-4 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                   <Button variant="primary" size="sm" loading={sending} onClick={handleSend}>
                     Send

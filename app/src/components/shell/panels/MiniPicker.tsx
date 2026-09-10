@@ -49,7 +49,7 @@ export function MiniPicker({
     <div className="relative" ref={boxRef}>
       <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-4">{label}</span>
       {value ? (
-        <div className="flex h-9 items-center justify-between gap-2 rounded-lg border border-line bg-white px-2.5">
+        <div className="flex h-9 items-center justify-between gap-2 rounded-lg border border-line bg-white dark:bg-fill px-2.5">
           <span className="min-w-0 truncate text-[13px] font-medium text-ink">
             {value.label}{value.sub ? <span className="text-ink-4"> · {value.sub}</span> : null}
           </span>
@@ -62,7 +62,7 @@ export function MiniPicker({
             onFocus={() => setOpen(true)}
             onChange={(e) => { setQ(e.target.value); setOpen(true); }}
             placeholder={placeholder ?? "Search…"}
-            className="h-9 w-full rounded-lg border border-line bg-white px-2.5 text-[13px] text-ink outline-none focus:border-brand"
+            className="h-9 w-full rounded-lg border border-line bg-white dark:bg-fill px-2.5 text-[13px] text-ink outline-none focus:border-brand"
           />
           {open && (
             <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-56 overflow-y-auto rounded-lg border border-line bg-surface shadow-pop">
