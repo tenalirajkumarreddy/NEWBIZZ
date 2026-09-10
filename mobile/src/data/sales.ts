@@ -202,15 +202,17 @@ export function useOrders(status?: string) {
     queryKey: qk.orders(status),
     enabled: !!user?.id,
     queryFn: async (): Promise<OrderRow[]> => {
-      let q = supabase
+      const base = supabase
         .from("sales_orders")
         .select(`id, order_no, order_date, status, store_id, notes, created_at,
                  store:customer_stores(name),
                  lines:sales_order_lines(item_id, qty, unit_price, item:items(name))`)
         .order("created_at", { ascending: false })
-        .limit(50);
-      if (status) q = q.eq("status", status as Enums<"order_status">);
-      else q = q.in("status", ["draft", "confirmed", "approved"]);
+        .limit(200);
+      // status filter: explicit status = exact match; no arg = open statuses
+      const q = status
+        ? base.eq("status", status as Enums<"order_status">)
+        : base.in("status", ["draft", "confirmed", "approved"]);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []).map((r: any) => ({

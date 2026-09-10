@@ -24,6 +24,7 @@ export const qk = {
   pendingExpenses: () => ["pendingExpenses"] as const,
   notifications: () => ["notifications"] as const,
   unread: () => ["unread"] as const,
+  notifPrefs: () => ["notifPrefs"] as const,
   holdings: () => ["stockHoldings"] as const,
   qr: (code: string) => ["qr", code] as const,
 };

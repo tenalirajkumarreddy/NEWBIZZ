@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Switch } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { ArrowLeft, BellOff, CheckCheck } from "lucide-react-native";
+import { ArrowLeft, BellOff, CheckCheck, Settings2 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { PressCard } from "@/components/PressCard";
 import { useNotifications, markRead, type NotificationRow } from "@/data/notifications";
+import { useNotifPrefs, setNotifPref, type NotifChannel } from "@/data/notifPrefs";
+import { useSession } from "@/lib/session";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { timeAgoIST } from "@/lib/format";
@@ -41,6 +43,89 @@ function NotificationRowItem({ n, onPress }: { n: NotificationRow; onPress: (n: 
         {unread ? <View style={s.unreadDot} /> : null}
       </View>
     </PressCard>
+  );
+}
+
+const CATEGORIES: { key: string; label: string; sub: string }[] = [
+  { key: "transfer", label: "Cash handovers", sub: "Handovers and deposits involving you" },
+  { key: "expense", label: "Expenses", sub: "Submissions and approval outcomes" },
+];
+
+const CHANNELS: { key: NotifChannel; label: string }[] = [
+  { key: "in_app", label: "In-app" },
+  { key: "whatsapp", label: "WhatsApp" },
+];
+
+function PrefsSection() {
+  const { user } = useSession();
+  const prefs = useNotifPrefs();
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [show, setShow] = useState(false);
+
+  function isEnabled(category: string, channel: NotifChannel): boolean {
+    const hit = (prefs.data ?? []).find((p) => p.category === category && p.channel === channel);
+    return hit ? hit.enabled : true; // server default is enabled
+  }
+
+  async function toggle(category: string, channel: NotifChannel, value: boolean) {
+    if (!user?.id || busyKey) return;
+    const key = `${category}:${channel}`;
+    setBusyKey(key);
+    try {
+      await setNotifPref({ userId: user.id, category, channel, enabled: value });
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Could not save preference", text2: friendlyError(e) });
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  return (
+    <View style={s.prefsCard}>
+      <Pressable
+        onPress={() => setShow((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel="Notification preferences"
+        accessibilityState={{ expanded: show }}
+        style={({ pressed }) => [s.prefsHead, pressed && { opacity: 0.85 }]}
+      >
+        <Settings2 size={15} color={tokens.color.ink2} />
+        <Text style={s.prefsTitle}>Notification settings</Text>
+        <Text style={s.prefsHint}>{show ? "Hide" : "Manage"}</Text>
+      </Pressable>
+      {show ? (
+        prefs.isLoading ? (
+          <SkeletonRows rows={2} />
+        ) : (
+          <View style={s.prefsBody}>
+            {CATEGORIES.map((c) => (
+              <View key={c.key} style={s.prefCat}>
+                <Text style={s.prefLabel}>{c.label}</Text>
+                <Text style={s.prefSub}>{c.sub}</Text>
+                <View style={s.prefChannels}>
+                  {CHANNELS.map((ch) => {
+                    const on = isEnabled(c.key, ch.key);
+                    return (
+                      <View key={ch.key} style={s.prefRow}>
+                        <Text style={s.prefChannel}>{ch.label}</Text>
+                        <Switch
+                          value={on}
+                          disabled={busyKey === `${c.key}:${ch.key}`}
+                          onValueChange={(v) => void toggle(c.key, ch.key, v)}
+                          trackColor={{ true: tokens.color.brand, false: tokens.color.line }}
+                          thumbColor="#ffffff"
+                          accessibilityLabel={`${ch.label} notifications for ${c.label}`}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </View>
+        )
+      ) : null}
+    </View>
   );
 }
 
@@ -119,6 +204,7 @@ export default function NotificationsScreen() {
       />
       <Screen refreshing={notifs.isRefetching} onRefresh={onRefresh}>
         <View style={s.body}>
+          <PrefsSection />
           {notifs.isLoading ? (
             <SkeletonRows rows={5} />
           ) : notifs.isError ? (
@@ -167,6 +253,34 @@ const s = StyleSheet.create({
     gap: tokens.space.md,
   },
   list: { gap: tokens.space.sm },
+  prefsCard: {
+    backgroundColor: tokens.color.surface,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: "rgba(226,232,240,0.6)",
+    ...tokens.shadow.card,
+  },
+  prefsHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.sm,
+    minHeight: 48,
+    paddingHorizontal: tokens.space.md,
+  },
+  prefsTitle: { flex: 1, color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  prefsHint: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  prefsBody: { paddingHorizontal: tokens.space.md, paddingBottom: tokens.space.md },
+  prefCat: { gap: 2, paddingVertical: tokens.space.xs },
+  prefLabel: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  prefSub: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  prefChannels: { marginTop: tokens.space.xs, gap: tokens.space.xs },
+  prefRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 40,
+  },
+  prefChannel: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   row: { flexDirection: "row", gap: tokens.space.md, padding: tokens.space.md },
   dotWrap: { paddingTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
