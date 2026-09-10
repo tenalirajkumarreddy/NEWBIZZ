@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Image, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import Toast from "react-native-toast-message";
-import { ReceiptText, HandCoins, X } from "lucide-react-native";
+import { HandCoins, ReceiptText, X } from "lucide-react-native";
 import { useTheme } from "@/theme/ThemeContext";
 import { tokens } from "@/theme/tokens";
-import { shareInbox, isAndroid, type InboxImage } from "@/data/shareInbox";
+import { shareInbox, type InboxImage } from "@/data/shareInbox";
 import { ExpenseSheet } from "@/features/history/ExpenseSheet";
 import { HandoverSheet } from "@/features/history/HandoverSheet";
 import { gotoTab } from "@/lib/tabBus";
@@ -14,42 +13,20 @@ import { gotoTab } from "@/lib/tabBus";
  * Android share-sheet target: receives receipt image(s) from payment apps
  * (or anything image-sharing), then offers "Create expense" / "Create
  * handover" with the images pre-attached.
+ *
+ * The raw intent is consumed by ShareIntentBridge (_layout) which populates
+ * the inbox and navigates here — this screen only renders what was received.
  */
 export default function ShareReceivedScreen() {
   const router = useRouter();
   const { palette: t } = useTheme();
   const s = useStyles();
-  const [images, setImages] = useState<InboxImage[]>([]);
-  const [loading, setLoading] = useState(isAndroid());
+  const [images, setImages] = useState<InboxImage[]>(shareInbox.peek());
   const [mode, setMode] = useState<"expense" | "handover" | null>(null);
 
   useEffect(() => {
-    if (!isAndroid()) return;
-    let ReceiveSharingIntent: any = null;
-    try {
-      ReceiveSharingIntent = require("react-native-receive-sharing-intent").default;
-    } catch {
-      setLoading(false);
-      return;
-    }
-    ReceiveSharingIntent.getReceivedFiles(
-      (files: any[]) => {
-        const imgs: InboxImage[] = (files ?? [])
-          .filter((f) => (f.mimeType ?? "").startsWith("image/") && f.filePath)
-          .map((f) => ({ uri: f.filePath as string, name: f.fileName as string }));
-        shareInbox.set(imgs);
-        setImages(imgs);
-        setLoading(false);
-      },
-      () => {
-        setLoading(false);
-      },
-    );
-    return () => {
-      try {
-        ReceiveSharingIntent.clearReceivedFiles();
-      } catch {}
-    };
+    const unsub = shareInbox.subscribe(() => setImages(shareInbox.peek()));
+    return unsub;
   }, []);
 
   const done = useCallback(() => {
@@ -78,9 +55,7 @@ export default function ShareReceivedScreen() {
           <X size={18} color={t.color.ink3} />
         </Pressable>
         <Text style={s.title}>Receipt received</Text>
-        {loading ? (
-          <ActivityIndicator color={t.color.brand} style={{ marginVertical: tokens.space.xl }} />
-        ) : images.length === 0 ? (
+        {images.length === 0 ? (
           <>
             <Text style={s.sub}>No image found in the share.</Text>
             <Pressable onPress={dismiss} style={[s.choice, { backgroundColor: t.color.fill }]}>

@@ -13,12 +13,15 @@ import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { ImageViewer } from "@/components/ImageViewer";
 import { useSession } from "@/lib/session";
+import { supabase } from "@/lib/supabase";
 import { friendlyError } from "@/lib/rpc";
 import { roleLabel } from "@/lib/claims";
 import { respondTransfer, cancelTransfer, useMyCustody, type CustodyRow } from "@/data/transfers";
 import { useMyActivity } from "@/data/activity";
 import { useMyExpenses, type MyExpenseRow } from "@/data/expenses";
-import { useTransactionImages, imageSignedUrl } from "@/data/attachments";
+import { useTransactionImages, imageSignedUrl, deleteTransactionImage } from "@/data/attachments";
+import { PressCard } from "@/components/PressCard";
+import { Sheet } from "@/components/Sheet";
 import { useActiveUsers } from "@/data/users";
 import { qk } from "@/data/keys";
 import { moneyINR, dateIST, timeAgoIST } from "@/lib/format";
@@ -65,7 +68,7 @@ function groupByDay(rows: ReturnType<typeof useMyActivity>["data"]): DayGroup[] 
 }
 
 function TransferRowItem({
-  row, fromName, toName, uid, busy, onRespond, onCancel,
+  row, fromName, toName, uid, busy, onRespond, onCancel, onOpen,
 }: {
   row: CustodyRow;
   fromName: string;
@@ -74,6 +77,7 @@ function TransferRowItem({
   busy: boolean;
   onRespond: (id: string, accept: boolean) => void;
   onCancel: (id: string) => void;
+  onOpen: () => void;
 }) {
   const images = useTransactionImages("transfers", row.transfer_id);
   const imgs = images.data ?? [];
@@ -92,7 +96,7 @@ function TransferRowItem({
     row.status === "accepted" ? "grn" : row.status === "rejected" ? "red" : row.status === "pending" ? "amb" : "neutral";
 
   return (
-    <View style={s.trCard}>
+    <PressCard onPress={onOpen} style={s.trCard}>
       <View style={s.trHead}>
         <View style={[s.trDir, { backgroundColor: incoming && !outgoing ? t.color.grnWash : t.color.redWash }]}>
           <DirIcon size={14} color={dirTone} />
@@ -165,12 +169,17 @@ function TransferRowItem({
       {imgs.length > 0 ? (
         <ImageViewer visible={viewerOpen} items={imgs} onClose={() => setViewerOpen(false)} />
       ) : null}
-    </View>
+    </PressCard>
   );
 }
 
 /** Small receipt thumbnail that resolves its own signed URL. */
-function Thumb({ image }: { image: { storage_bucket: string; storage_path: string } }) {
+function Thumb({
+  image, onOpen,
+}: {
+  image: { storage_bucket: string; storage_path: string };
+  onOpen?: () => void;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -182,7 +191,9 @@ function Thumb({ image }: { image: { storage_bucket: string; storage_path: strin
     };
   }, [image.storage_bucket, image.storage_path]);
   return url ? (
-    <Image source={{ uri: url }} style={th.thumb} />
+    <Pressable onPress={onOpen} disabled={!onOpen} accessibilityLabel="Open receipt">
+      <Image source={{ uri: url }} style={th.thumb} />
+    </Pressable>
   ) : (
     <View style={th.thumb} />
   );
@@ -192,7 +203,7 @@ const th = StyleSheet.create({
   thumb: { width: 28, height: 28, borderRadius: 6, backgroundColor: "rgba(148,163,184,0.25)" },
 });
 
-function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
+function ExpenseRowItem({ e, onOpen }: { e: MyExpenseRow; onOpen: () => void }) {
   const { palette: t } = useTheme();
   const s = useStyles();
   const tone = e.status === "approved" ? "grn" : e.status === "rejected" ? "red" : "amb";
@@ -201,7 +212,7 @@ function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
   const amountColor =
     e.status === "approved" ? t.color.red : e.status === "pending" ? t.color.amb : t.color.ink4;
   return (
-    <View style={s.trCard}>
+    <PressCard onPress={onOpen} style={s.trCard}>
       <View style={s.trHead}>
         <View style={[s.trDir, { backgroundColor: t.color.ambWash }]}>
           <Wallet size={14} color={t.color.amb} />
@@ -219,7 +230,7 @@ function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
         <View style={{ flex: 1 }} />
         <Text style={s.trTime}>{dateIST(e.expenseDate)}</Text>
       </View>
-    </View>
+    </PressCard>
   );
 }
 
@@ -233,6 +244,9 @@ export default function HistoryScreen() {
   const [sheetMode, setSheetMode] = useState<HandoverMode | null>(null);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<
+    { type: "expense"; expense: MyExpenseRow } | { type: "transfer"; row: CustodyRow } | null
+  >(null);
   const fetching = useIsFetching();
 
   const kpis = useTodayKpis();
@@ -387,6 +401,7 @@ export default function HistoryScreen() {
                 <TransferRowItem
                   key={tr.transfer_id}
                   row={tr}
+                  onOpen={() => setDetail({ type: "transfer", row: tr })}
                   fromName={nameMap.get(tr.from_user_id) ?? shortId(tr.from_user_id)}
                   toName={tr.to_user_id ? nameMap.get(tr.to_user_id) ?? shortId(tr.to_user_id) : "Bank"}
                   uid={uid}
@@ -410,7 +425,11 @@ export default function HistoryScreen() {
         ) : (
           <View style={s.list}>
             {(expenses.data ?? []).map((e) => (
-              <ExpenseRowItem key={e.id} e={e} />
+              <ExpenseRowItem
+                key={e.id}
+                e={e}
+                onOpen={() => setDetail({ type: "expense", expense: e })}
+              />
             ))}
           </View>
         )}
@@ -418,6 +437,7 @@ export default function HistoryScreen() {
 
       <HandoverSheet visible={sheetMode != null} mode={sheetMode ?? "handover"} onClose={() => setSheetMode(null)} />
       <ExpenseSheet visible={expenseOpen} onClose={() => setExpenseOpen(false)} />
+      <TxnDetailSheet detail={detail} uid={uid} onClose={() => setDetail(null)} />
     </Screen>
   );
 
@@ -428,6 +448,168 @@ export default function HistoryScreen() {
 
 function shortId(id: string): string {
   return id ? `…${id.slice(0, 6)}` : "Unknown";
+}
+
+type DetailSelection =
+  | { type: "expense"; expense: MyExpenseRow }
+  | { type: "transfer"; row: CustodyRow };
+
+/**
+ * Full details for an expense or handover: all fields, attached receipts,
+ * and a Cancel action while the transaction is still pending and owned by
+ * the signer.
+ */
+function TxnDetailSheet({
+  detail, uid, onClose,
+}: {
+  detail: DetailSelection | null;
+  uid: string;
+  onClose: () => void;
+}) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const entityType = detail?.type === "expense" ? "expenses" : "transfers";
+  const entityId =
+    detail?.type === "expense" ? detail.expense.id : detail?.type === "transfer" ? detail.row.transfer_id : "";
+  const images = useTransactionImages(entityType, entityId, !!detail);
+
+  const canCancel =
+    detail?.type === "expense"
+      ? detail.expense.status === "pending"
+      : detail?.type === "transfer"
+        ? detail.row.status === "pending" && detail.row.from_user_id === uid
+        : false;
+
+  async function onCancel() {
+    if (!detail || busy) return;
+    setBusy(true);
+    try {
+      if (detail.type === "expense") {
+        // remove attached receipts first, then the expense itself
+        for (const img of images.data ?? []) {
+          await deleteTransactionImage(img).catch(() => {});
+        }
+        const { error } = await supabase.from("expenses").delete().eq("id", detail.expense.id);
+        if (error) throw error;
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: qk.expenses() }),
+          qc.invalidateQueries({ queryKey: qk.txnImages("expenses", detail.expense.id) }),
+        ]);
+        Toast.show({ type: "success", text1: "Expense cancelled" });
+      } else {
+        await cancelTransfer(detail.row.transfer_id);
+        await qc.invalidateQueries({ queryKey: qk.custody() });
+        Toast.show({ type: "success", text1: "Transfer cancelled" });
+      }
+      onClose();
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Could not cancel", text2: friendlyError(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Sheet visible={detail != null} onClose={onClose} title={detail ? (detail.type === "expense" ? "Expense details" : "Handover details") : undefined}>
+      {detail?.type === "expense" ? (
+        <View style={s.detailBody}>
+          <View style={s.detailHead}>
+            <Text style={s.detailNo}>{detail.expense.expenseNo}</Text>
+            <Text style={[s.detailAmount, { color: detail.expense.status === "approved" ? t.color.red : t.color.amb }]}>
+              {moneyINR(detail.expense.amount)}
+            </Text>
+          </View>
+          <KVRow k="Category" v={detail.expense.category.replace("_", " ")} />
+          <KVRow k="Status" v={detail.expense.status} />
+          <KVRow k="Date" v={dateIST(detail.expense.expenseDate)} />
+          {detail.expense.note ? <KVRow k="Note" v={detail.expense.note} /> : null}
+        </View>
+      ) : detail?.type === "transfer" ? (
+        <View style={s.detailBody}>
+          <View style={s.detailHead}>
+            <Text style={s.detailNo}>{detail.row.transfer_no}</Text>
+            <Text
+              style={[s.detailAmount, { color: detail.row.to_user_id === uid ? t.color.grn : t.color.red }]}
+            >
+              {moneyINR(Number(detail.row.amount ?? 0))}
+            </Text>
+          </View>
+          <KVRow k="Type" v={detail.row.type === "cash" ? "Cash" : detail.row.type} />
+          <KVRow k="Status" v={detail.row.status} />
+          <KVRow k="Created" v={timeAgoIST(detail.row.created_at)} />
+          {detail.row.note ? <KVRow k="Note" v={detail.row.note} /> : null}
+        </View>
+      ) : null}
+
+      {detail ? (
+        <>
+          <Text style={s.receiptsLabel}>
+            RECEIPTS {(images.data?.length ?? 0) > 0 ? `(${images.data!.length})` : ""}
+          </Text>
+          {(images.data?.length ?? 0) === 0 ? (
+            <Text style={s.receiptsEmpty}>No receipts attached.</Text>
+          ) : (
+            <View style={s.receiptsRow}>
+              {images.data!.map((img) => (
+                <Thumb key={img.id} image={img} onOpen={() => setViewerOpen(true)} />
+              ))}
+              <Pressable
+                onPress={() => setViewerOpen(true)}
+                accessibilityLabel="View all receipts"
+                style={({ pressed }) => [s.receiptsOpen, pressed && { opacity: 0.75 }]}
+              >
+                <Text style={s.receiptsOpenTxt}>View all</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {canCancel ? (
+            <Pressable
+              onPress={() =>
+                Alert.alert("Cancel transaction", "This pending transaction will be withdrawn.", [
+                  { text: "Keep", style: "cancel" },
+                  {
+                    text: "Cancel it",
+                    style: "destructive",
+                    onPress: () => void onCancel(),
+                  },
+                ])
+              }
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel transaction"
+              style={({ pressed }) => [s.cancelBtn, (pressed || busy) && { opacity: 0.7 }]}
+            >
+              <Ban size={15} color={t.color.red} />
+              <Text style={s.cancelTxt}>{busy ? "Cancelling…" : "Cancel transaction"}</Text>
+            </Pressable>
+          ) : null}
+          {detail.type === "transfer" && detail.row.status === "accepted" ? (
+            <Text style={s.hintTxt}>Accepted transfers cannot be cancelled - reverse with a handover back.</Text>
+          ) : null}
+        </>
+      ) : null}
+
+      {images.data && images.data.length > 0 ? (
+        <ImageViewer visible={viewerOpen} items={images.data} onClose={() => setViewerOpen(false)} />
+      ) : null}
+    </Sheet>
+  );
+}
+
+function KVRow({ k, v }: { k: string; v: string }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  return (
+    <View style={s.kvRow}>
+      <Text style={s.kvK}>{k}</Text>
+      <Text style={s.kvV} numberOfLines={1}>{v}</Text>
+    </View>
+  );
 }
 
 function SegmentBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -562,6 +744,62 @@ const useStyles = () => {
     fontVariant: ["tabular-nums"],
   },
   trFoot: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
+  detailBody: { gap: tokens.space.sm, paddingBottom: tokens.space.md },
+  detailHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.space.md,
+  },
+  detailNo: {
+    color: t.color.ink,
+    fontFamily: tokens.font.monoBold,
+    fontSize: tokens.size.sm,
+    fontVariant: ["tabular-nums"],
+  },
+  detailAmount: {
+    fontFamily: tokens.font.monoBold,
+    fontSize: tokens.size.lg,
+    fontVariant: ["tabular-nums"],
+  },
+  kvRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 36,
+    gap: tokens.space.md,
+  },
+  kvK: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  kvV: {
+    color: t.color.ink,
+    fontFamily: tokens.font.sansSemi,
+    fontSize: tokens.size.xs,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  receiptsLabel: {
+    color: t.color.ink4,
+    fontFamily: tokens.font.sansSemi,
+    fontSize: tokens.size.eyebrow,
+    letterSpacing: 0.6,
+  },
+  receiptsEmpty: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  receiptsRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
+  receiptsOpen: { minHeight: 40, paddingHorizontal: tokens.space.sm, alignItems: "center", justifyContent: "center" },
+  receiptsOpenTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  cancelBtn: {
+    minHeight: 48,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(220,38,38,0.35)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: tokens.space.sm,
+    marginTop: tokens.space.sm,
+  },
+  cancelTxt: { color: t.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  hintTxt: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, lineHeight: 15 },
   thumbRow: {
     flexDirection: "row",
     alignItems: "center",

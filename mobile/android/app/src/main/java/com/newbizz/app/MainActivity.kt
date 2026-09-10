@@ -1,6 +1,7 @@
 package com.newbizz.app
 import expo.modules.splashscreen.SplashScreenManager
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 
@@ -21,6 +22,16 @@ class MainActivity : ReactActivity() {
     SplashScreenManager.registerOnActivity(this)
     // @generated end expo-splashscreen
     super.onCreate(null)
+  }
+
+  /**
+   * Share-sheet targets (SEND/SEND_MULTIPLE receipts) arrive here when the
+   * app is alive; Android does NOT update getIntent() on its own, so store
+   * the intent for react-native-receive-sharing-intent to read.
+   */
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
   }
 
   /**

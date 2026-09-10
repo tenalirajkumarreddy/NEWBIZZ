@@ -63,6 +63,16 @@ function PushBridge() {
 
   useEffect(() => {
     configureForegroundNotifications();
+    // Native Android channel the FCM messages target (newbizz_default).
+    // Without it Android falls back to "Miscellaneous" with default styling.
+    void Notifications.setNotificationChannelAsync("newbizz_default", {
+      name: "NEWBIZZ alerts",
+      description: "Handovers, expenses and approval alerts",
+      importance: Notifications.AndroidImportance.HIGH,
+      lightColor: "#0891b2",
+      vibrationPattern: [0, 250, 250, 250],
+      enableVibrate: true,
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {

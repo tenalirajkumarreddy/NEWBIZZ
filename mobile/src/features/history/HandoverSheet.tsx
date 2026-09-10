@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { Check, Info, Plus, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
+import { DropdownSelect } from "@/components/DropdownSelect";
 import { Sheet } from "@/components/Sheet";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { useSession } from "@/lib/session";
@@ -122,30 +123,17 @@ export function HandoverSheet({
             ) : recipients.length === 0 ? (
               <Text style={s.hint}>No other active users found.</Text>
             ) : (
-              <View style={s.people}>
-                {recipients.map((u) => {
-                  const active = toUserId === u.id;
-                  return (
-                    <Pressable
-                      key={u.id}
-                      onPress={() => setToUserId(u.id)}
-                      accessibilityLabel={`Select ${u.full_name}`}
-                      accessibilityState={{ selected: active }}
-                      style={({ pressed }) => [
-                        s.person,
-                        active && s.personActive,
-                        pressed && { backgroundColor: t.color.fill },
-                      ]}
-                    >
-                      <View style={s.avatar}>
-                        <Text style={s.avatarTxt}>{initials(u.full_name)}</Text>
-                      </View>
-                      <Text style={s.personName} numberOfLines={1}>{u.full_name}</Text>
-                      {active ? <Check size={16} color={t.color.brand} /> : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <DropdownSelect
+                label="Recipient"
+                value={toUserId}
+                options={recipients.map((u) => ({
+                  value: u.id,
+                  label: u.full_name,
+                  sub: initials(u.full_name),
+                }))}
+                onChange={(v) => setToUserId(v)}
+                placeholder="Select who will receive the cash"
+              />
             )}
           </View>
         ) : (

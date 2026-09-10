@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { Check, Plus, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
+import { DropdownSelect } from "@/components/DropdownSelect";
 import { Sheet } from "@/components/Sheet";
 import { friendlyError } from "@/lib/rpc";
 import { submitMyExpense, FIELD_CATEGORIES, type ExpenseCategory } from "@/data/expenses";
@@ -94,27 +95,12 @@ export function ExpenseSheet({
       <View style={s.content}>
         <View style={s.section}>
           <Text style={s.label}>CATEGORY</Text>
-          <View style={s.chipWrap}>
-            {FIELD_CATEGORIES.map((c) => {
-              const active = category === c.value;
-              return (
-                <Pressable
-                  key={c.value}
-                  onPress={() => setCategory(c.value)}
-                  accessibilityLabel={`Category ${c.label}`}
-                  accessibilityState={{ selected: active }}
-                  style={({ pressed }) => [
-                    s.chip,
-                    active && s.chipActive,
-                    pressed && !active && { backgroundColor: t.color.fill },
-                  ]}
-                >
-                  {active ? <Check size={13} color="#ffffff" /> : null}
-                  <Text style={[s.chipTxt, active && s.chipTxtActive]}>{c.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <DropdownSelect
+            label="Category"
+            value={category}
+            options={FIELD_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+            onChange={(v) => setCategory(v as ExpenseCategory)}
+          />
         </View>
 
         <View style={s.section}>
