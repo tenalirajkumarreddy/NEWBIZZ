@@ -1,0 +1,62 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
+import { parseAccessToken, can as canPerm, type AppClaims } from "./claims";
+
+interface SessionCtx {
+  session: Session | null;
+  user: User | null;
+  claims: AppClaims;
+  loading: boolean;
+  can: (perm: string) => boolean;
+  signOut: () => Promise<void>;
+}
+
+const Ctx = createContext<SessionCtx | null>(null);
+
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+      })
+      .catch(() => {
+        setSession(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Custom claims live in the JWT's app_metadata (injected by the access
+  // token hook at mint/refresh), NOT in the persisted user record — decode
+  // the token, never session.user.app_metadata.
+  const claims = parseAccessToken(session?.access_token);
+  const value: SessionCtx = {
+    session,
+    user: session?.user ?? null,
+    claims,
+    loading,
+    can: (perm) => canPerm(claims, perm),
+    signOut: async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        setSession(null);
+      }
+    },
+  };
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useSession(): SessionCtx {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useSession outside SessionProvider");
+  return ctx;
+}

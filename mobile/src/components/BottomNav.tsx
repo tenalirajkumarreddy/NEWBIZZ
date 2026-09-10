@@ -1,0 +1,145 @@
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { tokens } from "@/theme/tokens";
+import type { LucideIcon } from "lucide-react-native";
+
+export function BottomNav({
+  tabs, active, onChange, badgeCounts = {},
+}: {
+  tabs: { id: string; label: string; icon: LucideIcon; center?: boolean }[];
+  active: string;
+  onChange: (id: string) => void;
+  badgeCounts?: Record<string, number>;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[s.wrap, { paddingBottom: insets.bottom, height: 62 + insets.bottom }]}>
+      <View style={s.row}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = tab.id === active;
+          const count = badgeCounts[tab.id] ?? 0;
+
+          if (tab.center) {
+            return (
+              <Pressable key={tab.id} style={s.slot} onPress={() => onChange(tab.id)}>
+                <View style={s.centerWrap}>
+                  <View style={[s.centerCircle, tokens.shadow.fab]}>
+                    <Icon size={22} color="#ffffff" />
+                    {count > 0 ? (
+                      <View style={s.badge}>
+                        <Text style={s.badgeTxt}>{count > 99 ? "99+" : count}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                <Text
+                  style={[s.centerLabel, { color: tokens.color.brand, opacity: isActive ? 1 : 0 }]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          }
+
+          return (
+            <Pressable key={tab.id} style={s.slot} onPress={() => onChange(tab.id)}>
+              {isActive ? <View style={s.pill} /> : null}
+              <View style={s.iconWrap}>
+                <Icon size={20} color={isActive ? tokens.color.brand : tokens.color.ink4} />
+                {count > 0 ? (
+                  <View style={s.badge}>
+                    <Text style={s.badgeTxt}>{count > 99 ? "99+" : count}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                style={[s.label, { color: isActive ? tokens.color.brand : tokens.color.ink4 }]}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  wrap: {
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: tokens.color.line,
+  },
+  row: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  slot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
+  },
+  pill: {
+    position: "absolute",
+    top: 0,
+    width: 26,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: tokens.color.brand,
+  },
+  iconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    fontFamily: tokens.font.sansSemi,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  centerWrap: {
+    height: 54,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    transform: [{ translateY: -26 }],
+    overflow: "visible",
+  },
+  centerCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: tokens.color.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerLabel: {
+    fontFamily: tokens.font.sansSemi,
+    fontSize: 10,
+    marginTop: 2,
+    height: 12,
+  },
+  badge: {
+    position: "absolute",
+    top: -3,
+    right: -5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: tokens.color.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeTxt: {
+    color: "#ffffff",
+    fontFamily: tokens.font.monoBold,
+    fontSize: 9,
+    lineHeight: 10,
+    fontVariant: ["tabular-nums"],
+  },
+});
