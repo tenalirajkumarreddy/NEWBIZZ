@@ -15,9 +15,45 @@ import { ThemeProvider, useTheme } from "@/theme/ThemeContext";
 import {
   registerPushToken, configureForegroundNotifications, tapDestination,
 } from "@/data/push";
+import { shareInbox, isAndroid } from "@/data/shareInbox";
 import { qk } from "@/data/keys";
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } });
+
+/**
+ * Receives images shared into the app (Android share sheet) and routes to
+ * the share-received screen. Cold-start shares are handled by the screen
+ * itself; this covers shares while the app is already running.
+ */
+function ShareIntentBridge() {
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (!isAndroid()) return;
+    let ReceiveSharingIntent: any = null;
+    try {
+      ReceiveSharingIntent = require("react-native-receive-sharing-intent").default;
+    } catch {
+      return;
+    }
+    ReceiveSharingIntent.getReceivedFiles(
+      (files: any[]) => {
+        const imgs = (files ?? [])
+          .filter((f) => (f.mimeType ?? "").startsWith("image/") && f.filePath)
+          .map((f) => ({ uri: f.filePath as string, name: f.fileName as string }));
+        if (imgs.length === 0) return;
+        shareInbox.set(imgs);
+        if (segments[segments.length - 1] !== "share-received") {
+          router.push("/share-received");
+        }
+      },
+      () => {},
+    );
+  }, [router, segments]);
+
+  return null;
+}
 
 /** Registers the device push token once a session exists, handles taps. */
 function PushBridge() {
@@ -114,10 +150,12 @@ export default function RootLayout() {
       <ThemeProvider>
         <SessionProvider>
           <PushBridge />
+          <ShareIntentBridge />
           <ThemedStatusBar />
           <ThemeGate>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="record" options={{ presentation: "fullScreenModal" }} />
+              <Stack.Screen name="share-received" options={{ presentation: "transparentModal" }} />
             </Stack>
             <Toast />
           </ThemeGate>

@@ -1,22 +1,27 @@
 import { useEffect, useState, useMemo } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Image } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { Check } from "lucide-react-native";
+import { Check, Plus, X } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
 import { Sheet } from "@/components/Sheet";
 import { friendlyError } from "@/lib/rpc";
 import { submitMyExpense, FIELD_CATEGORIES, type ExpenseCategory } from "@/data/expenses";
+import { uploadTransactionImages } from "@/data/attachments";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
+const MAX_IMAGES = 5;
 
 export function ExpenseSheet({
-  visible, onClose,
+  visible, onClose, initialImages,
 }: {
   visible: boolean;
   onClose: () => void;
+  /** Receipts received via the share sheet, pre-attached. */
+  initialImages?: string[];
 }) {
   const { palette: t } = useTheme();
   const s = useStyles();
@@ -25,14 +30,29 @@ export function ExpenseSheet({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (visible) {
       setCategory("fuel");
       setAmount("");
       setNote("");
+      setImages(initialImages ? initialImages.slice(0, MAX_IMAGES) : []);
     }
-  }, [visible]);
+  }, [visible, initialImages]);
+
+  async function addImages() {
+    if (images.length >= MAX_IMAGES) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_IMAGES - images.length,
+      quality: 0.6,
+    });
+    if (!res.canceled && res.assets?.length) {
+      setImages((prev) => [...prev, ...res.assets.map((a) => a.uri)].slice(0, MAX_IMAGES));
+    }
+  }
 
   const n = Number(amount.trim().replace(/,/g, ""));
   const canSubmit = Number.isFinite(n) && n > 0 && !busy;
@@ -41,12 +61,19 @@ export function ExpenseSheet({
     if (!canSubmit) return;
     setBusy(true);
     try {
-      await submitMyExpense({ category, amount: Math.round(n * 100) / 100, note: note.trim() || null });
-      await qc.invalidateQueries({ queryKey: ["expenses"] });
+      const expenseId = await submitMyExpense({ category, amount: Math.round(n * 100) / 100, note: note.trim() || null });
+      let attached = 0;
+      if (images.length > 0) {
+        attached = await uploadTransactionImages(images, "expenses", expenseId);
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["expenses"] }),
+        qc.invalidateQueries({ queryKey: ["txnImages", "expenses", expenseId] }),
+      ]);
       Toast.show({
         type: "success",
         text1: "Expense submitted",
-        text2: "Pending manager approval - money leaves custody once approved",
+        text2: attached > 0 ? `${attached} receipt${attached === 1 ? "" : "s"} attached` : "Pending manager approval",
       });
       onClose();
     } catch (e) {
@@ -131,6 +158,33 @@ export function ExpenseSheet({
             accessible
             accessibilityLabel="Note"
           />
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.label}>RECEIPTS (UPTO {MAX_IMAGES})</Text>
+          <View style={s.imageRow}>
+            {images.map((uri, i) => (
+              <View key={`${uri}-${i}`} style={s.imageWrap}>
+                <Image source={{ uri }} style={s.image} />
+                <Pressable
+                  onPress={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                  accessibilityLabel={`Remove receipt ${i + 1}`}
+                  style={({ pressed }) => [s.imageRemove, pressed && { opacity: 0.7 }]}
+                >
+                  <X size={11} color="#ffffff" />
+                </Pressable>
+              </View>
+            ))}
+            {images.length < MAX_IMAGES ? (
+              <Pressable
+                onPress={() => void addImages()}
+                accessibilityLabel="Add receipt image"
+                style={({ pressed }) => [s.imageAdd, pressed && { opacity: 0.8 }]}
+              >
+                <Plus size={18} color={t.color.ink3} />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
 
         <View style={s.infoBox}>
@@ -241,7 +295,32 @@ const useStyles = () => {
   infoBox: {
     padding: tokens.space.md,
     borderRadius: tokens.radius.md,
-    backgroundColor: t.color.brandWash,
+    backgroundColor: tokens.color.brandWash,
+  },
+  imageRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
+  imageWrap: { width: 56, height: 56 },
+  image: { width: 56, height: 56, borderRadius: tokens.radius.md, backgroundColor: tokens.color.fill },
+  imageRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(15,23,42,0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageAdd: {
+    width: 56,
+    height: 56,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.color.surface,
   },
   infoTxt: { color: t.color.brandD, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   submit: {

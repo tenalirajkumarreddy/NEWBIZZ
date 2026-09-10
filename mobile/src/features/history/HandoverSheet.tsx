@@ -1,26 +1,31 @@
 import { useEffect, useState, useMemo } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Image } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { Check, Info } from "lucide-react-native";
+import { Check, Info, Plus, X } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
 import { Sheet } from "@/components/Sheet";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { createCashTransfer } from "@/data/transfers";
+import { uploadTransactionImages } from "@/data/attachments";
 import { useActiveUsers } from "@/data/users";
 import { qk } from "@/data/keys";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
 export type HandoverMode = "handover" | "deposit";
+const MAX_IMAGES = 5;
 
 export function HandoverSheet({
-  visible, onClose, mode,
+  visible, onClose, mode, initialImages,
 }: {
   visible: boolean;
   onClose: () => void;
   mode: HandoverMode;
+  /** Receipts received via the share sheet, pre-attached. */
+  initialImages?: string[];
 }) {
   const { palette: t } = useTheme();
   const s = useStyles();
@@ -31,14 +36,29 @@ export function HandoverSheet({
   const [amount, setAmount] = useState("0");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (visible) {
       setToUserId(null);
       setAmount("0");
       setNote("");
+      setImages(initialImages ? initialImages.slice(0, MAX_IMAGES) : []);
     }
-  }, [visible, mode]);
+  }, [visible, mode, initialImages]);
+
+  async function addImages() {
+    if (images.length >= MAX_IMAGES) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_IMAGES - images.length,
+      quality: 0.6,
+    });
+    if (!res.canceled && res.assets?.length) {
+      setImages((prev) => [...prev, ...res.assets.map((a) => a.uri)].slice(0, MAX_IMAGES));
+    }
+  }
 
   const recipients = (users.data ?? []).filter((u) => u.id !== user?.id);
 
@@ -55,12 +75,27 @@ export function HandoverSheet({
     }
     setBusy(true);
     try {
-      await createCashTransfer(mode === "deposit" ? null : toUserId, Math.round(n * 100) / 100, note.trim() || null);
-      await qc.invalidateQueries({ queryKey: qk.custody() });
+      const transferId = await createCashTransfer(
+        mode === "deposit" ? null : toUserId,
+        Math.round(n * 100) / 100,
+        note.trim() || null,
+      );
+      let attached = 0;
+      if (images.length > 0) {
+        attached = await uploadTransactionImages(images, "transfers", transferId);
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.custody() }),
+        qc.invalidateQueries({ queryKey: ["txnImages", "transfers", transferId] }),
+      ]);
       Toast.show({
         type: "success",
         text1: mode === "deposit" ? "Deposit posted" : "Handover created",
-        text2: mode === "deposit" ? "Cash will be posted to the bank account" : "Waiting for the recipient to confirm",
+        text2: attached > 0
+          ? `${attached} receipt${attached === 1 ? "" : "s"} attached`
+          : mode === "deposit"
+            ? "Cash will be posted to the bank account"
+            : "Waiting for the recipient to confirm",
       });
       onClose();
     } catch (e) {
@@ -147,6 +182,33 @@ export function HandoverSheet({
             accessible
             accessibilityLabel="Note"
           />
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.label}>RECEIPTS (UPTO {MAX_IMAGES})</Text>
+          <View style={s.imageRow}>
+            {images.map((uri, i) => (
+              <View key={`${uri}-${i}`} style={s.imageWrap}>
+                <Image source={{ uri }} style={s.image} />
+                <Pressable
+                  onPress={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                  accessibilityLabel={`Remove receipt ${i + 1}`}
+                  style={({ pressed }) => [s.imageRemove, pressed && { opacity: 0.7 }]}
+                >
+                  <X size={11} color="#ffffff" />
+                </Pressable>
+              </View>
+            ))}
+            {images.length < MAX_IMAGES ? (
+              <Pressable
+                onPress={() => void addImages()}
+                accessibilityLabel="Add receipt image"
+                style={({ pressed }) => [s.imageAdd, pressed && { opacity: 0.8 }]}
+              >
+                <Plus size={18} color={t.color.ink3} />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
 
         <Pressable
@@ -258,6 +320,31 @@ const useStyles = () => {
     color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
+  },
+  imageRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
+  imageWrap: { width: 56, height: 56 },
+  image: { width: 56, height: 56, borderRadius: tokens.radius.md, backgroundColor: t.color.fill },
+  imageRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(15,23,42,0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageAdd: {
+    width: 56,
+    height: 56,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: t.color.line,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: t.color.surface,
   },
   submit: {
     minHeight: 48,

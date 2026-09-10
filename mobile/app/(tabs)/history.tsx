@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, Pressable, Alert, StyleSheet, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import {
@@ -11,12 +11,14 @@ import { HeaderRight } from "@/components/HeaderRight";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
+import { ImageViewer } from "@/components/ImageViewer";
 import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { roleLabel } from "@/lib/claims";
 import { respondTransfer, cancelTransfer, useMyCustody, type CustodyRow } from "@/data/transfers";
 import { useMyActivity } from "@/data/activity";
 import { useMyExpenses, type MyExpenseRow } from "@/data/expenses";
+import { useTransactionImages, imageSignedUrl } from "@/data/attachments";
 import { useActiveUsers } from "@/data/users";
 import { qk } from "@/data/keys";
 import { moneyINR, dateIST, timeAgoIST } from "@/lib/format";
@@ -73,6 +75,9 @@ function TransferRowItem({
   onRespond: (id: string, accept: boolean) => void;
   onCancel: (id: string) => void;
 }) {
+  const images = useTransactionImages("transfers", row.transfer_id);
+  const imgs = images.data ?? [];
+  const [viewerOpen, setViewerOpen] = useState(false);
   const { palette: t } = useTheme();
   const s = useStyles();
   const incoming = row.to_user_id === uid;
@@ -103,6 +108,20 @@ function TransferRowItem({
           {moneyINR(Number(row.amount ?? 0))}
         </Text>
       </View>
+      {imgs.length > 0 ? (
+        <Pressable
+          onPress={() => setViewerOpen(true)}
+          accessibilityLabel={`View ${imgs.length} receipt image(s)`}
+          style={({ pressed }) => [s.thumbRow, pressed && { opacity: 0.8 }]}
+        >
+          {imgs.slice(0, 3).map((img) => (
+            <Thumb key={img.id} image={img} />
+          ))}
+          <Text style={s.thumbCount}>
+            {imgs.length} receipt{imgs.length === 1 ? "" : "s"}
+          </Text>
+        </Pressable>
+      ) : null}
       <View style={s.trFoot}>
         <StatusBadge label={row.status} tone={statusTone} />
         {row.note ? <Text style={s.trNote} numberOfLines={1}>"{row.note}"</Text> : <View style={{ flex: 1 }} />}
@@ -143,9 +162,35 @@ function TransferRowItem({
           </Pressable>
         </View>
       ) : null}
+      {imgs.length > 0 ? (
+        <ImageViewer visible={viewerOpen} items={imgs} onClose={() => setViewerOpen(false)} />
+      ) : null}
     </View>
   );
 }
+
+/** Small receipt thumbnail that resolves its own signed URL. */
+function Thumb({ image }: { image: { storage_bucket: string; storage_path: string } }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    imageSignedUrl(image.storage_bucket, image.storage_path)
+      .then((u) => alive && setUrl(u))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [image.storage_bucket, image.storage_path]);
+  return url ? (
+    <Image source={{ uri: url }} style={th.thumb} />
+  ) : (
+    <View style={th.thumb} />
+  );
+}
+
+const th = StyleSheet.create({
+  thumb: { width: 28, height: 28, borderRadius: 6, backgroundColor: "rgba(148,163,184,0.25)" },
+});
 
 function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
   const { palette: t } = useTheme();
@@ -517,6 +562,17 @@ const useStyles = () => {
     fontVariant: ["tabular-nums"],
   },
   trFoot: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
+  thumbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.xs,
+    minHeight: 32,
+  },
+  thumbCount: {
+    color: t.color.ink3,
+    fontFamily: tokens.font.sans,
+    fontSize: tokens.size.eyebrow,
+  },
   trNote: {
     flex: 1,
     color: t.color.ink3,

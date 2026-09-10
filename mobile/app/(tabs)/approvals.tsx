@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { CheckCheck, ClipboardList, Eye, FileText, Info, Wallet, X } from "lucide-react-native";
@@ -22,6 +22,8 @@ import {
 import {
   approveExpense, rejectExpense, usePendingExpenses, type PendingExpenseRow,
 } from "@/data/expenses";
+import { useTransactionImages, imageSignedUrl } from "@/data/attachments";
+import { ImageViewer } from "@/components/ImageViewer";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -43,6 +45,7 @@ export default function ApprovalsScreen() {
   const [detail, setDetail] = useState<OrderRow | null>(null);
   const [rejecting, setRejecting] = useState<PendingExpenseRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [viewerItems, setViewerItems] = useState<{ storage_bucket: string; storage_path: string }[] | null>(null);
 
   const pending = useMemo(
     () => ordersAll(confirmed, approved).sort((a, b) => (a.orderDate < b.orderDate ? 1 : -1)),
@@ -224,6 +227,10 @@ export default function ApprovalsScreen() {
         )}
       </View>
 
+      {viewerItems ? (
+        <ImageViewer visible items={viewerItems} onClose={() => setViewerItems(null)} />
+      ) : null}
+
       <Sheet visible={detail != null} onClose={() => setDetail(null)} title={detail ? `Order ${detail.orderNo}` : undefined}>
         {detail ? (
           <View style={st.detailBody}>
@@ -312,6 +319,10 @@ function ExpenseCard({
 }) {
   const { palette: t } = useTheme();
   const st = useStyles();
+  const images = useTransactionImages("expenses", row.id);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const imgs = images.data ?? [];
+  const count = imgs.length;
   return (
     <View style={st.card}>
       <View style={st.cardHead}>
@@ -328,6 +339,18 @@ function ExpenseCard({
         {/* Money convention: red = amount will leave custody on approval */}
         <Text style={[st.total, { color: t.color.red }]} numberOfLines={1}>{moneyINR(row.amount)}</Text>
       </View>
+      {count > 0 ? (
+        <Pressable
+          onPress={() => setViewerOpen(true)}
+          accessibilityLabel={`View ${count} receipt image(s)`}
+          style={({ pressed }) => [st.thumbRow, pressed && { opacity: 0.8 }]}
+        >
+          {imgs.slice(0, 3).map((img) => (
+            <Thumb key={img.id} image={img} />
+          ))}
+          <Text style={st.thumbCount}>{count} receipt{count === 1 ? "" : "s"} · tap to review</Text>
+        </Pressable>
+      ) : null}
       <View style={st.actions}>
         <Pressable
           onPress={onApprove}
@@ -350,9 +373,39 @@ function ExpenseCard({
           <Text style={[st.btnTxt, { color: t.color.red }]}>Reject</Text>
         </Pressable>
       </View>
+      {count > 0 ? (
+        <ImageViewer
+          visible={viewerOpen}
+          items={imgs}
+          onClose={() => setViewerOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }
+
+/** Small receipt thumbnail that resolves its own signed URL. */
+function Thumb({ image }: { image: { storage_bucket: string; storage_path: string } }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    imageSignedUrl(image.storage_bucket, image.storage_path)
+      .then((u) => alive && setUrl(u))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [image.storage_bucket, image.storage_path]);
+  return url ? (
+    <Image source={{ uri: url }} style={th.thumb} />
+  ) : (
+    <View style={th.thumb} />
+  );
+}
+
+const th = StyleSheet.create({
+  thumb: { width: 28, height: 28, borderRadius: 6, backgroundColor: "rgba(148,163,184,0.25)" },
+});
 
 function orderTotal(order: OrderRow): number {
   return order.lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0);
@@ -504,6 +557,18 @@ const useStyles = () => {
     backgroundColor: t.color.surface,
     borderWidth: 1,
     borderColor: t.color.line,
+  },
+  thumbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.xs,
+    minHeight: 32,
+  },
+  thumbCount: {
+    flex: 1,
+    color: t.color.ink3,
+    fontFamily: tokens.font.sans,
+    fontSize: tokens.size.eyebrow,
   },
   gridRow: { flexDirection: "row", gap: tokens.space.sm },
   note: {
