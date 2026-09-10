@@ -249,7 +249,7 @@ export default function ApprovalsScreen() {
       <Sheet visible={rejecting != null} onClose={() => setRejecting(null)} title="Reject expense">
         {rejecting ? (
           <View style={st.detailBody}>
-            <Text style={st.detailStore}>{rejecting.expenseNo} - {moneyINR(rejecting.amount)}</Text>
+            <Text style={st.detailStore}>{rejecting.expenseNo} · <Text style={{ color: tokens.color.red }}>{moneyINR(rejecting.amount)}</Text></Text>
             <Text style={st.detailNotes}>
               {rejecting.spenderName ?? "Agent"} · {rejecting.category.replace("_", " ")}
             </Text>
@@ -319,7 +319,8 @@ function ExpenseCard({
           </Text>
           {row.note ? <Text style={st.expNote} numberOfLines={1}>"{row.note}"</Text> : null}
         </View>
-        <Text style={st.total} numberOfLines={1}>{moneyINR(row.amount)}</Text>
+        {/* Money convention: red = amount will leave custody on approval */}
+        <Text style={[st.total, { color: tokens.color.red }]} numberOfLines={1}>{moneyINR(row.amount)}</Text>
       </View>
       <View style={st.actions}>
         <Pressable

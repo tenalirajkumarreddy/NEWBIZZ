@@ -76,7 +76,8 @@ function TransferRowItem({
   const outgoing = t.from_user_id === uid;
   const isPending = t.status === "pending";
   const DirIcon = incoming && !outgoing ? ArrowDown : ArrowUp;
-  const dirTone = incoming && !outgoing ? tokens.color.grn : tokens.color.brand;
+  // Money convention: green = you receive, red = you pay/hand out.
+  const dirTone = incoming && !outgoing ? tokens.color.grn : tokens.color.red;
   const dirLabel = incoming && !outgoing ? `from ${fromName}` : `to ${toName}`;
 
   const statusTone =
@@ -85,14 +86,19 @@ function TransferRowItem({
   return (
     <View style={s.trCard}>
       <View style={s.trHead}>
-        <View style={[s.trDir, { backgroundColor: incoming && !outgoing ? tokens.color.grnWash : tokens.color.brandWash }]}>
+        <View style={[s.trDir, { backgroundColor: incoming && !outgoing ? tokens.color.grnWash : tokens.color.redWash }]}>
           <DirIcon size={14} color={dirTone} />
         </View>
         <View style={s.trMain}>
           <Text style={s.trNo}>{t.transfer_no}</Text>
           <Text style={s.trParty} numberOfLines={1}>{dirLabel}</Text>
         </View>
-        <Text style={s.trAmount} numberOfLines={1}>{moneyINR(Number(t.amount ?? 0))}</Text>
+        <Text
+          style={[s.trAmount, { color: incoming && !outgoing ? tokens.color.grn : tokens.color.red }]}
+          numberOfLines={1}
+        >
+          {moneyINR(Number(t.amount ?? 0))}
+        </Text>
       </View>
       <View style={s.trFoot}>
         <StatusBadge label={t.status} tone={statusTone} />
@@ -140,6 +146,10 @@ function TransferRowItem({
 
 function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
   const tone = e.status === "approved" ? "grn" : e.status === "rejected" ? "red" : "amb";
+  // Money convention: approved = paid out (red), pending = uncertain (amber),
+  // rejected = nothing moved (muted).
+  const amountColor =
+    e.status === "approved" ? tokens.color.red : e.status === "pending" ? tokens.color.amb : tokens.color.ink4;
   return (
     <View style={s.trCard}>
       <View style={s.trHead}>
@@ -152,7 +162,7 @@ function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
             {e.category.replace("_", " ")}{e.note ? ` - ${e.note}` : ""}
           </Text>
         </View>
-        <Text style={s.trAmount} numberOfLines={1}>{moneyINR(e.amount)}</Text>
+        <Text style={[s.trAmount, { color: amountColor }]} numberOfLines={1}>{moneyINR(e.amount)}</Text>
       </View>
       <View style={s.trFoot}>
         <StatusBadge label={e.status} tone={tone} />
@@ -490,7 +500,6 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
   trAmount: {
-    color: tokens.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
