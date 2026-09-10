@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, Pressable, Platform, Linking,
 } from "react-native";
@@ -17,6 +17,7 @@ import type { StoreRow } from "@/data/stores";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Tone = "brand" | "grn" | "amb";
 
@@ -25,8 +26,10 @@ function MiniAction({
 }: {
   icon: LucideIcon; label: string; onPress: () => void; tone?: Tone; disabled?: boolean;
 }) {
-  const wash = { brand: tokens.color.brandWash, grn: tokens.color.grnWash, amb: tokens.color.ambWash }[tone];
-  const fg = { brand: tokens.color.brand, grn: tokens.color.grn, amb: tokens.color.amb }[tone];
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const wash = { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[tone];
+  const fg = { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[tone];
   return (
     <Pressable
       onPress={onPress}
@@ -53,6 +56,7 @@ export function StoreCard({
   canCollect: boolean;
   sessionId: string;
 }) {
+  const s = useStyles();
   const router = useRouter();
   const qc = useQueryClient();
   const [visiting, setVisiting] = useState(false);
@@ -161,24 +165,28 @@ export function StoreCard({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   inner: { padding: tokens.space.md, gap: tokens.space.md },
   head: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   chip: {
     width: 40, height: 40, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center", justifyContent: "center",
   },
-  chipTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
+  chipTxt: { color: t.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   main: { flex: 1, minWidth: 0 },
-  name: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  sub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  name: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  sub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   eyebrow: {
-    color: tokens.color.ink4, fontFamily: tokens.font.sansSemi,
+    color: t.color.ink4, fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow, letterSpacing: 0.5, marginTop: 3,
   },
   code: {
-    color: tokens.color.ink4, fontFamily: tokens.font.mono,
+    color: t.color.ink4, fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs, fontVariant: ["tabular-nums"],
   },
   actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.space.xs },
@@ -189,3 +197,5 @@ const s = StyleSheet.create({
   },
   btnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

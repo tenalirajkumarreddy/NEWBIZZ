@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,8 +15,11 @@ import Toast from "react-native-toast-message";
 import { supabase } from "@/lib/supabase";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export default function Login() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [stage, setStage] = useState<"phone" | "otp">("phone");
@@ -79,7 +82,7 @@ export default function Login() {
                 keyboardType="phone-pad"
                 textContentType="telephoneNumber"
                 placeholder="9876543210"
-                placeholderTextColor={tokens.color.ink4}
+                placeholderTextColor={t.color.ink4}
                 maxLength={10}
                 autoFocus
               />
@@ -93,7 +96,7 @@ export default function Login() {
               ]}
             >
               {sending ? (
-                <ActivityIndicator color={tokens.color.surface} />
+                <ActivityIndicator color={t.color.surface} />
               ) : (
                 <Text style={s.primaryTxt}>Send OTP</Text>
               )}
@@ -109,7 +112,7 @@ export default function Login() {
               keyboardType="number-pad"
               textContentType="oneTimeCode"
               placeholder="······"
-              placeholderTextColor={tokens.color.ink4}
+              placeholderTextColor={t.color.ink4}
               maxLength={6}
               autoFocus
             />
@@ -122,7 +125,7 @@ export default function Login() {
               ]}
             >
               {verifying ? (
-                <ActivityIndicator color={tokens.color.surface} />
+                <ActivityIndicator color={t.color.surface} />
               ) : (
                 <Text style={s.primaryTxt}>Verify</Text>
               )}
@@ -144,8 +147,12 @@ export default function Login() {
   );
 }
 
-const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: tokens.color.bg },
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: t.color.bg },
   container: {
     flexGrow: 1,
     alignItems: "center",
@@ -156,23 +163,23 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: tokens.radius.lg,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: tokens.space.lg,
   },
   logoTxt: {
-    color: tokens.color.surface,
+    color: t.color.surface,
     fontFamily: tokens.font.sansBold,
     fontSize: tokens.size.xxl,
   },
   title: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansBold,
     fontSize: tokens.size.xxl,
   },
   subtitle: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.sm,
     marginTop: tokens.space.xs,
@@ -183,32 +190,32 @@ const s = StyleSheet.create({
     alignItems: "center",
     alignSelf: "stretch",
     height: 52,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     paddingHorizontal: tokens.space.md,
   },
   prefix: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.base,
   },
   divider: {
     width: 1,
     height: 22,
-    backgroundColor: tokens.color.line,
+    backgroundColor: t.color.line,
     marginHorizontal: tokens.space.md,
   },
   phoneInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.base,
     padding: 0,
   },
   otpLabel: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.sm,
     textAlign: "center",
@@ -217,11 +224,11 @@ const s = StyleSheet.create({
   otpInput: {
     alignSelf: "stretch",
     height: 56,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    color: tokens.color.ink,
+    borderColor: t.color.line,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xl,
     letterSpacing: 8,
@@ -233,14 +240,14 @@ const s = StyleSheet.create({
     alignSelf: "stretch",
     height: 48,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
     marginTop: tokens.space.lg,
   },
   primaryBtnDisabled: { opacity: 0.6 },
   primaryTxt: {
-    color: tokens.color.surface,
+    color: t.color.surface,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.base,
   },
@@ -252,8 +259,10 @@ const s = StyleSheet.create({
     marginTop: tokens.space.sm,
   },
   ghostTxt: {
-    color: tokens.color.brand,
+    color: t.color.brand,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
   },
 });
+  }, [palette]);
+};

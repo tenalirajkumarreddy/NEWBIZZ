@@ -30,6 +30,7 @@ import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { moneyINR, todayIST } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Mode = "sale" | "collect";
 
@@ -43,6 +44,8 @@ function Segmented({
   canSale: boolean;
   canCollect: boolean;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const opts: { key: Mode; label: string; icon: typeof IndianRupee }[] = [];
   if (canSale) opts.push({ key: "sale", label: "Sale", icon: IndianRupee });
   if (canCollect) opts.push({ key: "collect", label: "Collect", icon: HandCoins });
@@ -60,7 +63,7 @@ function Segmented({
             accessibilityState={{ selected: on }}
             style={({ pressed }) => [s.segBtn, on && s.segBtnOn, pressed && { opacity: 0.85 }]}
           >
-            <Icon size={14} color={on ? tokens.color.surface : tokens.color.white30} />
+            <Icon size={14} color={on ? t.color.surface : t.color.white30} />
             <Text style={[s.segTxt, on && s.segTxtOn]}>{o.label}</Text>
           </Pressable>
         );
@@ -77,8 +80,10 @@ function StoreCard({
   onPress: () => void;
   accent: "brand" | "grn";
 }) {
-  const fg = accent === "grn" ? tokens.color.grn : tokens.color.brand;
-  const wash = accent === "grn" ? tokens.color.grnWash : tokens.color.brandWash;
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const fg = accent === "grn" ? t.color.grn : t.color.brand;
+  const wash = accent === "grn" ? t.color.grnWash : t.color.brandWash;
   if (store) {
     return (
       <PressCard onPress={locked ? () => {} : onPress}>
@@ -93,9 +98,9 @@ function StoreCard({
             </Text>
           </View>
           {locked ? (
-            <ClipboardList size={15} color={tokens.color.ink4} />
+            <ClipboardList size={15} color={t.color.ink4} />
           ) : (
-            <ChevronDown size={16} color={tokens.color.ink4} />
+            <ChevronDown size={16} color={t.color.ink4} />
           )}
         </View>
       </PressCard>
@@ -107,14 +112,16 @@ function StoreCard({
       accessibilityLabel="Tap to select store"
       style={({ pressed }) => [s.storeEmpty, pressed && { opacity: 0.85 }]}
     >
-      <StoreIcon size={16} color={tokens.color.ink4} />
+      <StoreIcon size={16} color={t.color.ink4} />
       <Text style={s.storeEmptyTxt}>Tap to select store</Text>
-      <ChevronDown size={16} color={tokens.color.ink4} />
+      <ChevronDown size={16} color={t.color.ink4} />
     </Pressable>
   );
 }
 
 export default function RecordScreen() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const router = useRouter();
   const qc = useQueryClient();
   const { can, user } = useSession();
@@ -463,15 +470,15 @@ export default function RecordScreen() {
                   <SkeletonRows rows={2} />
                 ) : order ? (
                   <View style={s.orderBanner}>
-                    <ClipboardList size={15} color={tokens.color.brand} />
+                    <ClipboardList size={15} color={t.color.brand} />
                     <Text style={s.orderBannerTxt}>
                       Fulfilling order <Text style={s.monoBold}>{order.orderNo}</Text> — cart prefilled from order lines
                     </Text>
                   </View>
                 ) : (
                   <View style={[s.orderBanner, s.orderBannerWarn]}>
-                    <TriangleAlert size={15} color={tokens.color.amb} />
-                    <Text style={[s.orderBannerTxt, { color: tokens.color.amb }]}>Order not found</Text>
+                    <TriangleAlert size={15} color={t.color.amb} />
+                    <Text style={[s.orderBannerTxt, { color: t.color.amb }]}>Order not found</Text>
                   </View>
                 )
               ) : null}
@@ -576,8 +583,12 @@ export default function RecordScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: tokens.color.bg },
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.color.bg },
   flex: { flex: 1 },
   noPermBody: { padding: tokens.space.xl },
   scrollIn: { paddingBottom: 64, flexGrow: 1 },
@@ -601,9 +612,9 @@ const s = StyleSheet.create({
     minHeight: 44,
     borderRadius: tokens.radius.full,
   },
-  segBtnOn: { backgroundColor: tokens.color.brand },
-  segTxt: { color: tokens.color.white30, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  segTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  segBtnOn: { backgroundColor: t.color.brand },
+  segTxt: { color: t.color.white30, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  segTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   storeRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md, padding: tokens.space.md },
   storeChip: {
     width: 40, height: 40, borderRadius: tokens.radius.md,
@@ -611,53 +622,53 @@ const s = StyleSheet.create({
   },
   storeChipTxt: { fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   storeMain: { flex: 1 },
-  storeName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  storeSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  storeName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  storeSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   storeEmpty: {
     minHeight: 56,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: tokens.color.ink4,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.ink4,
+    backgroundColor: t.color.surface,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: tokens.space.sm,
     paddingHorizontal: tokens.space.lg,
   },
-  storeEmptyTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
+  storeEmptyTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
   orderBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.sm,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     borderRadius: tokens.radius.md,
     padding: tokens.space.md,
   },
-  orderBannerWarn: { backgroundColor: tokens.color.ambWash },
+  orderBannerWarn: { backgroundColor: t.color.ambWash },
   orderBannerTxt: {
     flex: 1,
-    color: tokens.color.brand,
+    color: t.color.brand,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.xs,
     lineHeight: 17,
   },
   monoBold: { fontFamily: tokens.font.monoBold },
   sectionTitle: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.base,
     marginTop: tokens.space.xs,
   },
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
     gap: tokens.space.lg,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   totalRow: {
     flexDirection: "row",
@@ -666,28 +677,28 @@ const s = StyleSheet.create({
     gap: tokens.space.md,
   },
   totalLabel: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.5,
   },
   totalVal: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xxl,
     fontVariant: ["tabular-nums"],
   },
   breakdown: { gap: 6 },
   breakRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
-  breakName: { flex: 1, color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  breakName: { flex: 1, color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   breakQty: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
   breakTotal: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
@@ -697,9 +708,11 @@ const s = StyleSheet.create({
   submit: {
     minHeight: 48,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
   },
-  submitTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  submitTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
 });
+  }, [palette]);
+};

@@ -5,12 +5,16 @@ import { Wifi, WifiOff, UserRound } from "lucide-react-native";
 import { Bell } from "@/components/Bell";
 import { useUnreadCount } from "@/data/notifications";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 /**
  * Gradient-header actions: sync state, notifications, profile.
  * Ghost buttons - no background, white icons that sit on the gradient.
  */
 export function HeaderRight() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const router = useRouter();
   const pathname = usePathname();
   const { data: unread = 0 } = useUnreadCount();
@@ -28,7 +32,7 @@ export function HeaderRight() {
           style={({ pressed }) => [s.ghost, pressed && { opacity: 0.7 }]}
         >
           {online ? <Wifi size={19} color="#ffffff" /> : <WifiOff size={19} color="#fecaca" />}
-          {!online ? <View style={[s.dot, { backgroundColor: tokens.color.red }]} /> : null}
+          {!online ? <View style={[s.dot, { backgroundColor: t.color.red }]} /> : null}
         </Pressable>
       ) : null}
       {pathname !== "/notifications" ? (
@@ -49,7 +53,11 @@ export function HeaderRight() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -73,3 +81,5 @@ const s = StyleSheet.create({
     borderColor: "#0e7490",
   },
 });
+  }, [palette]);
+};

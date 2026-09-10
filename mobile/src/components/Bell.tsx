@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { tokens } from "@/theme/tokens";
 import { Bell as BellIcon } from "lucide-react-native";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function Bell({
   unreadCount, onPress,
@@ -10,6 +11,7 @@ export function Bell({
   unreadCount: number;
   onPress: () => void;
 }) {
+  const s = useStyles();
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -36,7 +38,11 @@ export function Bell({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   hit: {
     alignItems: "center",
     justifyContent: "center",
@@ -51,7 +57,7 @@ const s = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: tokens.color.red,
+    backgroundColor: t.color.red,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -63,3 +69,5 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
 });
+  }, [palette]);
+};

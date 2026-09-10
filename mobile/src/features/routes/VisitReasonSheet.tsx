@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
@@ -11,6 +11,7 @@ import { recordVisit } from "@/data/routes";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export interface VisitTargetStore {
   id: string;
@@ -18,12 +19,6 @@ export interface VisitTargetStore {
   lat: number | null;
   lng: number | null;
 }
-
-const REASONS: { type: string; label: string; desc: string; icon: LucideIcon; wash: string; fg: string }[] = [
-  { type: "mark_visited", label: "Mark visited", desc: "Checked in at the store", icon: Footprints, wash: tokens.color.brandWash, fg: tokens.color.brand },
-  { type: "record_sale", label: "Sale visit", desc: "Order or cash memo placed", icon: ShoppingCart, wash: tokens.color.grnWash, fg: tokens.color.grn },
-  { type: "collect_payment", label: "Collect payment visit", desc: "Payment collected at the store", icon: HandCoins, wash: tokens.color.ambWash, fg: tokens.color.amb },
-];
 
 async function grabCoords(): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -44,8 +39,16 @@ export function VisitReasonSheet({
   store: VisitTargetStore | null;
   sessionId: string;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const [busyType, setBusyType] = useState<string | null>(null);
+
+  const REASONS: { type: string; label: string; desc: string; icon: LucideIcon; wash: string; fg: string }[] = [
+    { type: "mark_visited", label: "Mark visited", desc: "Checked in at the store", icon: Footprints, wash: t.color.brandWash, fg: t.color.brand },
+    { type: "record_sale", label: "Sale visit", desc: "Order or cash memo placed", icon: ShoppingCart, wash: t.color.grnWash, fg: t.color.grn },
+    { type: "collect_payment", label: "Collect payment visit", desc: "Payment collected at the store", icon: HandCoins, wash: t.color.ambWash, fg: t.color.amb },
+  ];
 
   async function confirm(type: string) {
     if (!store || busyType) return;
@@ -101,9 +104,13 @@ export function VisitReasonSheet({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   storeName: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.xs,
     marginBottom: tokens.space.md,
@@ -117,14 +124,16 @@ const s = StyleSheet.create({
     padding: tokens.space.md,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
   chip: {
     width: 36, height: 36, borderRadius: tokens.radius.sm,
     alignItems: "center", justifyContent: "center",
   },
   rowMain: { flex: 1 },
-  rowLabel: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  rowDesc: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  rowLabel: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  rowDesc: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
 });
+  }, [palette]);
+};

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Platform, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { ChevronDown, Footprints, HandCoins, IndianRupee, Navigation, Phone, Store } from "lucide-react-native";
@@ -12,16 +12,17 @@ import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 import { VisitReasonSheet, type VisitTargetStore } from "./VisitReasonSheet";
-
-const ACCENTS = [tokens.color.brand, tokens.color.grn, tokens.color.amb, tokens.color.ink4];
+import { useTheme } from "@/theme/ThemeContext";
 
 function MiniAction({
   icon: Icon, label, onPress, tone = "brand",
 }: {
   icon: LucideIcon; label: string; onPress: () => void; tone?: "brand" | "grn" | "amb";
 }) {
-  const wash = { brand: tokens.color.brandWash, grn: tokens.color.grnWash, amb: tokens.color.ambWash }[tone];
-  const fg = { brand: tokens.color.brand, grn: tokens.color.grn, amb: tokens.color.amb }[tone];
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const wash = { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[tone];
+  const fg = { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[tone];
   return (
     <Pressable
       onPress={onPress}
@@ -45,12 +46,15 @@ export function RouteCard({
   visitedSet: Set<string>;
   sessionId: string;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const router = useRouter();
   const { can } = useSession();
   const stores = useRouteStores(routeId);
   const [expanded, setExpanded] = useState(false);
   const [visitTarget, setVisitTarget] = useState<VisitTargetStore | null>(null);
-  const accent = ACCENTS[index % ACCENTS.length];
+  const accents = [t.color.brand, t.color.grn, t.color.amb, t.color.ink4];
+  const accent = accents[index % accents.length];
 
   function navigateTo(store: { name: string; lat: number | null; lng: number | null }) {
     const hasCoords = store.lat != null && store.lng != null;
@@ -82,7 +86,7 @@ export function RouteCard({
           >
             <ChevronDown
               size={18}
-              color={tokens.color.ink4}
+              color={t.color.ink4}
               style={expanded ? { transform: [{ rotate: "180deg" }] } : undefined}
             />
           </Pressable>
@@ -104,7 +108,7 @@ export function RouteCard({
                   <View
                     style={[
                       s.visitDot,
-                      visitedSet.has(st.id) ? { backgroundColor: tokens.color.grn } : { backgroundColor: tokens.color.line },
+                      visitedSet.has(st.id) ? { backgroundColor: t.color.grn } : { backgroundColor: t.color.line },
                     ]}
                   />
                   <View style={s.storeMain}>
@@ -143,7 +147,11 @@ export function RouteCard({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: { overflow: "hidden" },
   accent: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4 },
   head: {
@@ -152,10 +160,10 @@ const s = StyleSheet.create({
     minHeight: 56,
   },
   headMain: { flex: 1 },
-  name: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  sub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  name: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  sub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   mono: {
-    fontFamily: tokens.font.monoBold, color: tokens.color.ink2,
+    fontFamily: tokens.font.monoBold, color: t.color.ink2,
     fontVariant: ["tabular-nums"],
   },
   chevBtn: {
@@ -163,10 +171,10 @@ const s = StyleSheet.create({
     marginRight: -tokens.space.sm,
   },
   stores: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     paddingHorizontal: tokens.space.md,
     paddingVertical: tokens.space.sm,
     gap: tokens.space.xs,
@@ -175,13 +183,13 @@ const s = StyleSheet.create({
     gap: tokens.space.xs,
     paddingVertical: tokens.space.sm,
     borderBottomWidth: 1,
-    borderBottomColor: tokens.color.lineSoft,
+    borderBottomColor: t.color.lineSoft,
   },
   storeTop: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   visitDot: { width: 8, height: 8, borderRadius: 4 },
   storeMain: { flex: 1, minWidth: 0 },
-  storeName: { color: tokens.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
-  storeArea: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  storeName: { color: t.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
+  storeArea: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   storeActions: {
     flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.space.xs,
   },
@@ -192,3 +200,5 @@ const s = StyleSheet.create({
   },
   btnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

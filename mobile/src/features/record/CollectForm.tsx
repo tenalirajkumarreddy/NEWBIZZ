@@ -12,6 +12,7 @@ import { useSession } from "@/lib/session";
 import Toast from "react-native-toast-message";
 import { tokens } from "@/theme/tokens";
 import type { ReceiptResult } from "./ReceiptModal";
+import { useTheme } from "@/theme/ThemeContext";
 
 type CollectMode = "cash" | "upi" | "bank" | "cheque";
 
@@ -29,6 +30,8 @@ export function CollectForm({
   accent: "brand" | "grn";
   onDone: (result: ReceiptResult) => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const { user } = useSession();
   const detail = useStoreDetail(storeId);
   const customer = detail.data?.store?.customer as
@@ -46,8 +49,8 @@ export function CollectForm({
   const [alloc, setAlloc] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  const fg = accent === "grn" ? tokens.color.grn : tokens.color.brand;
-  const wash = accent === "grn" ? tokens.color.grnWash : tokens.color.brandWash;
+  const fg = accent === "grn" ? t.color.grn : t.color.brand;
+  const wash = accent === "grn" ? t.color.grnWash : t.color.brandWash;
 
   const amountNum = useMemo(() => {
     const n = parseMoney(amount);
@@ -195,12 +198,12 @@ export function CollectForm({
               accessibilityState={{ selected: on }}
               style={({ pressed }) => [
                 s.chip,
-                { backgroundColor: on ? wash : tokens.color.surface },
+                { backgroundColor: on ? wash : t.color.surface },
                 on && { borderColor: fg },
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <Icon size={14} color={on ? fg : tokens.color.ink3} />
+              <Icon size={14} color={on ? fg : t.color.ink3} />
               <Text style={[s.chipTxt, on && { color: fg }]}>{m.label}</Text>
             </Pressable>
           );
@@ -219,7 +222,7 @@ export function CollectForm({
               keyboardType="decimal-pad"
               inputMode="decimal"
               placeholder="0"
-              placeholderTextColor={tokens.color.ink4}
+              placeholderTextColor={t.color.ink4}
               accessible
               accessibilityLabel="Receipt amount"
             />
@@ -246,7 +249,7 @@ export function CollectForm({
         value={reference}
         onChangeText={setReference}
         placeholder="UTR / cheque no / transaction id"
-        placeholderTextColor={tokens.color.ink4}
+        placeholderTextColor={t.color.ink4}
         accessible
         accessibilityLabel="Reference"
       />
@@ -257,7 +260,7 @@ export function CollectForm({
         value={notes}
         onChangeText={setNotes}
         placeholder="Optional note"
-        placeholderTextColor={tokens.color.ink4}
+        placeholderTextColor={t.color.ink4}
         multiline
         accessible
         accessibilityLabel="Notes"
@@ -307,8 +310,8 @@ export function CollectForm({
             <Text
               style={[
                 s.allocVal,
-                unallocated > 0.005 && { color: tokens.color.amb },
-                unallocated < -0.005 && { color: tokens.color.red },
+                unallocated > 0.005 && { color: t.color.amb },
+                unallocated < -0.005 && { color: t.color.red },
               ]}
             >
               {moneyINR(unallocated)}
@@ -348,6 +351,8 @@ function InvoiceAllocRow({
   value: string;
   onChange: (t: string) => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const over = parseMoney(value) > invoice.balance + 0.005;
   return (
     <View style={s.invRow}>
@@ -356,7 +361,7 @@ function InvoiceAllocRow({
         <Text style={s.invDate}>{dateIST(invoice.invoiceDate)}</Text>
       </View>
       <Text style={s.invBalance}>{moneyINR(invoice.balance)}</Text>
-      <View style={[s.allocInputWrap, over && { borderColor: tokens.color.red }]}>
+      <View style={[s.allocInputWrap, over && { borderColor: t.color.red }]}>
         <Text style={s.prefix}>₹</Text>
         <TextInput
           style={s.allocInput}
@@ -365,7 +370,7 @@ function InvoiceAllocRow({
           keyboardType="decimal-pad"
           inputMode="decimal"
           placeholder="0"
-          placeholderTextColor={tokens.color.ink4}
+          placeholderTextColor={t.color.ink4}
           accessible
           accessibilityLabel={`Allocate to ${invoice.invoiceNo}`}
         />
@@ -374,10 +379,14 @@ function InvoiceAllocRow({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   wrap: { gap: tokens.space.md },
   outstandingCard: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.md,
     borderLeftWidth: 3,
     padding: tokens.space.lg,
@@ -385,22 +394,22 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: tokens.space.md,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   outstandingLabel: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.6,
   },
   outstandingCustomer: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     marginTop: 2,
   },
   outstandingVal: {
-    color: tokens.color.red,
+    color: t.color.red,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xl,
     fontVariant: ["tabular-nums"],
@@ -414,13 +423,13 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.full,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
   },
-  chipTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  chipTxt: { color: t.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   amountRow: { flexDirection: "row", alignItems: "flex-end", gap: tokens.space.sm },
   amountField: { flex: 1, gap: 6 },
   label: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.4,
@@ -430,16 +439,16 @@ const s = StyleSheet.create({
     alignItems: "center",
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
     gap: 2,
   },
-  prefix: { color: tokens.color.ink3, fontFamily: tokens.font.mono, fontSize: tokens.size.sm },
+  prefix: { color: t.color.ink3, fontFamily: tokens.font.mono, fontSize: tokens.size.sm },
   moneyInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
@@ -456,12 +465,12 @@ const s = StyleSheet.create({
   textInput: {
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
     paddingVertical: 10,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
   },
@@ -474,7 +483,7 @@ const s = StyleSheet.create({
     marginTop: tokens.space.xs,
   },
   sectionTitle: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
     flex: 1,
@@ -493,23 +502,23 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   invMain: { flex: 1 },
   invNo: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
-  invDate: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 2 },
+  invDate: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 2 },
   invBalance: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
@@ -520,36 +529,36 @@ const s = StyleSheet.create({
     width: 110,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.sm,
     gap: 2,
   },
   allocInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
     paddingVertical: 0,
   },
   allocSummary: {
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.md,
     padding: tokens.space.md,
     gap: 6,
   },
   allocRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  allocLabel: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  allocLabel: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   allocVal: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
   advanceNote: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
     lineHeight: 15,
@@ -561,5 +570,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     marginTop: tokens.space.xs,
   },
-  submitTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  submitTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
 });
+  }, [palette]);
+};

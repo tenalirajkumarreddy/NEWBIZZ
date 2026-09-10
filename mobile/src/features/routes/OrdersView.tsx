@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export const ORDER_CHIPS = [
   { key: "all", label: "All", status: undefined },
@@ -42,8 +43,10 @@ function ActionBtn({
 }: {
   label: string; onPress: () => void; tone: "brand" | "grn";
 }) {
-  const bg = tone === "brand" ? tokens.color.brandWash : tokens.color.grnWash;
-  const fg = tone === "brand" ? tokens.color.brand : tokens.color.grn;
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const bg = tone === "brand" ? t.color.brandWash : t.color.grnWash;
+  const fg = tone === "brand" ? t.color.brand : t.color.grn;
   return (
     <Pressable
       onPress={onPress}
@@ -56,6 +59,7 @@ function ActionBtn({
 }
 
 function OrderCard({ order }: { order: OrderRow }) {
+  const s = useStyles();
   const router = useRouter();
   const qc = useQueryClient();
   const { can } = useSession();
@@ -134,6 +138,7 @@ function OrderCard({ order }: { order: OrderRow }) {
 }
 
 export function OrdersView() {
+  const s = useStyles();
   const [chip, setChip] = useState<string>("all");
   const activeChip = ORDER_CHIPS.find((c) => c.key === chip) ?? ORDER_CHIPS[0];
   const orders = useOrders(activeChip.status);
@@ -177,7 +182,11 @@ export function OrdersView() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   wrap: { gap: tokens.space.md },
   chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
   chip: {
@@ -185,36 +194,36 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.full,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
     alignItems: "center", justifyContent: "center",
   },
-  chipOn: { backgroundColor: tokens.color.brand, borderColor: tokens.color.brand },
-  chipTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  chipTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  chipOn: { backgroundColor: t.color.brand, borderColor: t.color.brand },
+  chipTxt: { color: t.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  chipTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
     gap: tokens.space.md,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   head: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   headMain: { flex: 1 },
   orderNo: {
-    color: tokens.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.sm,
+    color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
   },
-  store: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  store: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   lines: { gap: 2 },
-  line: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  line: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   mono: { fontFamily: tokens.font.mono, fontVariant: ["tabular-nums"] },
-  more: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  more: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
   foot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: tokens.space.md },
   total: {
-    color: tokens.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.base,
+    color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.base,
     fontVariant: ["tabular-nums"],
     flex: 1,
   },
@@ -227,3 +236,5 @@ const s = StyleSheet.create({
   },
   actTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

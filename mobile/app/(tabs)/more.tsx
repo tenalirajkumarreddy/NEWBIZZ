@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, Alert, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -13,6 +13,7 @@ import { useSession } from "@/lib/session";
 import { roleLabel } from "@/lib/claims";
 import { gotoTab } from "@/lib/tabBus";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 interface MoreRow {
   key: string;
@@ -24,6 +25,8 @@ interface MoreRow {
 }
 
 export default function MoreScreen() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const router = useRouter();
   const { claims, can, signOut } = useSession();
   const [busy, setBusy] = useState(false);
@@ -98,8 +101,8 @@ export default function MoreScreen() {
       <GradientHeader title="More" subtitle={roleLabel(claims)} right={<HeaderRight />} />
       <View style={s.body}>
         {rows.map((r) => {
-          const fg = r.danger ? tokens.color.red : tokens.color.brand;
-          const wash = r.danger ? tokens.color.redWash : tokens.color.brandWash;
+          const fg = r.danger ? t.color.red : t.color.brand;
+          const wash = r.danger ? t.color.redWash : t.color.brandWash;
           return (
             <PressCard key={r.key} onPress={r.onPress} style={s.rowCard}>
               <View style={s.row}>
@@ -107,10 +110,10 @@ export default function MoreScreen() {
                   <r.icon size={16} color={fg} />
                 </View>
                 <View style={s.main}>
-                  <Text style={[s.label, r.danger && { color: tokens.color.red }]}>{r.label}</Text>
+                  <Text style={[s.label, r.danger && { color: t.color.red }]}>{r.label}</Text>
                   <Text style={s.sub}>{r.sub}</Text>
                 </View>
-                {r.danger ? null : <ChevronRight size={16} color={tokens.color.ink4} />}
+                {r.danger ? null : <ChevronRight size={16} color={t.color.ink4} />}
               </View>
             </PressCard>
           );
@@ -120,7 +123,11 @@ export default function MoreScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -141,6 +148,8 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   main: { flex: 1, minWidth: 0 },
-  label: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  sub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  label: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  sub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
 });
+  }, [palette]);
+};

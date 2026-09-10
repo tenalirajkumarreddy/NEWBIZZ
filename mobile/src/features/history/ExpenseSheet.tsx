@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
@@ -8,6 +8,7 @@ import { friendlyError } from "@/lib/rpc";
 import { submitMyExpense, FIELD_CATEGORIES, type ExpenseCategory } from "@/data/expenses";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 const QUICK_AMOUNTS = [100, 200, 500, 1000];
 
@@ -17,6 +18,8 @@ export function ExpenseSheet({
   visible: boolean;
   onClose: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const [category, setCategory] = useState<ExpenseCategory>("fuel");
   const [amount, setAmount] = useState("");
@@ -76,7 +79,7 @@ export function ExpenseSheet({
                   style={({ pressed }) => [
                     s.chip,
                     active && s.chipActive,
-                    pressed && !active && { backgroundColor: tokens.color.fill },
+                    pressed && !active && { backgroundColor: t.color.fill },
                   ]}
                 >
                   {active ? <Check size={13} color="#ffffff" /> : null}
@@ -97,7 +100,7 @@ export function ExpenseSheet({
               onChangeText={(t) => setAmount(t.replace(/[^0-9.]/g, ""))}
               keyboardType="decimal-pad"
               placeholder="0"
-              placeholderTextColor={tokens.color.ink4}
+              placeholderTextColor={t.color.ink4}
               accessible
               accessibilityLabel="Amount"
             />
@@ -108,7 +111,7 @@ export function ExpenseSheet({
                 key={q}
                 onPress={() => setAmount(String(q))}
                 accessibilityLabel={`Set amount ${q}`}
-                style={({ pressed }) => [s.quick, pressed && { backgroundColor: tokens.color.fill }]}
+                style={({ pressed }) => [s.quick, pressed && { backgroundColor: t.color.fill }]}
               >
                 <Text style={s.quickTxt}>{moneyINR(q)}</Text>
               </Pressable>
@@ -123,7 +126,7 @@ export function ExpenseSheet({
             value={note}
             onChangeText={setNote}
             placeholder="e.g. Van fuel - Salem trip"
-            placeholderTextColor={tokens.color.ink4}
+            placeholderTextColor={t.color.ink4}
             maxLength={200}
             accessible
             accessibilityLabel="Note"
@@ -156,13 +159,17 @@ export function ExpenseSheet({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   content: {
     gap: tokens.space.lg,
   },
   section: { gap: tokens.space.xs },
   label: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.6,
@@ -176,11 +183,11 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.full,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
-  chipActive: { backgroundColor: tokens.color.brand, borderColor: tokens.color.brand },
-  chipTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  chipActive: { backgroundColor: t.color.brand, borderColor: t.color.brand },
+  chipTxt: { color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   chipTxtActive: { color: "#ffffff" },
   amountWrap: {
     flexDirection: "row",
@@ -188,15 +195,15 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
     minHeight: 52,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
   },
-  rupee: { color: tokens.color.ink3, fontFamily: tokens.font.monoBold, fontSize: tokens.size.lg },
+  rupee: { color: t.color.ink3, fontFamily: tokens.font.monoBold, fontSize: tokens.size.lg },
   amountInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xl,
     fontVariant: ["tabular-nums"],
@@ -210,11 +217,11 @@ const s = StyleSheet.create({
     justifyContent: "center",
     borderRadius: tokens.radius.sm,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
   quickTxt: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
@@ -222,27 +229,29 @@ const s = StyleSheet.create({
   noteInput: {
     minHeight: 52,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
     paddingVertical: tokens.space.sm,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.sm,
   },
   infoBox: {
     padding: tokens.space.md,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
   },
-  infoTxt: { color: tokens.color.brandD, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  infoTxt: { color: t.color.brandD, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   submit: {
     minHeight: 48,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
   },
   submitTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
 });
+  }, [palette]);
+};

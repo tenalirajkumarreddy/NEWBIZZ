@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import * as Network from "expo-network";
 import { Wifi, WifiOff, Activity, RefreshCw, Database, Clock, ShieldCheck } from "lucide-react-native";
@@ -9,10 +9,13 @@ import { supabase } from "@/lib/supabase";
 import { friendlyError } from "@/lib/rpc";
 import { timeAgoIST } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 const APP_VERSION = "NEWBIZZ v1.0.0";
 
 export default function SyncScreen() {
+  const { palette: t } = useTheme();
+  const { s } = useStyles();
   const state = Network.useNetworkState();
   const online = state.isConnected !== false && state.isInternetReachable !== false;
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -49,21 +52,21 @@ export default function SyncScreen() {
     latencyMs == null
       ? null
       : latencyMs < 400
-        ? { label: "Excellent", tone: tokens.color.grn }
+        ? { label: "Excellent", tone: t.color.grn }
         : latencyMs < 1200
-          ? { label: "Good", tone: tokens.color.amb }
-          : { label: "Slow", tone: tokens.color.red };
+          ? { label: "Good", tone: t.color.amb }
+          : { label: "Slow", tone: t.color.red };
 
   return (
     <Screen refreshing={pinging} onRefresh={() => void ping()}>
       <GradientHeader title="Sync & data" subtitle="Connection and data status" right={<HeaderRight />} />
 
       <View style={s.body}>
-        <View style={[s.statusCard, { backgroundColor: online ? tokens.color.grnWash : tokens.color.redWash }]}>
-          <View style={[s.statusIcon, { backgroundColor: online ? tokens.color.grn : tokens.color.red }]}>
+        <View style={[s.statusCard, { backgroundColor: online ? t.color.grnWash : t.color.redWash }]}>
+          <View style={[s.statusIcon, { backgroundColor: online ? t.color.grn : t.color.red }]}>
             {online ? <Wifi size={26} color="#ffffff" /> : <WifiOff size={26} color="#ffffff" />}
           </View>
-          <Text style={[s.statusTitle, { color: online ? tokens.color.grn : tokens.color.red }]}>
+          <Text style={[s.statusTitle, { color: online ? t.color.grn : t.color.red }]}>
             {online ? "Online" : "Offline"}
           </Text>
           <Text style={s.statusSub}>
@@ -83,7 +86,7 @@ export default function SyncScreen() {
             accessibilityLabel="Test connection"
             style={({ pressed }) => [s.testBtn, (pressed || pinging || !online) && { opacity: 0.6 }]}
           >
-            <RefreshCw size={13} color={tokens.color.brand} />
+            <RefreshCw size={13} color={t.color.brand} />
             <Text style={s.testTxt}>{pinging ? "Testing..." : "Test connection"}</Text>
           </Pressable>
           {err ? <Text style={s.err}>{err}</Text> : null}
@@ -91,8 +94,8 @@ export default function SyncScreen() {
 
         <View style={s.card}>
           <Text style={s.cardTitle}>DATA</Text>
-          <Row icon={Database} label="Mode" value="Live (online-only)" extra="v1" extraTone={tokens.color.ink4} />
-          <Row icon={ShieldCheck} label="Queued changes" value="0" extra="All synced" extraTone={tokens.color.grn} />
+          <Row icon={Database} label="Mode" value="Live (online-only)" extra="v1" extraTone={t.color.ink4} />
+          <Row icon={ShieldCheck} label="Queued changes" value="0" extra="All synced" extraTone={t.color.grn} />
           <Text style={s.note}>
             Offline mode arrives in v2 - sales, collections and visits recorded without network will queue here and
             sync automatically.
@@ -114,21 +117,28 @@ function Row({
   extra?: string;
   extraTone?: string;
 }) {
+  const { palette: t } = useTheme();
+  const { r } = useStyles();
   return (
     <View style={r.row}>
       <View style={r.iconWrap}>
-        <Icon size={14} color={tokens.color.ink3} />
+        <Icon size={14} color={t.color.ink3} />
       </View>
       <Text style={r.label}>{label}</Text>
       <View style={r.right}>
-        {extra ? <Text style={[r.extra, { color: extraTone ?? tokens.color.ink4 }]}>{extra}</Text> : null}
+        {extra ? <Text style={[r.extra, { color: extraTone ?? t.color.ink4 }]}>{extra}</Text> : null}
         <Text style={r.value}>{value}</Text>
       </View>
     </View>
   );
 }
 
-const r = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return {
+      r: StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -139,22 +149,21 @@ const r = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     alignItems: "center",
     justifyContent: "center",
   },
-  label: { flex: 1, color: tokens.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  label: { flex: 1, color: t.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   right: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   extra: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
   value: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
-});
-
-const s = StyleSheet.create({
+}),
+      s: StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -176,23 +185,23 @@ const s = StyleSheet.create({
   },
   statusTitle: { fontFamily: tokens.font.sansBold, fontSize: tokens.size.lg },
   statusSub: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     textAlign: "center",
     lineHeight: 18,
   },
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
     gap: tokens.space.xs,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   cardTitle: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.6,
@@ -206,17 +215,22 @@ const s = StyleSheet.create({
     minHeight: 44,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     marginTop: tokens.space.xs,
   },
-  testTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  err: { color: tokens.color.red, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
-  note: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, lineHeight: 16, marginTop: tokens.space.xs },
+  testTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  err: { color: t.color.red, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  note: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, lineHeight: 16, marginTop: tokens.space.xs },
   version: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.eyebrow,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
   },
-});
+}),
+    };
+  }, [palette]);
+};
+
+

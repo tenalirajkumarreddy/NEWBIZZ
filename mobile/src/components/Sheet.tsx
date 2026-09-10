@@ -1,6 +1,8 @@
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function Sheet({
   visible, onClose, title, children,
@@ -10,6 +12,7 @@ export function Sheet({
   title?: string;
   children: React.ReactNode;
 }) {
+  const s = useStyles();
   const insets = useSafeAreaInsets();
 
   return (
@@ -37,29 +40,33 @@ export function Sheet({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   flex: { flex: 1 },
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(15,23,42,0.4)",
   },
   sheet: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "85%",
-    ...tokens.shadow.pop,
+    ...t.shadow.pop,
   },
   handle: {
     alignSelf: "center",
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: tokens.color.line,
+    backgroundColor: t.color.line,
     marginTop: tokens.space.sm,
   },
   title: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
     paddingHorizontal: tokens.space.lg,
@@ -71,3 +78,5 @@ const s = StyleSheet.create({
     paddingBottom: tokens.space.lg,
   },
 });
+  }, [palette]);
+};

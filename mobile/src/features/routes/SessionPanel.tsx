@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
@@ -20,6 +20,7 @@ import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 import { formatElapsed, useElapsed } from "@/features/home/useElapsed";
+import { useTheme } from "@/theme/ThemeContext";
 
 async function ensureLocation(): Promise<void> {
   try {
@@ -39,9 +40,11 @@ function RouteOption({
   onSelect: () => void;
   disabled: boolean;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <PressCard onPress={onSelect} style={[s.option, selected && s.optionSelected, disabled && { opacity: 0.6 }]}>
-      <View style={[s.radio, selected && { borderColor: tokens.color.brand }]}>
+      <View style={[s.radio, selected && { borderColor: t.color.brand }]}>
         {selected ? <View style={s.radioDot} /> : null}
       </View>
       <View style={s.optionMain}>
@@ -55,6 +58,8 @@ function RouteOption({
 }
 
 export function SessionPanel() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const session = useActiveSession();
   const routes = useRoutes();
@@ -160,7 +165,7 @@ export function SessionPanel() {
         <View style={s.card}>
           <View style={s.idleRow}>
             <View style={s.idleChip}>
-              <RouteIcon size={16} color={tokens.color.ink4} />
+              <RouteIcon size={16} color={t.color.ink4} />
             </View>
             <View style={s.idleMain}>
               <Text style={s.idleTitle}>No active session</Text>
@@ -172,7 +177,7 @@ export function SessionPanel() {
             style={({ pressed }) => [s.startBtn, pressed && { opacity: 0.85 }]}
             accessibilityLabel="Start route session"
           >
-            <Play size={15} color={tokens.color.surface} />
+            <Play size={15} color={t.color.surface} />
             <Text style={s.startTxt}>Start route session</Text>
           </Pressable>
         </View>
@@ -208,7 +213,7 @@ export function SessionPanel() {
                 ]}
                 accessibilityLabel="Confirm start route session"
               >
-                <Play size={15} color={tokens.color.surface} />
+                <Play size={15} color={t.color.surface} />
                 <Text style={s.startTxt}>{starting ? "Starting..." : "Start session"}</Text>
               </Pressable>
             </>
@@ -232,7 +237,7 @@ export function SessionPanel() {
           </Text>
         </View>
         <View style={s.elapsed}>
-          <Timer size={11} color={tokens.color.ink3} />
+          <Timer size={11} color={t.color.ink3} />
           <Text style={s.elapsedTxt}>{formatElapsed(elapsedSec)}</Text>
         </View>
         <Pressable
@@ -241,7 +246,7 @@ export function SessionPanel() {
           style={({ pressed }) => [s.endBtn, pressed && { opacity: 0.85 }, ending && { opacity: 0.5 }]}
           accessibilityLabel="End route session"
         >
-          <Square size={11} color={tokens.color.red} fill={tokens.color.red} />
+          <Square size={11} color={t.color.red} fill={t.color.red} />
           <Text style={s.endTxt}>{ending ? "Ending..." : "End"}</Text>
         </Pressable>
       </View>
@@ -249,65 +254,71 @@ export function SessionPanel() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   mono: {
     fontFamily: tokens.font.monoBold,
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontVariant: ["tabular-nums"],
   },
   idleRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   idleChip: {
     width: 34, height: 34, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.fill, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.fill, alignItems: "center", justifyContent: "center",
   },
   idleMain: { flex: 1 },
-  idleTitle: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  idleMsg: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  idleTitle: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  idleMsg: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   startBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: tokens.space.sm,
     minHeight: 44, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     marginTop: tokens.space.lg,
   },
-  startTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  startTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   option: { padding: tokens.space.md },
-  optionSelected: { borderColor: tokens.color.brand, borderWidth: 1.5 },
+  optionSelected: { borderColor: t.color.brand, borderWidth: 1.5 },
   radio: {
     width: 18, height: 18, borderRadius: 9,
-    borderWidth: 2, borderColor: tokens.color.line,
+    borderWidth: 2, borderColor: t.color.line,
     alignItems: "center", justifyContent: "center",
   },
-  radioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: tokens.color.brand },
+  radioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: t.color.brand },
   optionMain: { flex: 1 },
-  optionName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  optionSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  optionName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  optionSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   activeRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   pulseWrap: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
   pulseDot: {
     position: "absolute", width: 22, height: 22, borderRadius: 11,
-    backgroundColor: tokens.color.grn,
+    backgroundColor: t.color.grn,
   },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: tokens.color.grn },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: t.color.grn },
   activeMain: { flex: 1 },
-  activeTitle: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  activeSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  activeTitle: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  activeSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   elapsed: { flexDirection: "row", alignItems: "center", gap: 4 },
   elapsedTxt: {
-    color: tokens.color.ink3, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
+    color: t.color.ink3, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
   endBtn: {
     flexDirection: "row", alignItems: "center", gap: 5,
     minHeight: 44, paddingHorizontal: tokens.space.md, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.redWash,
+    backgroundColor: t.color.redWash,
   },
-  endTxt: { color: tokens.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  endTxt: { color: t.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

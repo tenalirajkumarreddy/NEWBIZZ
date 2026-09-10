@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Linking, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -17,6 +17,7 @@ import { haversineKm } from "@/lib/geo";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 import type { LucideIcon } from "lucide-react-native";
+import { useTheme } from "@/theme/ThemeContext";
 
 interface Stop {
   store: { id: string; name: string; area: string | null; phone: string | null; lat: number | null; lng: number | null };
@@ -60,8 +61,10 @@ function ActionBtn({
 }: {
   icon: LucideIcon; label: string; onPress: () => void; tone?: "brand" | "grn" | "amb";
 }) {
-  const wash = { brand: tokens.color.brandWash, grn: tokens.color.grnWash, amb: tokens.color.ambWash }[tone];
-  const fg = { brand: tokens.color.brand, grn: tokens.color.grn, amb: tokens.color.amb }[tone];
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const wash = { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[tone];
+  const fg = { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[tone];
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [s.btn, { backgroundColor: wash }, pressed && { opacity: 0.8 }]}>
       <Icon size={14} color={fg} />
@@ -71,6 +74,7 @@ function ActionBtn({
 }
 
 export function NextStopCard() {
+  const s = useStyles();
   const router = useRouter();
   const qc = useQueryClient();
   const { can } = useSession();
@@ -219,31 +223,35 @@ export function NextStopCard() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   head: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   initial: {
     width: 40, height: 40, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center", justifyContent: "center",
   },
-  initialTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
+  initialTxt: { color: t.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   headTxt: { flex: 1 },
-  name: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  area: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  name: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  area: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   distChip: {
-    backgroundColor: tokens.color.fill, borderRadius: tokens.radius.sm,
+    backgroundColor: t.color.fill, borderRadius: tokens.radius.sm,
     paddingHorizontal: tokens.space.sm, paddingVertical: 4,
   },
   distTxt: {
-    color: tokens.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
+    color: t.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
     fontVariant: ["tabular-nums"],
   },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm, marginTop: tokens.space.lg },
@@ -254,3 +262,5 @@ const s = StyleSheet.create({
   },
   btnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

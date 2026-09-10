@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -8,7 +8,6 @@ import type { LucideIcon } from "lucide-react-native";
 import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/lib/session";
 import { onGotoTab } from "@/lib/tabBus";
-import { tokens } from "@/theme/tokens";
 
 import HomeScreen from "./home";
 import RouteScreen from "./route";
@@ -19,6 +18,7 @@ import DashScreen from "./dash";
 import ApprovalsScreen from "./approvals";
 import CustomersScreen from "./customers";
 import MoreScreen from "./more";
+import { useTheme } from "@/theme/ThemeContext";
 
 interface TabDef {
   id: string;
@@ -59,6 +59,7 @@ const MANAGER_SCREENS: Record<string, ComponentType> = {
 };
 
 export default function TabsLayout() {
+  const s = useStyles();
   const { claims } = useSession();
   const router = useRouter();
   const isAgent = claims.roles.includes("agent");
@@ -109,6 +110,12 @@ export default function TabsLayout() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: tokens.color.bg },
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.color.bg },
 });
+  }, [palette]);
+};

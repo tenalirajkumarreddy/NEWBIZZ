@@ -25,6 +25,7 @@ import { HandoverSheet, type HandoverMode } from "@/features/history/HandoverShe
 import { ExpenseSheet } from "@/features/history/ExpenseSheet";
 import { useTodayKpis } from "@/data/sales";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Segment = "activity" | "handovers" | "expenses";
 
@@ -62,9 +63,9 @@ function groupByDay(rows: ReturnType<typeof useMyActivity>["data"]): DayGroup[] 
 }
 
 function TransferRowItem({
-  t, fromName, toName, uid, busy, onRespond, onCancel,
+  row, fromName, toName, uid, busy, onRespond, onCancel,
 }: {
-  t: CustodyRow;
+  row: CustodyRow;
   fromName: string;
   toName: string;
   uid: string;
@@ -72,54 +73,56 @@ function TransferRowItem({
   onRespond: (id: string, accept: boolean) => void;
   onCancel: (id: string) => void;
 }) {
-  const incoming = t.to_user_id === uid;
-  const outgoing = t.from_user_id === uid;
-  const isPending = t.status === "pending";
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const incoming = row.to_user_id === uid;
+  const outgoing = row.from_user_id === uid;
+  const isPending = row.status === "pending";
   const DirIcon = incoming && !outgoing ? ArrowDown : ArrowUp;
   // Money convention: green = you receive, red = you pay/hand out.
-  const dirTone = incoming && !outgoing ? tokens.color.grn : tokens.color.red;
+  const dirTone = incoming && !outgoing ? t.color.grn : t.color.red;
   const dirLabel = incoming && !outgoing ? `from ${fromName}` : `to ${toName}`;
 
   const statusTone =
-    t.status === "accepted" ? "grn" : t.status === "rejected" ? "red" : t.status === "pending" ? "amb" : "neutral";
+    row.status === "accepted" ? "grn" : row.status === "rejected" ? "red" : row.status === "pending" ? "amb" : "neutral";
 
   return (
     <View style={s.trCard}>
       <View style={s.trHead}>
-        <View style={[s.trDir, { backgroundColor: incoming && !outgoing ? tokens.color.grnWash : tokens.color.redWash }]}>
+        <View style={[s.trDir, { backgroundColor: incoming && !outgoing ? t.color.grnWash : t.color.redWash }]}>
           <DirIcon size={14} color={dirTone} />
         </View>
         <View style={s.trMain}>
-          <Text style={s.trNo}>{t.transfer_no}</Text>
+          <Text style={s.trNo}>{row.transfer_no}</Text>
           <Text style={s.trParty} numberOfLines={1}>{dirLabel}</Text>
         </View>
         <Text
-          style={[s.trAmount, { color: incoming && !outgoing ? tokens.color.grn : tokens.color.red }]}
+          style={[s.trAmount, { color: incoming && !outgoing ? t.color.grn : t.color.red }]}
           numberOfLines={1}
         >
-          {moneyINR(Number(t.amount ?? 0))}
+          {moneyINR(Number(row.amount ?? 0))}
         </Text>
       </View>
       <View style={s.trFoot}>
-        <StatusBadge label={t.status} tone={statusTone} />
-        {t.note ? <Text style={s.trNote} numberOfLines={1}>"{t.note}"</Text> : <View style={{ flex: 1 }} />}
-        <Text style={s.trTime}>{timeAgoIST(t.created_at)}</Text>
+        <StatusBadge label={row.status} tone={statusTone} />
+        {row.note ? <Text style={s.trNote} numberOfLines={1}>"{row.note}"</Text> : <View style={{ flex: 1 }} />}
+        <Text style={s.trTime}>{timeAgoIST(row.created_at)}</Text>
       </View>
       {isPending && incoming ? (
         <View style={s.trActions}>
           <Pressable
-            onPress={() => onRespond(t.transfer_id, true)}
+            onPress={() => onRespond(row.transfer_id, true)}
             disabled={busy}
-            accessibilityLabel={`Accept ${t.transfer_no}`}
+            accessibilityLabel={`Accept ${row.transfer_no}`}
             style={({ pressed }) => [s.actBtn, s.actGrn, (pressed || busy) && { opacity: 0.8 }]}
           >
             <Check size={14} color="#ffffff" />
             <Text style={s.actTxt}>Confirm</Text>
           </Pressable>
           <Pressable
-            onPress={() => onRespond(t.transfer_id, false)}
+            onPress={() => onRespond(row.transfer_id, false)}
             disabled={busy}
-            accessibilityLabel={`Reject ${t.transfer_no}`}
+            accessibilityLabel={`Reject ${row.transfer_no}`}
             style={({ pressed }) => [s.actBtn, s.actRed, (pressed || busy) && { opacity: 0.8 }]}
           >
             <X size={14} color="#ffffff" />
@@ -130,13 +133,13 @@ function TransferRowItem({
       {isPending && outgoing ? (
         <View style={s.trActions}>
           <Pressable
-            onPress={() => onCancel(t.transfer_id)}
+            onPress={() => onCancel(row.transfer_id)}
             disabled={busy}
-            accessibilityLabel={`Cancel ${t.transfer_no}`}
+            accessibilityLabel={`Cancel ${row.transfer_no}`}
             style={({ pressed }) => [s.actBtn, s.actNeutral, (pressed || busy) && { opacity: 0.8 }]}
           >
-            <Ban size={14} color={tokens.color.ink2} />
-            <Text style={[s.actTxt, { color: tokens.color.ink2 }]}>Cancel</Text>
+            <Ban size={14} color={t.color.ink2} />
+            <Text style={[s.actTxt, { color: t.color.ink2 }]}>Cancel</Text>
           </Pressable>
         </View>
       ) : null}
@@ -145,16 +148,18 @@ function TransferRowItem({
 }
 
 function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const tone = e.status === "approved" ? "grn" : e.status === "rejected" ? "red" : "amb";
   // Money convention: approved = paid out (red), pending = uncertain (amber),
   // rejected = nothing moved (muted).
   const amountColor =
-    e.status === "approved" ? tokens.color.red : e.status === "pending" ? tokens.color.amb : tokens.color.ink4;
+    e.status === "approved" ? t.color.red : e.status === "pending" ? t.color.amb : t.color.ink4;
   return (
     <View style={s.trCard}>
       <View style={s.trHead}>
-        <View style={[s.trDir, { backgroundColor: tokens.color.ambWash }]}>
-          <Wallet size={14} color={tokens.color.amb} />
+        <View style={[s.trDir, { backgroundColor: t.color.ambWash }]}>
+          <Wallet size={14} color={t.color.amb} />
         </View>
         <View style={s.trMain}>
           <Text style={s.trNo}>{e.expenseNo}</Text>
@@ -174,6 +179,8 @@ function ExpenseRowItem({ e }: { e: MyExpenseRow }) {
 }
 
 export default function HistoryScreen() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const { user, claims } = useSession();
   const qc = useQueryClient();
   const uid = user?.id ?? "";
@@ -286,13 +293,13 @@ export default function HistoryScreen() {
                         <View
                           style={[
                             s.actChip,
-                            { backgroundColor: r.kind === "sale" ? tokens.color.brandWash : tokens.color.grnWash },
+                            { backgroundColor: r.kind === "sale" ? t.color.brandWash : t.color.grnWash },
                           ]}
                         >
                           {r.kind === "sale" ? (
-                            <FileText size={13} color={tokens.color.brand} />
+                            <FileText size={13} color={t.color.brand} />
                           ) : (
-                            <ReceiptText size={13} color={tokens.color.grn} />
+                            <ReceiptText size={13} color={t.color.grn} />
                           )}
                         </View>
                         <View style={s.actMain}>
@@ -305,7 +312,7 @@ export default function HistoryScreen() {
                         <Text
                           style={[
                             s.actAmount,
-                            { color: r.kind === "sale" ? tokens.color.brand : tokens.color.grn },
+                            { color: r.kind === "sale" ? t.color.brand : t.color.grn },
                           ]}
                           numberOfLines={1}
                         >
@@ -331,12 +338,12 @@ export default function HistoryScreen() {
             />
           ) : (
             <View style={s.list}>
-              {(custody.data ?? []).map((t) => (
+              {(custody.data ?? []).map((tr) => (
                 <TransferRowItem
-                  key={t.transfer_id}
-                  t={t}
-                  fromName={nameMap.get(t.from_user_id) ?? shortId(t.from_user_id)}
-                  toName={t.to_user_id ? nameMap.get(t.to_user_id) ?? shortId(t.to_user_id) : "Bank"}
+                  key={tr.transfer_id}
+                  row={tr}
+                  fromName={nameMap.get(tr.from_user_id) ?? shortId(tr.from_user_id)}
+                  toName={tr.to_user_id ? nameMap.get(tr.to_user_id) ?? shortId(tr.to_user_id) : "Bank"}
                   uid={uid}
                   busy={busyId != null}
                   onRespond={(id, accept) => void onRespond(id, accept)}
@@ -379,6 +386,7 @@ function shortId(id: string): string {
 }
 
 function SegmentBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const s = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -391,7 +399,11 @@ function SegmentBtn({ label, active, onPress }: { label: string; active: boolean
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -399,10 +411,10 @@ const s = StyleSheet.create({
   },
   segWrap: {
     flexDirection: "row",
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     padding: 3,
     gap: 3,
   },
@@ -414,13 +426,13 @@ const s = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 4,
   },
-  segBtnActive: { backgroundColor: tokens.color.surface, ...tokens.shadow.card },
-  segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  segTxtActive: { color: tokens.color.brand },
+  segBtnActive: { backgroundColor: t.color.surface, ...t.shadow.card },
+  segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  segTxtActive: { color: t.color.brand },
   list: { gap: tokens.space.sm },
   dayGroup: { gap: tokens.space.xs },
   dayLabel: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.6,
@@ -428,11 +440,11 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.xs,
   },
   dayCard: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
-    ...tokens.shadow.card,
+    borderColor: t.color.line,
+    ...t.shadow.card,
   },
   actRow: {
     flexDirection: "row",
@@ -452,13 +464,13 @@ const s = StyleSheet.create({
   actMain: { flex: 1, minWidth: 0 },
   actDocRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
   actDocNo: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
   actName: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     marginTop: 1,
@@ -470,13 +482,13 @@ const s = StyleSheet.create({
     maxWidth: 110,
   },
   trCard: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
     gap: tokens.space.sm,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   trHead: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   trDir: {
@@ -488,13 +500,13 @@ const s = StyleSheet.create({
   },
   trMain: { flex: 1, minWidth: 0 },
   trNo: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
   trParty: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     marginTop: 1,
@@ -507,13 +519,13 @@ const s = StyleSheet.create({
   trFoot: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   trNote: {
     flex: 1,
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     fontStyle: "italic",
   },
   trTime: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
   },
@@ -527,12 +539,14 @@ const s = StyleSheet.create({
     justifyContent: "center",
     gap: tokens.space.xs,
   },
-  actGrn: { backgroundColor: tokens.color.grn },
-  actRed: { backgroundColor: tokens.color.red },
+  actGrn: { backgroundColor: t.color.grn },
+  actRed: { backgroundColor: t.color.red },
   actNeutral: {
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
   },
   actTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

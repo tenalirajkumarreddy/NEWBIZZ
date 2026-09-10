@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function PressCard({
   onPress, children, style,
@@ -9,6 +11,7 @@ export function PressCard({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const s = useStyles();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -31,12 +34,18 @@ export function PressCard({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
-    ...tokens.shadow.card,
+    borderColor: t.color.line,
+    ...t.shadow.card,
   },
 });
+  }, [palette]);
+};

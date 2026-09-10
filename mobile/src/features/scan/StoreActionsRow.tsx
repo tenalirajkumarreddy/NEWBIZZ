@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Linking, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 import type { LucideIcon } from "lucide-react-native";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Tone = "brand" | "grn" | "amb";
 
@@ -22,8 +23,10 @@ function ActionBtn({
 }: {
   icon: LucideIcon; label: string; onPress: () => void; tone?: Tone; disabled?: boolean;
 }) {
-  const wash = { brand: tokens.color.brandWash, grn: tokens.color.grnWash, amb: tokens.color.ambWash }[tone];
-  const fg = { brand: tokens.color.brand, grn: tokens.color.grn, amb: tokens.color.amb }[tone];
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const wash = { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[tone];
+  const fg = { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[tone];
   return (
     <Pressable
       onPress={onPress}
@@ -47,6 +50,7 @@ export function StoreActionsRow({
   store: ResolvedStore;
   onAfterVisit?: () => void;
 }) {
+  const s = useStyles();
   const router = useRouter();
   const qc = useQueryClient();
   const session = useActiveSession();
@@ -136,7 +140,11 @@ export function StoreActionsRow({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
   btn: {
     flexDirection: "row", alignItems: "center", gap: 5,
@@ -145,3 +153,5 @@ const s = StyleSheet.create({
   },
   btnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

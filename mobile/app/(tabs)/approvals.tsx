@@ -23,10 +23,13 @@ import {
   approveExpense, rejectExpense, usePendingExpenses, type PendingExpenseRow,
 } from "@/data/expenses";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Segment = "orders" | "expenses";
 
 export default function ApprovalsScreen() {
+  const { palette: t } = useTheme();
+  const st = useStyles();
   const { claims, can } = useSession();
   const qc = useQueryClient();
   const fetching = useIsFetching();
@@ -154,7 +157,7 @@ export default function ApprovalsScreen() {
             </View>
 
             <View style={st.note}>
-              <Info size={13} color={tokens.color.ink3} />
+              <Info size={13} color={t.color.ink3} />
               <Text style={st.noteTxt}>
                 Approving creates an official GST invoice. Server enforces credit limits on invoicing.
               </Text>
@@ -190,7 +193,7 @@ export default function ApprovalsScreen() {
         ) : (
           <>
             <View style={st.note}>
-              <Info size={13} color={tokens.color.ink3} />
+              <Info size={13} color={t.color.ink3} />
               <Text style={st.noteTxt}>
                 Approving deducts the amount from the spender's cash custody. Rejected expenses move nothing.
               </Text>
@@ -249,7 +252,7 @@ export default function ApprovalsScreen() {
       <Sheet visible={rejecting != null} onClose={() => setRejecting(null)} title="Reject expense">
         {rejecting ? (
           <View style={st.detailBody}>
-            <Text style={st.detailStore}>{rejecting.expenseNo} · <Text style={{ color: tokens.color.red }}>{moneyINR(rejecting.amount)}</Text></Text>
+            <Text style={st.detailStore}>{rejecting.expenseNo} · <Text style={{ color: t.color.red }}>{moneyINR(rejecting.amount)}</Text></Text>
             <Text style={st.detailNotes}>
               {rejecting.spenderName ?? "Agent"} · {rejecting.category.replace("_", " ")}
             </Text>
@@ -258,7 +261,7 @@ export default function ApprovalsScreen() {
               value={rejectReason}
               onChangeText={setRejectReason}
               placeholder="Reason (optional)"
-              placeholderTextColor={tokens.color.ink4}
+              placeholderTextColor={t.color.ink4}
               maxLength={200}
               multiline
               accessibilityLabel="Rejection reason"
@@ -283,6 +286,7 @@ export default function ApprovalsScreen() {
 }
 
 function SegmentBtn({ label, count, active, onPress }: { label: string; count: number; active: boolean; onPress: () => void }) {
+  const st = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -306,11 +310,13 @@ function ExpenseCard({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const st = useStyles();
   return (
     <View style={st.card}>
       <View style={st.cardHead}>
         <View style={[st.expChip]}>
-          <Wallet size={14} color={tokens.color.amb} />
+          <Wallet size={14} color={t.color.amb} />
         </View>
         <View style={st.arMain}>
           <Text style={st.orderNo}>{row.expenseNo}</Text>
@@ -320,7 +326,7 @@ function ExpenseCard({
           {row.note ? <Text style={st.expNote} numberOfLines={1}>"{row.note}"</Text> : null}
         </View>
         {/* Money convention: red = amount will leave custody on approval */}
-        <Text style={[st.total, { color: tokens.color.red }]} numberOfLines={1}>{moneyINR(row.amount)}</Text>
+        <Text style={[st.total, { color: t.color.red }]} numberOfLines={1}>{moneyINR(row.amount)}</Text>
       </View>
       <View style={st.actions}>
         <Pressable
@@ -340,8 +346,8 @@ function ExpenseCard({
           accessibilityLabel={`Reject ${row.expenseNo}`}
           style={({ pressed }) => [st.btn, st.btnGhost, (pressed || busy) && { opacity: 0.7 }]}
         >
-          <X size={14} color={tokens.color.red} />
-          <Text style={[st.btnTxt, { color: tokens.color.red }]}>Reject</Text>
+          <X size={14} color={t.color.red} />
+          <Text style={[st.btnTxt, { color: t.color.red }]}>Reject</Text>
         </Pressable>
       </View>
     </View>
@@ -367,6 +373,7 @@ function OrderCard({
   onApprove: () => void;
   onView: () => void;
 }) {
+  const st = useStyles();
   const lines = order.lines;
   const total = orderTotal(order);
   return (
@@ -415,7 +422,11 @@ function OrderCard({
   );
 }
 
-const st = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -423,10 +434,10 @@ const st = StyleSheet.create({
   },
   segWrap: {
     flexDirection: "row",
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     padding: 3,
     gap: 3,
   },
@@ -440,21 +451,21 @@ const st = StyleSheet.create({
     borderRadius: tokens.radius.sm,
     paddingHorizontal: 4,
   },
-  segBtnOn: { backgroundColor: tokens.color.surface, ...tokens.shadow.card },
-  segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  segTxtOn: { color: tokens.color.brand },
+  segBtnOn: { backgroundColor: t.color.surface, ...t.shadow.card },
+  segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  segTxtOn: { color: t.color.brand },
   segCount: {
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: tokens.color.ambWash,
+    backgroundColor: t.color.ambWash,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
   },
-  segCountOn: { backgroundColor: tokens.color.brand },
+  segCountOn: { backgroundColor: t.color.brand },
   segCountTxt: {
-    color: tokens.color.amb,
+    color: t.color.amb,
     fontFamily: tokens.font.monoBold,
     fontSize: 11,
     fontVariant: ["tabular-nums"],
@@ -464,12 +475,12 @@ const st = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.ambWash,
+    backgroundColor: t.color.ambWash,
     alignItems: "center",
     justifyContent: "center",
   },
   expNote: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
     fontStyle: "italic",
@@ -479,72 +490,72 @@ const st = StyleSheet.create({
     minHeight: 72,
     textAlignVertical: "top",
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
     paddingVertical: tokens.space.sm,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.sm,
   },
-  btnRed: { backgroundColor: tokens.color.red },
+  btnRed: { backgroundColor: t.color.red },
   btnGhost: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
   },
   gridRow: { flexDirection: "row", gap: tokens.space.sm },
   note: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.sm,
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     paddingHorizontal: tokens.space.md,
     paddingVertical: tokens.space.sm,
   },
   noteTxt: {
     flex: 1,
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     lineHeight: 17,
   },
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
     gap: tokens.space.sm,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: tokens.space.md },
   orderNo: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
   },
   storeName: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     marginTop: 2,
   },
   total: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
     maxWidth: 110,
   },
   preview: { gap: 2 },
-  previewLine: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
-  more: { color: tokens.color.ink4, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
+  previewLine: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  more: { color: t.color.ink4, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
   actions: { flexDirection: "row", gap: tokens.space.sm },
   btn: {
     flex: 1,
@@ -555,20 +566,20 @@ const st = StyleSheet.create({
     justifyContent: "center",
     gap: tokens.space.xs,
   },
-  btnGrn: { backgroundColor: tokens.color.grn },
-  btnBrand: { backgroundColor: tokens.color.brand },
+  btnGrn: { backgroundColor: t.color.grn },
+  btnBrand: { backgroundColor: t.color.brand },
   btnTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   detailBody: { gap: tokens.space.md, paddingBottom: tokens.space.md },
-  detailStore: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.base },
-  detailDate: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
-  detailNotes: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  detailStore: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.base },
+  detailDate: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  detailNotes: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   detailLines: { gap: tokens.space.xs },
   arRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md, minHeight: 40 },
   arMain: { flex: 1, minWidth: 0 },
-  lineName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  lineSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
+  lineName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  lineSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
   lineAmt: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
@@ -578,14 +589,16 @@ const st = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: tokens.color.line,
+    borderTopColor: t.color.line,
     paddingTop: tokens.space.md,
   },
-  totalLabel: { color: tokens.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  totalLabel: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   totalValue: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.lg,
     fontVariant: ["tabular-nums"],
   },
 });
+  }, [palette]);
+};

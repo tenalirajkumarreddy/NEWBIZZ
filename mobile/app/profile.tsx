@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   View, Text, Pressable, Alert, StyleSheet, ScrollView, TextInput, Image, ActivityIndicator, Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Toast from "react-native-toast-message";
 import * as DocumentPicker from "expo-document-picker";
 import {
@@ -21,14 +20,15 @@ import { supabase } from "@/lib/supabase";
 import { friendlyError } from "@/lib/rpc";
 import { dateIST } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useTheme, type ThemeMode } from "@/theme/ThemeContext";
 
 const APP_VERSION = "NEWBIZZ v1.0.0";
 const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
 const MAX_DOC_BYTES = 10 * 1024 * 1024;
 
-type ThemeMode = "system" | "light" | "dark";
-
 export default function ProfileScreen() {
+  const { palette: t, mode: theme, setMode: setThemePref } = useTheme();
+  const { s } = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
@@ -36,22 +36,9 @@ export default function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const uid = user?.id ?? "";
 
-  // theme (persisted locally; applied in v2 — picker ships now)
-  const [theme, setTheme] = useState<ThemeMode>("system");
   // avatars live in the private documents bucket - resolve a short-lived
   // signed URL whenever the profile changes (effect placed after profile)
   const [avatarSignedUrl, setAvatarSignedUrl] = useState<string | null>(null);
-  useEffect(() => {
-    AsyncStorage.getItem("nb.theme")
-      .then((v) => {
-        if (v === "light" || v === "dark" || v === "system") setTheme(v);
-      })
-      .catch(() => {});
-  }, []);
-  const setThemePref = (t: ThemeMode) => {
-    setTheme(t);
-    AsyncStorage.setItem("nb.theme", t).catch(() => {});
-  };
 
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const metaName = typeof meta.full_name === "string" ? meta.full_name : null;
@@ -332,7 +319,7 @@ export default function ProfileScreen() {
       <ScrollView style={s.flex} contentContainerStyle={[s.body, { paddingBottom: 48 + insets.bottom }]}>
         {busy ? (
           <View style={s.busyBar}>
-            <ActivityIndicator size="small" color={tokens.color.brand} />
+            <ActivityIndicator size="small" color={t.color.brand} />
             <Text style={s.busyTxt}>Working...</Text>
           </View>
         ) : null}
@@ -363,7 +350,7 @@ export default function ProfileScreen() {
                   value={nameDraft}
                   onChangeText={setNameDraft}
                   placeholder="Full name"
-                  placeholderTextColor={tokens.color.ink4}
+                  placeholderTextColor={t.color.ink4}
                   maxLength={80}
                   autoFocus
                 />
@@ -374,7 +361,7 @@ export default function ProfileScreen() {
                   hitSlop={14}
                   style={s.iconHit}
                 >
-                  <Check size={18} color={tokens.color.grn} />
+                  <Check size={18} color={t.color.grn} />
                 </Pressable>
                 <Pressable
                   onPress={() => setEditingName(false)}
@@ -382,7 +369,7 @@ export default function ProfileScreen() {
                   hitSlop={14}
                   style={s.iconHit}
                 >
-                  <X size={18} color={tokens.color.ink4} />
+                  <X size={18} color={t.color.ink4} />
                 </Pressable>
               </View>
             ) : (
@@ -392,7 +379,7 @@ export default function ProfileScreen() {
                 style={({ pressed }) => [s.nameRow, pressed && { opacity: 0.8 }]}
               >
                 <Text style={s.userName} numberOfLines={1}>{name}</Text>
-                <Pencil size={13} color={tokens.color.ink4} />
+                <Pencil size={13} color={t.color.ink4} />
               </Pressable>
             )}
             <Text style={s.userPhone}>{phone ?? "-"}</Text>
@@ -425,15 +412,15 @@ export default function ProfileScreen() {
                   accessibilityState={{ selected: on }}
                   style={({ pressed }) => [s.themeBtn, on && s.themeBtnOn, pressed && { opacity: 0.85 }]}
                 >
-                  <Icon size={15} color={on ? "#ffffff" : tokens.color.ink3} />
+                  <Icon size={15} color={on ? "#ffffff" : t.color.ink3} />
                   <Text style={[s.themeTxt, on && s.themeTxtOn]}>{o.label}</Text>
                 </Pressable>
               );
             })}
           </View>
           <View style={s.noteRow}>
-            <Info size={12} color={tokens.color.ink4} />
-            <Text style={s.noteTxt}>Preference saved — dark mode applies in the next release.</Text>
+            <Info size={12} color={t.color.ink4} />
+            <Text style={s.noteTxt}>Applies instantly across the app — “System” follows your device setting.</Text>
           </View>
         </View>
 
@@ -447,7 +434,7 @@ export default function ProfileScreen() {
               accessibilityLabel="Upload document"
               style={({ pressed }) => [s.uploadBtn, (pressed || busy) && { opacity: 0.7 }]}
             >
-              <FileUp size={13} color={tokens.color.brand} />
+              <FileUp size={13} color={t.color.brand} />
               <Text style={s.uploadTxt}>Upload</Text>
             </Pressable>
           </View>
@@ -467,7 +454,7 @@ export default function ProfileScreen() {
                     style={({ pressed }) => [s.docMain, pressed && { opacity: 0.75 }]}
                   >
                     <View style={s.docRowInner}>
-                      <FileText size={14} color={tokens.color.ink3} />
+                      <FileText size={14} color={t.color.ink3} />
                       <View style={s.docText}>
                         <Text style={s.docTitle} numberOfLines={1}>{d.title}</Text>
                         <Text style={s.docMeta}>
@@ -482,7 +469,7 @@ export default function ProfileScreen() {
                     hitSlop={12}
                     style={({ pressed }) => [s.iconHit, pressed && { opacity: 0.6 }]}
                   >
-                    <Trash2 size={15} color={tokens.color.red} />
+                    <Trash2 size={15} color={t.color.red} />
                   </Pressable>
                 </View>
               ))}
@@ -495,7 +482,7 @@ export default function ProfileScreen() {
           <View style={s.cardHead}>
             <Text style={s.cardTitle}>ACCESS</Text>
             <View style={s.accessChip}>
-              <ShieldCheck size={12} color={tokens.color.brand} />
+              <ShieldCheck size={12} color={t.color.brand} />
               <Text style={s.accessTxt}>Managed by your manager</Text>
             </View>
           </View>
@@ -525,7 +512,7 @@ export default function ProfileScreen() {
           accessibilityLabel="Sign out"
           style={({ pressed }) => [s.signOut, (pressed || busy) && { opacity: 0.8 }]}
         >
-          <LogOut size={16} color={tokens.color.red} />
+          <LogOut size={16} color={t.color.red} />
           <Text style={s.signOutTxt}>Sign out</Text>
         </Pressable>
 
@@ -536,6 +523,7 @@ export default function ProfileScreen() {
 }
 
 function KV({ k, v }: { k: string; v: string }) {
+  const { kv } = useStyles();
   return (
     <View style={kv.row}>
       <Text style={kv.k}>{k}</Text>
@@ -544,7 +532,12 @@ function KV({ k, v }: { k: string; v: string }) {
   );
 }
 
-const kv = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return {
+      kv: StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -552,23 +545,17 @@ const kv = StyleSheet.create({
     minHeight: 38,
     gap: tokens.space.md,
   },
-  k: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  k: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   v: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.xs,
     flexShrink: 1,
     textAlign: "right",
   },
-});
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "U";
-}
-
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: tokens.color.bg },
+}),
+      s: StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.color.bg },
   flex: { flex: 1 },
   backBtn: {
     minHeight: 44,
@@ -589,23 +576,23 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
     paddingVertical: tokens.space.xs,
   },
-  busyTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  busyTxt: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   userCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: tokens.space.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -617,13 +604,13 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: tokens.color.surface,
+    borderColor: t.color.surface,
   },
-  avatarTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
+  avatarTxt: { color: t.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   userMain: { flex: 1, minWidth: 0 },
   nameRow: {
     flexDirection: "row",
@@ -636,31 +623,31 @@ const s = StyleSheet.create({
     flex: 1,
     minHeight: 40,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.sm,
     paddingHorizontal: tokens.space.sm,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
   },
-  userName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.base, flexShrink: 1 },
+  userName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.base, flexShrink: 1 },
   userPhone: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     marginTop: 2,
     fontVariant: ["tabular-nums"],
   },
-  userEmail: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
+  userEmail: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
     gap: tokens.space.xs,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   cardHead: {
     flexDirection: "row",
@@ -669,7 +656,7 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
   },
   cardTitle: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.6,
@@ -686,14 +673,14 @@ const s = StyleSheet.create({
     minHeight: 44,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
-  themeBtnOn: { backgroundColor: tokens.color.brand, borderColor: tokens.color.brand },
-  themeTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  themeBtnOn: { backgroundColor: t.color.brand, borderColor: t.color.brand },
+  themeTxt: { color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   themeTxtOn: { color: "#ffffff" },
   noteRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: tokens.space.xs },
-  noteTxt: { flex: 1, color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, lineHeight: 15 },
+  noteTxt: { flex: 1, color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, lineHeight: 15 },
   uploadBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -702,10 +689,10 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.sm,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     marginBottom: tokens.space.xs,
   },
-  uploadTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  uploadTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   iconHit: {
     width: 44,
     height: 44,
@@ -717,40 +704,50 @@ const s = StyleSheet.create({
   docText: { flex: 1, minWidth: 0 },
   docList: { gap: tokens.space.xs },
   docMain: { flex: 1, minWidth: 0 },
-  docTitle: { color: tokens.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  docMeta: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
+  docTitle: { color: t.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  docMeta: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
   accessChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginBottom: tokens.space.xs,
   },
-  accessTxt: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  accessTxt: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
   accessLabel: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.6,
   },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.xs, marginTop: tokens.space.xs },
-  muted: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
-  errText: { color: tokens.color.red, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  muted: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  errText: { color: t.color.red, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   signOut: {
     minHeight: 48,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.redWash,
+    backgroundColor: t.color.redWash,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: tokens.space.sm,
     marginTop: tokens.space.sm,
   },
-  signOutTxt: { color: tokens.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  signOutTxt: { color: t.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   version: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.eyebrow,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
   },
-});
+}),
+    };
+  }, [palette]);
+};
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "U";
+}
+
+

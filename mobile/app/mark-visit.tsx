@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,8 +14,11 @@ import { recordVisit, useActiveSession } from "@/data/routes";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export default function MarkVisitScreen() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const router = useRouter();
   const qc = useQueryClient();
   const session = useActiveSession();
@@ -66,7 +69,7 @@ export default function MarkVisitScreen() {
             <View style={s.card}>
               <View style={s.row}>
                 <View style={s.chip}>
-                  <MapPin size={16} color={tokens.color.brand} />
+                  <MapPin size={16} color={t.color.brand} />
                 </View>
                 <View style={s.main}>
                   <Text style={s.name} numberOfLines={1}>{picked.name}</Text>
@@ -97,7 +100,7 @@ export default function MarkVisitScreen() {
               </Pressable>
             </View>
             <View style={s.hintWrap}>
-              <Navigation2 size={13} color={tokens.color.ink4} />
+              <Navigation2 size={13} color={t.color.ink4} />
               <Text style={s.hint}>Your GPS position is attached when location permission is granted.</Text>
             </View>
           </>
@@ -105,7 +108,7 @@ export default function MarkVisitScreen() {
           <Pressable onPress={() => setPickerOpen(true)} style={({ pressed }) => [s.card, s.pickCard, pressed && { opacity: 0.85 }]}>
             <View style={s.row}>
               <View style={s.chip}>
-                <MapPin size={16} color={tokens.color.brand} />
+                <MapPin size={16} color={t.color.brand} />
               </View>
               <View style={s.main}>
                 <Text style={s.name}>Select a store</Text>
@@ -134,7 +137,11 @@ export default function MarkVisitScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -142,11 +149,11 @@ const s = StyleSheet.create({
   },
   card: {
     padding: tokens.space.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
-    ...tokens.shadow.card,
+    borderColor: t.color.line,
+    ...t.shadow.card,
   },
   pickCard: { minHeight: 72, justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
@@ -154,20 +161,20 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center",
     justifyContent: "center",
   },
   main: { flex: 1, minWidth: 0 },
-  name: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  sub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  name: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  sub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   changeWrap: { alignItems: "center", paddingVertical: tokens.space.sm },
-  changeTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  changeTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   actions: { marginTop: tokens.space.sm },
   confirm: {
     minHeight: 48,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -180,5 +187,7 @@ const s = StyleSheet.create({
     gap: tokens.space.xs,
     paddingHorizontal: tokens.space.xs,
   },
-  hint: { flex: 1, color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  hint: { flex: 1, color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
 });
+  }, [palette]);
+};

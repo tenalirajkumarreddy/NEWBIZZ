@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { rpc, friendlyError, RpcError } from "@/lib/rpc";
 import type { Database } from "@/lib/db-types";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 type CustomerKind = Database["public"]["Enums"]["customer_kind"];
 type AuditAction = Database["public"]["Enums"]["audit_action"];
@@ -39,6 +40,7 @@ function KindChip({
 }: {
   label: string; on: boolean; onPress: () => void;
 }) {
+  const s = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -56,6 +58,8 @@ function RoutePick({
 }: {
   name: string; on: boolean; onPress: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -64,7 +68,7 @@ function RoutePick({
       style={({ pressed }) => [s.routeRow, on && s.routeRowOn, pressed && { opacity: 0.85 }]}
     >
       <Text style={[s.routeName, on && s.routeNameOn]} numberOfLines={1}>{name}</Text>
-      {on ? <Check size={15} color={tokens.color.brand} /> : null}
+      {on ? <Check size={15} color={t.color.brand} /> : null}
     </Pressable>
   );
 }
@@ -77,6 +81,8 @@ export function AddStoreWizard({
   /** Scanned QR code to auto-link to the newly created store (optional). */
   linkCode?: string | null;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const routesQ = useRoutes();
 
@@ -300,7 +306,7 @@ export function AddStoreWizard({
               accessibilityState={{ selected: custMode === "new" }}
               style={({ pressed }) => [s.modeBtn, custMode === "new" && s.modeBtnOn, pressed && { opacity: 0.85 }]}
             >
-              <UserPlus size={14} color={custMode === "new" ? tokens.color.surface : tokens.color.ink3} />
+              <UserPlus size={14} color={custMode === "new" ? t.color.surface : t.color.ink3} />
               <Text style={[s.modeTxt, custMode === "new" && s.modeTxtOn]}>New customer</Text>
             </Pressable>
             <Pressable
@@ -309,7 +315,7 @@ export function AddStoreWizard({
               accessibilityState={{ selected: custMode === "existing" }}
               style={({ pressed }) => [s.modeBtn, custMode === "existing" && s.modeBtnOn, pressed && { opacity: 0.85 }]}
             >
-              <Users size={14} color={custMode === "existing" ? tokens.color.surface : tokens.color.ink3} />
+              <Users size={14} color={custMode === "existing" ? t.color.surface : t.color.ink3} />
               <Text style={[s.modeTxt, custMode === "existing" && s.modeTxtOn]}>Existing</Text>
             </Pressable>
           </View>
@@ -323,7 +329,7 @@ export function AddStoreWizard({
                   value={custName}
                   onChangeText={setCustName}
                   placeholder="e.g. Sri Traders"
-                  placeholderTextColor={tokens.color.ink4}
+                  placeholderTextColor={t.color.ink4}
                   accessible
                   accessibilityLabel="Customer name"
                 />
@@ -335,7 +341,7 @@ export function AddStoreWizard({
                   value={custPhone}
                   onChangeText={(t) => setCustPhone(t.replace(/\D/g, "").slice(0, 10))}
                   placeholder="10-digit mobile number"
-                  placeholderTextColor={tokens.color.ink4}
+                  placeholderTextColor={t.color.ink4}
                   keyboardType="phone-pad"
                   accessible
                   accessibilityLabel="Customer phone"
@@ -353,7 +359,7 @@ export function AddStoreWizard({
                   value={custQuery}
                   onChangeText={setCustQuery}
                   placeholder="Search customers by name or phone"
-                  placeholderTextColor={tokens.color.ink4}
+                  placeholderTextColor={t.color.ink4}
                   onSubmitEditing={() => void searchCustomers()}
                   returnKeyType="search"
                   accessible
@@ -366,9 +372,9 @@ export function AddStoreWizard({
                   style={({ pressed }) => [s.searchBtn, pressed && { opacity: 0.85 }, custSearch && { opacity: 0.5 }]}
                 >
                   {custSearch ? (
-                    <ActivityIndicator size="small" color={tokens.color.brand} />
+                    <ActivityIndicator size="small" color={t.color.brand} />
                   ) : (
-                    <Search size={15} color={tokens.color.brand} />
+                    <Search size={15} color={t.color.brand} />
                   )}
                 </Pressable>
               </View>
@@ -411,7 +417,7 @@ export function AddStoreWizard({
                             {c.code} · {c.phone || "no phone"}
                           </Text>
                         </View>
-                        {on ? <Check size={15} color={tokens.color.brand} /> : null}
+                        {on ? <Check size={15} color={t.color.brand} /> : null}
                       </Pressable>
                     );
                   })}
@@ -429,7 +435,7 @@ export function AddStoreWizard({
               value={storeName}
               onChangeText={setStoreName}
               placeholder="e.g. Sri Traders — Main Street"
-              placeholderTextColor={tokens.color.ink4}
+              placeholderTextColor={t.color.ink4}
               accessible
               accessibilityLabel="Store name"
             />
@@ -461,7 +467,7 @@ export function AddStoreWizard({
             <Text style={[s.routeName, routeId === null && s.routeNameOn]} numberOfLines={1}>
               No route
             </Text>
-            {routeId === null ? <Check size={15} color={tokens.color.brand} /> : null}
+            {routeId === null ? <Check size={15} color={t.color.brand} /> : null}
           </Pressable>
           {routesQ.data!.map((r) => (
             <RoutePick
@@ -482,7 +488,7 @@ export function AddStoreWizard({
               value={addressLine}
               onChangeText={setAddressLine}
               placeholder="Shop no, street"
-              placeholderTextColor={tokens.color.ink4}
+              placeholderTextColor={t.color.ink4}
               accessible
               accessibilityLabel="Address line"
             />
@@ -495,7 +501,7 @@ export function AddStoreWizard({
                 value={area}
                 onChangeText={setArea}
                 placeholder="Area"
-                placeholderTextColor={tokens.color.ink4}
+                placeholderTextColor={t.color.ink4}
                 accessible
                 accessibilityLabel="Area"
               />
@@ -507,7 +513,7 @@ export function AddStoreWizard({
                 value={city}
                 onChangeText={setCity}
                 placeholder="City"
-                placeholderTextColor={tokens.color.ink4}
+                placeholderTextColor={t.color.ink4}
                 accessible
                 accessibilityLabel="City"
               />
@@ -526,9 +532,9 @@ export function AddStoreWizard({
             ]}
           >
             {locating ? (
-              <ActivityIndicator size="small" color={tokens.color.grn} />
+              <ActivityIndicator size="small" color={t.color.grn} />
             ) : (
-              <Crosshair size={15} color={lat != null && lng != null ? tokens.color.grn : tokens.color.ink3} />
+              <Crosshair size={15} color={lat != null && lng != null ? t.color.grn : t.color.ink3} />
             )}
             <Text style={[s.gpsTxt, lat != null && lng != null && s.gpsTxtOn]}>
               {locating
@@ -567,7 +573,7 @@ export function AddStoreWizard({
             accessibilityLabel="Go back a step"
             style={({ pressed }) => [s.navBack, pressed && { opacity: 0.85 }, busy && { opacity: 0.5 }]}
           >
-            <ChevronLeft size={15} color={tokens.color.ink2} />
+            <ChevronLeft size={15} color={t.color.ink2} />
             <Text style={s.navBackTxt}>Back</Text>
           </Pressable>
         ) : (
@@ -596,12 +602,16 @@ export function AddStoreWizard({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   stepBody: { gap: tokens.space.md, marginTop: tokens.space.sm },
   gap: { gap: tokens.space.md },
   modeRow: {
     flexDirection: "row",
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.full,
     padding: 3,
     gap: 3,
@@ -615,12 +625,12 @@ const s = StyleSheet.create({
     minHeight: 40,
     borderRadius: tokens.radius.full,
   },
-  modeBtnOn: { backgroundColor: tokens.color.brand, ...tokens.shadow.card },
-  modeTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  modeTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  modeBtnOn: { backgroundColor: t.color.brand, ...t.shadow.card },
+  modeTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  modeTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   fieldWrap: { gap: 6 },
   label: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.4,
@@ -628,12 +638,12 @@ const s = StyleSheet.create({
   input: {
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
     paddingVertical: 10,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
   },
@@ -641,7 +651,7 @@ const s = StyleSheet.create({
     fontFamily: tokens.font.mono,
     fontVariant: ["tabular-nums"],
   },
-  warn: { color: tokens.color.amb, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  warn: { color: t.color.amb, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -651,11 +661,11 @@ const s = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
   },
@@ -663,12 +673,12 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center",
     justifyContent: "center",
   },
   hint: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
     lineHeight: 16,
@@ -683,40 +693,40 @@ const s = StyleSheet.create({
     paddingVertical: tokens.space.sm,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
-  hitRowOn: { borderColor: tokens.color.brand, backgroundColor: tokens.color.brandWash },
+  hitRowOn: { borderColor: t.color.brand, backgroundColor: t.color.brandWash },
   hitMain: { flex: 1, minWidth: 0 },
-  hitName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  hitSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  hitName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  hitSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   picked: {
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.brand,
-    backgroundColor: tokens.color.brandWash,
+    borderColor: t.color.brand,
+    backgroundColor: t.color.brandWash,
     padding: tokens.space.md,
   },
   pickedRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   pickedMain: { flex: 1, minWidth: 0 },
-  pickedName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  pickedSub: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  pickedName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  pickedSub: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   pickedChange: { minHeight: 44, justifyContent: "center", paddingHorizontal: tokens.space.sm },
-  pickedChangeTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  pickedChangeTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
   chip: {
     minHeight: 44,
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.full,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipOn: { backgroundColor: tokens.color.brand, borderColor: tokens.color.brand },
-  chipTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  chipTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  chipOn: { backgroundColor: t.color.brand, borderColor: t.color.brand },
+  chipTxt: { color: t.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  chipTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   routes: { gap: tokens.space.xs },
   routeRow: {
     flexDirection: "row",
@@ -726,12 +736,12 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
-  routeRowOn: { borderColor: tokens.color.brand, backgroundColor: tokens.color.brandWash },
-  routeName: { flex: 1, color: tokens.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
-  routeNameOn: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi },
+  routeRowOn: { borderColor: t.color.brand, backgroundColor: t.color.brandWash },
+  routeName: { flex: 1, color: t.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
+  routeNameOn: { color: t.color.brand, fontFamily: tokens.font.sansSemi },
   twoCol: { flexDirection: "row", gap: tokens.space.sm },
   twoColField: { flex: 1 },
   gpsBtn: {
@@ -742,28 +752,28 @@ const s = StyleSheet.create({
     minHeight: 44,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
-  gpsBtnOn: { borderColor: tokens.color.grn, backgroundColor: tokens.color.grnWash },
-  gpsTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  gpsTxtOn: { color: tokens.color.grn },
+  gpsBtnOn: { borderColor: t.color.grn, backgroundColor: t.color.grnWash },
+  gpsTxt: { color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  gpsTxtOn: { color: t.color.grn },
   review: {
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
     padding: tokens.space.md,
     gap: tokens.space.sm,
   },
   reviewRow: { gap: 2 },
   reviewLabel: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.4,
   },
-  reviewVal: { color: tokens.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
+  reviewVal: { color: t.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.sm },
   navRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -777,14 +787,16 @@ const s = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: tokens.space.sm,
   },
-  navBackTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  navBackTxt: { color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   navNext: {
     minHeight: 44,
     paddingHorizontal: tokens.space.xl,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
   },
-  navNextTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  navNextTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
 });
+  }, [palette]);
+};

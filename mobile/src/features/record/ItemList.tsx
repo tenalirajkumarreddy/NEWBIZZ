@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, TextInput } from "react-native";
 import { Minus, Plus, PackageOpen } from "lucide-react-native";
 import { EmptyState } from "@/components/EmptyState";
@@ -6,6 +6,7 @@ import { SkeletonRows } from "@/components/SkeletonRows";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
 import type { SellableItem } from "@/data/catalog";
+import { useTheme } from "@/theme/ThemeContext";
 
 const MAX_QTY = 999_999;
 
@@ -32,6 +33,7 @@ export function ItemList({
   loading: boolean;
   errorText: string | null;
 }) {
+  const s = useStyles();
   if (loading) return <SkeletonRows rows={6} />;
   if (errorText) return <EmptyState title="Could not load items" message={errorText} />;
   if (items.length === 0) {
@@ -66,6 +68,8 @@ function ItemRow({
   override: number | undefined;
   onQty: (itemId: string, qty: number) => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const price = override ?? effectivePrice(item, qty);
   const selected = qty > 0;
   const [txt, setTxt] = useState(qty > 0 ? fmtQty(qty) : "");
@@ -103,7 +107,7 @@ function ItemRow({
           accessibilityLabel={`Add ${item.name}`}
           style={({ pressed }) => [s.addBtn, pressed && { opacity: 0.8 }]}
         >
-          <Plus size={16} color={tokens.color.brand} />
+          <Plus size={16} color={t.color.brand} />
         </Pressable>
       )}
       {selected ? (
@@ -113,7 +117,7 @@ function ItemRow({
             accessibilityLabel={`Decrease ${item.name}`}
             style={({ pressed }) => [s.stepBtn, pressed && { opacity: 0.8 }]}
           >
-            <Minus size={15} color={tokens.color.ink2} />
+            <Minus size={15} color={t.color.ink2} />
           </Pressable>
           <TextInput
             style={s.stepInput}
@@ -129,7 +133,7 @@ function ItemRow({
             accessibilityLabel={`Increase ${item.name}`}
             style={({ pressed }) => [s.stepBtn, pressed && { opacity: 0.8 }]}
           >
-            <Plus size={15} color={tokens.color.brand} />
+            <Plus size={15} color={t.color.brand} />
           </Pressable>
         </View>
       ) : null}
@@ -137,27 +141,31 @@ function ItemRow({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   list: { gap: tokens.space.sm },
   row: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
     gap: tokens.space.sm,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
-  rowOn: { borderColor: tokens.color.brand, backgroundColor: tokens.color.brandWash },
+  rowOn: { borderColor: t.color.brand, backgroundColor: t.color.brandWash },
   rowMain: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
-  name: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  name: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2, flexWrap: "wrap" },
-  sku: { color: tokens.color.ink4, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow },
-  dot: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
-  price: { color: tokens.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow },
-  unit: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  sku: { color: t.color.ink4, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow },
+  dot: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  price: { color: t.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow },
+  unit: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
   lineTotal: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
@@ -165,27 +173,29 @@ const s = StyleSheet.create({
   },
   addBtn: {
     width: 44, height: 44, borderRadius: tokens.radius.md,
-    borderWidth: 1, borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderWidth: 1, borderColor: t.color.line,
+    backgroundColor: t.color.surface,
     alignItems: "center", justifyContent: "center",
     alignSelf: "flex-end",
   },
   stepper: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs, alignSelf: "flex-end" },
   stepBtn: {
     width: 44, height: 44, borderRadius: tokens.radius.md,
-    borderWidth: 1, borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderWidth: 1, borderColor: t.color.line,
+    backgroundColor: t.color.surface,
     alignItems: "center", justifyContent: "center",
   },
   stepInput: {
     width: 64, height: 44,
-    borderWidth: 1, borderColor: tokens.color.line,
+    borderWidth: 1, borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     textAlign: "center",
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.sm,
     paddingVertical: 0,
   },
 });
+  }, [palette]);
+};

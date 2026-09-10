@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { tokens } from "@/theme/tokens";
 import { PackageOpen } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 /**
  * Empty state card for lists/screens with no content.
@@ -24,10 +26,12 @@ export function EmptyState({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <View style={s.card}>
       <View style={s.circle}>
-        <Icon size={24} color={tokens.color.ink4} />
+        <Icon size={24} color={t.color.ink4} />
       </View>
       <Text style={s.title}>{title}</Text>
       {message ? <Text style={s.msg}>{message}</Text> : null}
@@ -43,13 +47,17 @@ export function EmptyState({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     padding: tokens.space.xl,
     alignItems: "center",
   },
@@ -57,19 +65,19 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     alignItems: "center",
     justifyContent: "center",
   },
   title: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
     marginTop: tokens.space.md,
     textAlign: "center",
   },
   msg: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     marginTop: tokens.space.xs,
@@ -80,14 +88,16 @@ const s = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: tokens.space.lg,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
     marginTop: tokens.space.lg,
   },
   btnTxt: {
-    color: tokens.color.surface,
+    color: t.color.surface,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.xs,
   },
 });
+  }, [palette]);
+};

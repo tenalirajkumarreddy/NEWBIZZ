@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { View, Text, StyleSheet, useWindowDimensions } from "react-native";
 import Animated, {
   cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming,
@@ -7,6 +7,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import { CameraOff } from "lucide-react-native";
 import { EmptyState } from "@/components/EmptyState";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 const DEBOUNCE_MS = 1500;
 const BRACKET = 28;
@@ -20,6 +21,7 @@ export function QrViewport({
   onScan: (raw: string) => void;
   resetKey: number;
 }) {
+  const s = useStyles();
   const [permission, requestPermission] = useCameraPermissions();
   const lastScanRef = useRef(0);
   const { width } = useWindowDimensions();
@@ -98,6 +100,7 @@ export function QrViewport({
 }
 
 function StatusPill({ text }: { text: string }) {
+  const s = useStyles();
   return (
     <View style={s.pillWrap}>
       <View style={s.pill}>
@@ -107,18 +110,22 @@ function StatusPill({ text }: { text: string }) {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   viewport: {
     width: "100%",
     borderRadius: tokens.radius.lg,
     overflow: "hidden",
-    backgroundColor: tokens.color.ink,
+    backgroundColor: t.color.ink,
   },
   camera: { flex: 1 },
   deniedBox: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     justifyContent: "center",
     paddingHorizontal: tokens.space.lg,
   },
@@ -126,7 +133,7 @@ const s = StyleSheet.create({
     position: "absolute",
     width: BRACKET,
     height: BRACKET,
-    borderColor: tokens.color.brand,
+    borderColor: t.color.brand,
   },
   tl: { top: BRACKET_INSET, left: BRACKET_INSET, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 12 },
   tr: { top: BRACKET_INSET, right: BRACKET_INSET, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 12 },
@@ -139,21 +146,23 @@ const s = StyleSheet.create({
     top: BRACKET_INSET,
     height: 2,
     borderRadius: 1,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     opacity: 0.85,
   },
   pillWrap: { alignItems: "center", marginTop: tokens.space.md },
   pill: {
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.full,
     paddingHorizontal: tokens.space.md,
     paddingVertical: 6,
   },
   pillTxt: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.xs,
   },
 });
+  }, [palette]);
+};

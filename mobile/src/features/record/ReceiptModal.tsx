@@ -3,6 +3,8 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react-native";
 import { Sheet } from "@/components/Sheet";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export interface ReceiptResult {
   kind: "sale" | "collect";
@@ -22,6 +24,8 @@ export function ReceiptModal({
   result: ReceiptResult | null;
   onClose: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   if (!result) return null;
   const success = result.kind === "sale" ? "Sale recorded" : "Payment recorded";
 
@@ -34,9 +38,9 @@ export function ReceiptModal({
     >
       <View style={[s.iconWrap, result.receiptFailed ? s.iconWrapWarn : s.iconWrapOk]}>
         {result.receiptFailed ? (
-          <AlertTriangle size={26} color={tokens.color.amb} />
+          <AlertTriangle size={26} color={t.color.amb} />
         ) : (
-          <CheckCircle2 size={26} color={tokens.color.grn} />
+          <CheckCircle2 size={26} color={t.color.grn} />
         )}
       </View>
       <Text style={s.title}>{result.receiptFailed ? "Recorded with warning" : success}</Text>
@@ -76,6 +80,8 @@ function Row({
 }: {
   label: string; value: string; mono?: boolean; tone?: "red" | "grn";
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <View style={s.row}>
       <Text style={s.rowLabel}>{label}</Text>
@@ -83,8 +89,8 @@ function Row({
         style={[
           s.rowVal,
           mono && s.mono,
-          tone === "red" && { color: tokens.color.red },
-          tone === "grn" && { color: tokens.color.grn },
+          tone === "red" && { color: t.color.red },
+          tone === "grn" && { color: t.color.grn },
         ]}
       >
         {value}
@@ -93,16 +99,20 @@ function Row({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   iconWrap: {
     width: 52, height: 52, borderRadius: 26,
     alignItems: "center", justifyContent: "center",
     alignSelf: "center",
   },
-  iconWrapOk: { backgroundColor: tokens.color.grnWash },
-  iconWrapWarn: { backgroundColor: tokens.color.ambWash },
+  iconWrapOk: { backgroundColor: t.color.grnWash },
+  iconWrapWarn: { backgroundColor: t.color.ambWash },
   title: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansBold,
     fontSize: tokens.size.lg,
     textAlign: "center",
@@ -117,32 +127,34 @@ const s = StyleSheet.create({
     gap: tokens.space.md,
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: tokens.color.lineSoft,
+    borderBottomColor: t.color.lineSoft,
   },
-  rowLabel: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.sm },
-  rowVal: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  rowLabel: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.sm },
+  rowVal: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   mono: { fontFamily: tokens.font.mono, fontVariant: ["tabular-nums"] },
   note: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     marginTop: tokens.space.sm,
     lineHeight: 17,
   },
   warn: {
-    backgroundColor: tokens.color.ambWash,
+    backgroundColor: t.color.ambWash,
     borderRadius: tokens.radius.md,
     padding: tokens.space.md,
     marginTop: tokens.space.md,
   },
-  warnTxt: { color: tokens.color.amb, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs, lineHeight: 17 },
+  warnTxt: { color: t.color.amb, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs, lineHeight: 17 },
   done: {
     minHeight: 44,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
     marginTop: tokens.space.lg,
   },
-  doneTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  doneTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
 });
+  }, [palette]);
+};

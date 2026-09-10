@@ -11,6 +11,7 @@ import { useStores } from "@/data/stores";
 import { haversineKm } from "@/lib/geo";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export interface PickedStore {
   id: string;
@@ -33,14 +34,16 @@ export function StorePickerSheet({
   onSelect: (store: PickedStore) => void;
   accent?: "brand" | "grn";
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const storesQ = useStores();
   const [search, setSearch] = useState("");
   const [nearest, setNearest] = useState(false);
   const [coords, setCoords] = useState<Coords>(null);
   const [locating, setLocating] = useState(false);
 
-  const wash = accent === "grn" ? tokens.color.grnWash : tokens.color.brandWash;
-  const fg = accent === "grn" ? tokens.color.grn : tokens.color.brand;
+  const wash = accent === "grn" ? t.color.grnWash : t.color.brandWash;
+  const fg = accent === "grn" ? t.color.grn : t.color.brand;
 
   async function toggleNearest() {
     if (nearest) {
@@ -91,13 +94,13 @@ export function StorePickerSheet({
     <Sheet visible={visible} onClose={onClose} title="Select store">
       <View style={s.searchRow}>
         <View style={s.searchBox}>
-          <Search size={15} color={tokens.color.ink4} />
+          <Search size={15} color={t.color.ink4} />
           <TextInput
             style={s.searchInput}
             value={search}
             onChangeText={setSearch}
             placeholder="Search name, area, customer"
-            placeholderTextColor={tokens.color.ink4}
+            placeholderTextColor={t.color.ink4}
             accessible
             accessibilityLabel="Search stores"
           />
@@ -109,12 +112,12 @@ export function StorePickerSheet({
           accessibilityState={{ selected: nearest && !!coords }}
           style={({ pressed }) => [
             s.nearestBtn,
-            { backgroundColor: nearest && coords ? wash : tokens.color.fill },
+            { backgroundColor: nearest && coords ? wash : t.color.fill },
             pressed && { opacity: 0.85 },
             locating && { opacity: 0.6 },
           ]}
         >
-          <MapPin size={14} color={nearest && coords ? fg : tokens.color.ink3} />
+          <MapPin size={14} color={nearest && coords ? fg : t.color.ink3} />
           <Text style={[s.nearestTxt, nearest && coords && { color: fg }]}>
             {locating ? "Locating..." : "Nearest"}
           </Text>
@@ -165,7 +168,11 @@ export function StorePickerSheet({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   searchRow: { flexDirection: "row", gap: tokens.space.sm },
   searchBox: {
     flex: 1,
@@ -174,14 +181,14 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
   },
   searchInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
     paddingVertical: 0,
@@ -194,9 +201,9 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.md,
   },
-  nearestTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  nearestTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   hint: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
     marginTop: tokens.space.sm,
@@ -209,12 +216,14 @@ const s = StyleSheet.create({
   },
   chipTxt: { fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   rowMain: { flex: 1 },
-  rowName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  rowSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  rowName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  rowSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   dist: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
 });
+  }, [palette]);
+};

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
@@ -13,8 +13,11 @@ import { gotoTab } from "@/lib/tabBus";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 import { formatElapsed, useElapsed } from "./useElapsed";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function ActiveRouteCard() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const session = useActiveSession();
   const qc = useQueryClient();
   const [ending, setEnding] = useState(false);
@@ -89,11 +92,11 @@ export function ActiveRouteCard() {
     <View style={s.card}>
       <View style={s.head}>
         <View style={s.chip}>
-          <RouteIcon size={13} color={tokens.color.grn} />
+          <RouteIcon size={13} color={t.color.grn} />
         </View>
         <Text style={s.title} numberOfLines={1}>{routeName}</Text>
         <View style={s.elapsed}>
-          <Timer size={11} color={tokens.color.ink3} />
+          <Timer size={11} color={t.color.ink3} />
           <Text style={s.elapsedTxt}>{formatElapsed(elapsedSec)}</Text>
         </View>
       </View>
@@ -120,43 +123,49 @@ export function ActiveRouteCard() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   head: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   chip: {
     width: 26, height: 26, borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.grnWash, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.grnWash, alignItems: "center", justifyContent: "center",
   },
-  title: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm, flex: 1 },
+  title: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm, flex: 1 },
   elapsed: { flexDirection: "row", alignItems: "center", gap: 4 },
   elapsedTxt: {
-    color: tokens.color.ink3, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
+    color: t.color.ink3, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
   track: {
-    height: 6, borderRadius: 3, backgroundColor: tokens.color.lineSoft,
+    height: 6, borderRadius: 3, backgroundColor: t.color.lineSoft,
     marginTop: tokens.space.lg, overflow: "hidden",
   },
-  fill: { height: "100%", borderRadius: 3, backgroundColor: tokens.color.grn },
+  fill: { height: "100%", borderRadius: 3, backgroundColor: t.color.grn },
   foot: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     marginTop: tokens.space.md, gap: tokens.space.md,
   },
-  progress: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, flex: 1 },
+  progress: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, flex: 1 },
   mono: {
-    fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, color: tokens.color.ink2,
+    fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, color: t.color.ink2,
     fontVariant: ["tabular-nums"],
   },
   endBtn: {
     minHeight: 44, paddingHorizontal: tokens.space.lg, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.redWash, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.redWash, alignItems: "center", justifyContent: "center",
   },
-  endTxt: { color: tokens.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  endTxt: { color: t.color.red, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

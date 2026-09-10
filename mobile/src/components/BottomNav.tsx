@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
 import type { LucideIcon } from "lucide-react-native";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function BottomNav({
   tabs, active, onChange, badgeCounts = {},
@@ -11,6 +13,8 @@ export function BottomNav({
   onChange: (id: string) => void;
   badgeCounts?: Record<string, number>;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <View style={[s.wrap, { paddingBottom: insets.bottom, height: 62 + insets.bottom }]}>
@@ -24,7 +28,7 @@ export function BottomNav({
             return (
               <Pressable key={tab.id} style={s.slot} onPress={() => onChange(tab.id)}>
                 <View style={s.centerWrap}>
-                  <View style={[s.centerCircle, tokens.shadow.fab]}>
+                  <View style={[s.centerCircle, t.shadow.fab]}>
                     <Icon size={22} color="#ffffff" />
                     {count > 0 ? (
                       <View style={s.badge}>
@@ -34,7 +38,7 @@ export function BottomNav({
                   </View>
                 </View>
                 <Text
-                  style={[s.centerLabel, { color: tokens.color.brand, opacity: isActive ? 1 : 0 }]}
+                  style={[s.centerLabel, { color: t.color.brand, opacity: isActive ? 1 : 0 }]}
                   numberOfLines={1}
                 >
                   {tab.label}
@@ -47,7 +51,7 @@ export function BottomNav({
             <Pressable key={tab.id} style={s.slot} onPress={() => onChange(tab.id)}>
               {isActive ? <View style={s.pill} /> : null}
               <View style={s.iconWrap}>
-                <Icon size={20} color={isActive ? tokens.color.brand : tokens.color.ink4} />
+                <Icon size={20} color={isActive ? t.color.brand : t.color.ink4} />
                 {count > 0 ? (
                   <View style={s.badge}>
                     <Text style={s.badgeTxt}>{count > 99 ? "99+" : count}</Text>
@@ -55,7 +59,7 @@ export function BottomNav({
                 ) : null}
               </View>
               <Text
-                style={[s.label, { color: isActive ? tokens.color.brand : tokens.color.ink4 }]}
+                style={[s.label, { color: isActive ? t.color.brand : t.color.ink4 }]}
                 numberOfLines={1}
               >
                 {tab.label}
@@ -68,11 +72,15 @@ export function BottomNav({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   wrap: {
-    backgroundColor: "rgba(255,255,255,0.94)",
+    backgroundColor: t.color.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: tokens.color.line,
+    borderTopColor: t.color.line,
   },
   row: {
     flex: 1,
@@ -91,7 +99,7 @@ const s = StyleSheet.create({
     width: 26,
     height: 2,
     borderRadius: 2,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
   },
   iconWrap: {
     alignItems: "center",
@@ -113,7 +121,7 @@ const s = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -131,7 +139,7 @@ const s = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 3,
-    backgroundColor: tokens.color.red,
+    backgroundColor: t.color.red,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -143,3 +151,5 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
 });
+  }, [palette]);
+};

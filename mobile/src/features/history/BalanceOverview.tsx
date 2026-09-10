@@ -7,6 +7,8 @@ import { useMyCustody } from "@/data/transfers";
 import { qk } from "@/data/keys";
 import { moneyCompact, todayIST } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 function istDay(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -21,6 +23,8 @@ export function BalanceOverview({
   onDeposit: () => void;
   onExpense: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const { can } = useSession();
   const custody = useMyCustody();
@@ -71,7 +75,7 @@ export function BalanceOverview({
                 void qc.invalidateQueries({ queryKey: qk.custody() });
                 onHandover();
               }}
-              style={({ pressed }) => [s.btn, { backgroundColor: tokens.color.brand }, pressed && { opacity: 0.9 }]}
+              style={({ pressed }) => [s.btn, { backgroundColor: t.color.brand }, pressed && { opacity: 0.9 }]}
               accessibilityLabel="Hand over cash"
             >
               <HandCoins size={15} color="#ffffff" />
@@ -81,7 +85,7 @@ export function BalanceOverview({
           {showDeposit ? (
             <Pressable
               onPress={onDeposit}
-              style={({ pressed }) => [s.btn, { backgroundColor: tokens.color.grn }, pressed && { opacity: 0.9 }]}
+              style={({ pressed }) => [s.btn, { backgroundColor: t.color.grn }, pressed && { opacity: 0.9 }]}
               accessibilityLabel="Deposit to bank"
             >
               <Landmark size={15} color="#ffffff" />
@@ -97,28 +101,32 @@ export function BalanceOverview({
           style={({ pressed }) => [s.btn, s.expenseBtn, pressed && { opacity: 0.9 }]}
           accessibilityLabel="Submit expense"
         >
-          <Wallet size={15} color={tokens.color.amb} />
-          <Text style={[s.btnTxt, { color: tokens.color.amb }]}>Submit expense</Text>
+          <Wallet size={15} color={t.color.amb} />
+          <Text style={[s.btnTxt, { color: t.color.amb }]}>Submit expense</Text>
         </Pressable>
       ) : null}
     </View>
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.lg,
     padding: tokens.space.sm,
     gap: tokens.space.sm,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
   },
   grid: { gap: tokens.space.sm },
   row: { flexDirection: "row", gap: tokens.space.sm },
   btns: { flexDirection: "row", gap: tokens.space.sm },
   expenseBtn: {
-    backgroundColor: tokens.color.ambWash,
+    backgroundColor: t.color.ambWash,
     borderWidth: 1,
     borderColor: "rgba(217,119,6,0.25)",
   },
@@ -133,3 +141,5 @@ const s = StyleSheet.create({
   },
   btnTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

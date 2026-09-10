@@ -11,8 +11,11 @@ import { useRoutes, useActiveSession } from "@/data/routes";
 import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function StoresTabBody({ showRouteFilter }: { showRouteFilter: boolean }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const { can } = useSession();
   const [search, setSearch] = useState("");
   const [routeId, setRouteId] = useState<string | undefined>(undefined);
@@ -36,13 +39,13 @@ export function StoresTabBody({ showRouteFilter }: { showRouteFilter: boolean })
   return (
     <View style={s.body}>
       <View style={s.searchBox}>
-        <Search size={15} color={tokens.color.ink4} />
+        <Search size={15} color={t.color.ink4} />
         <TextInput
           style={s.searchInput}
           value={search}
           onChangeText={setSearch}
           placeholder="Search stores, areas, customers"
-          placeholderTextColor={tokens.color.ink4}
+          placeholderTextColor={t.color.ink4}
           accessible
           accessibilityLabel="Search stores"
         />
@@ -125,6 +128,7 @@ export function useStoresRefresh() {
 }
 
 export function AddStoreFab({ onPress }: { onPress: () => void }) {
+  const s = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <Pressable
@@ -141,7 +145,11 @@ export function AddStoreFab({ onPress }: { onPress: () => void }) {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -153,14 +161,14 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
   },
   searchInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
     paddingVertical: 0,
@@ -171,14 +179,14 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius.full,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipOn: { backgroundColor: tokens.color.brand, borderColor: tokens.color.brand },
-  chipTxt: { color: tokens.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  chipTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  chipOn: { backgroundColor: t.color.brand, borderColor: t.color.brand },
+  chipTxt: { color: t.color.ink2, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  chipTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   list: { gap: tokens.space.md },
   fab: {
     position: "absolute",
@@ -186,9 +194,11 @@ const s = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
-    ...tokens.shadow.fab,
+    ...t.shadow.fab,
   },
 });
+  }, [palette]);
+};

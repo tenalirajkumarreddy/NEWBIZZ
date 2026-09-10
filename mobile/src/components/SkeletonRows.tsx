@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function SkeletonRows({ rows = 3 }: { rows?: number }) {
+  const s = useStyles();
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -24,12 +26,18 @@ export function SkeletonRows({ rows = 3 }: { rows?: number }) {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   wrap: { gap: tokens.space.sm },
   row: {
     height: 12,
     borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.lineSoft,
+    backgroundColor: t.color.lineSoft,
     width: "100%",
   },
 });
+  }, [palette]);
+};

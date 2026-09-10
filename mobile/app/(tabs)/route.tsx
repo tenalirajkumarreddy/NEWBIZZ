@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import { Map, ShoppingCart } from "lucide-react-native";
@@ -14,6 +14,7 @@ import { useActiveSession, useRoutes, useVisitedToday } from "@/data/routes";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 type ViewKey = "routes" | "orders";
 
@@ -23,6 +24,8 @@ const VIEWS: { key: ViewKey; label: string; icon: typeof Map }[] = [
 ];
 
 function SegmentedToggle({ value, onChange }: { value: ViewKey; onChange: (v: ViewKey) => void }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <View style={s.seg}>
       {VIEWS.map((v) => {
@@ -36,7 +39,7 @@ function SegmentedToggle({ value, onChange }: { value: ViewKey; onChange: (v: Vi
             accessibilityState={{ selected }}
             style={({ pressed }) => [s.segBtn, selected && s.segBtnOn, pressed && { opacity: 0.85 }]}
           >
-            <Icon size={14} color={selected ? tokens.color.surface : tokens.color.ink3} />
+            <Icon size={14} color={selected ? t.color.surface : t.color.ink3} />
             <Text style={[s.segTxt, selected && s.segTxtOn]}>{v.label}</Text>
           </Pressable>
         );
@@ -46,6 +49,7 @@ function SegmentedToggle({ value, onChange }: { value: ViewKey; onChange: (v: Vi
 }
 
 export default function RouteScreen() {
+  const s = useStyles();
   const qc = useQueryClient();
   const fetching = useIsFetching();
   const [view, setView] = useState<ViewKey>("routes");
@@ -115,7 +119,11 @@ export default function RouteScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -123,7 +131,7 @@ const s = StyleSheet.create({
   },
   seg: {
     flexDirection: "row",
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.full,
     padding: 3,
   },
@@ -137,9 +145,11 @@ const s = StyleSheet.create({
     borderRadius: tokens.radius.full,
   },
   segBtnOn: {
-    backgroundColor: tokens.color.brand,
-    ...tokens.shadow.card,
+    backgroundColor: t.color.brand,
+    ...t.shadow.card,
   },
-  segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  segTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  segTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
 });
+  }, [palette]);
+};

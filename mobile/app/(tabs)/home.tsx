@@ -22,15 +22,19 @@ import { VanStockCard } from "@/features/home/VanStockCard";
 import { ActiveRouteCard } from "@/features/home/ActiveRouteCard";
 import { NextStopCard } from "@/features/home/NextStopCard";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 const MAX_PENDING_ROWS = 5;
 
 function OrderRowItem({ order }: { order: OrderRow }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <PressCard onPress={() => gotoTab("routes")} style={s.orderCard}>
       <View style={s.orderRow}>
         <View style={s.orderChip}>
-          <ShoppingCart size={13} color={tokens.color.amb} />
+          <ShoppingCart size={13} color={t.color.amb} />
         </View>
         <View style={s.orderMain}>
           <Text style={s.orderStore} numberOfLines={1}>
@@ -38,13 +42,14 @@ function OrderRowItem({ order }: { order: OrderRow }) {
           </Text>
           <Text style={s.orderNo}>{order.orderNo}</Text>
         </View>
-        <ChevronRight size={16} color={tokens.color.ink4} />
+        <ChevronRight size={16} color={t.color.ink4} />
       </View>
     </PressCard>
   );
 }
 
 export default function HomeScreen() {
+  const s = useStyles();
   const { user, claims } = useSession();
   const qc = useQueryClient();
   const kpis = useTodayKpis();
@@ -127,7 +132,11 @@ export default function HomeScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -137,23 +146,25 @@ const s = StyleSheet.create({
   ordersWrap: { gap: tokens.space.sm },
   ordersHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   ordersTitle: {
-    color: tokens.color.ink2, fontFamily: tokens.font.sansSemi,
+    color: t.color.ink2, fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow, letterSpacing: 0.6,
   },
   ordersCount: {
-    color: tokens.color.ink4, fontFamily: tokens.font.monoBold,
+    color: t.color.ink4, fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.eyebrow, fontVariant: ["tabular-nums"],
   },
   orderCard: { padding: tokens.space.md },
   orderRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   orderChip: {
     width: 28, height: 28, borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.ambWash, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.ambWash, alignItems: "center", justifyContent: "center",
   },
   orderMain: { flex: 1 },
-  orderStore: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  orderStore: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   orderNo: {
-    color: tokens.color.ink4, fontFamily: tokens.font.mono, fontSize: 10,
+    color: t.color.ink4, fontFamily: tokens.font.mono, fontSize: 10,
     marginTop: 1, fontVariant: ["tabular-nums"],
   },
 });
+  }, [palette]);
+};

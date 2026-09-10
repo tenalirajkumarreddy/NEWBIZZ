@@ -12,6 +12,7 @@ import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
 import type { StoreRow } from "@/data/stores";
 import type { ResolvedStore } from "@/data/qr";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Coords = { lat: number; lng: number } | null;
 
@@ -25,6 +26,7 @@ export function NearbyStores({
   onOpen: (store: ResolvedStore) => void;
   refreshKey: number;
 }) {
+  const s = useStyles();
   const { can } = useSession();
   const stores = useStores();
 
@@ -139,21 +141,27 @@ export function NearbyStores({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   list: { gap: tokens.space.sm },
   rowCard: {},
   rowInner: { flexDirection: "row", alignItems: "center", gap: tokens.space.md, padding: tokens.space.md },
   chip: {
     width: 40, height: 40, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center", justifyContent: "center",
   },
-  chipTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
+  chipTxt: { color: t.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   rowMain: { flex: 1 },
-  rowName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  rowSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  rowName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  rowSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   dist: {
-    color: tokens.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
+    color: t.color.ink2, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
 });
+  }, [palette]);
+};

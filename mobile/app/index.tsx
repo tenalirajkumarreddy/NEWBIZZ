@@ -3,8 +3,12 @@ import { Redirect } from "expo-router";
 import { useSession } from "@/lib/session";
 import { isGatedStatus } from "@/lib/claims";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export default function Gate() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const { session, claims, loading } = useSession();
 
   if (loading) {
@@ -13,7 +17,7 @@ export default function Gate() {
         <View style={s.logo}>
           <Text style={s.logoTxt}>N</Text>
         </View>
-        <ActivityIndicator color={tokens.color.surface} />
+        <ActivityIndicator color={t.color.surface} />
       </View>
     );
   }
@@ -22,10 +26,14 @@ export default function Gate() {
   return <Redirect href="/(tabs)/home" />;
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   splash: {
     flex: 1,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
     gap: tokens.space.lg,
@@ -34,13 +42,15 @@ const s = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: tokens.radius.lg,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   logoTxt: {
-    color: tokens.color.brand,
+    color: t.color.brand,
     fontFamily: tokens.font.sansBold,
     fontSize: 32,
   },
 });
+  }, [palette]);
+};

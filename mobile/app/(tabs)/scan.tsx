@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -19,10 +19,13 @@ import { friendlyError } from "@/lib/rpc";
 import { qk } from "@/data/keys";
 import { tokens } from "@/theme/tokens";
 import type { ResolvedStore } from "@/data/qr";
+import { useTheme } from "@/theme/ThemeContext";
 
 type Mode = "qr" | "nearby";
 
 function SegmentedToggle({ value, onChange }: { value: Mode; onChange: (v: Mode) => void }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <View style={s.seg}>
       {(
@@ -41,7 +44,7 @@ function SegmentedToggle({ value, onChange }: { value: Mode; onChange: (v: Mode)
             accessibilityState={{ selected }}
             style={({ pressed }) => [s.segBtn, selected && s.segBtnOn, pressed && { opacity: 0.85 }]}
           >
-            <Icon size={14} color={selected ? tokens.color.surface : tokens.color.ink3} />
+            <Icon size={14} color={selected ? t.color.surface : t.color.ink3} />
             <Text style={[s.segTxt, selected && s.segTxtOn]}>{v.label}</Text>
           </Pressable>
         );
@@ -51,6 +54,7 @@ function SegmentedToggle({ value, onChange }: { value: Mode; onChange: (v: Mode)
 }
 
 export default function ScanScreen() {
+  const s = useStyles();
   const qc = useQueryClient();
   const router = useRouter();
   const { can } = useSession();
@@ -179,6 +183,8 @@ export default function ScanScreen() {
 
 /** Always-available actions: open the record flow and pick the store there. */
 function QuickActions() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const router = useRouter();
   const { can } = useSession();
 
@@ -194,8 +200,8 @@ function QuickActions() {
     <View style={s.quickWrap}>
       {visible.map((a) => {
         const Icon = a.icon;
-        const wash = { brand: tokens.color.brandWash, grn: tokens.color.grnWash, amb: tokens.color.ambWash }[a.tone];
-        const fg = { brand: tokens.color.brand, grn: tokens.color.grn, amb: tokens.color.amb }[a.tone];
+        const wash = { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[a.tone];
+        const fg = { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[a.tone];
         return (
           <Pressable
             key={a.key}
@@ -213,19 +219,25 @@ function QuickActions() {
 }
 
 function ScanAnotherButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <Pressable
       onPress={onPress}
       accessibilityLabel={label}
       style={({ pressed }) => [s.rescan, pressed && { opacity: 0.7 }]}
     >
-      <ScanLine size={14} color={tokens.color.ink3} />
+      <ScanLine size={14} color={t.color.ink3} />
       <Text style={s.rescanTxt}>{label}</Text>
     </Pressable>
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   body: {
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
@@ -233,7 +245,7 @@ const s = StyleSheet.create({
   },
   seg: {
     flexDirection: "row",
-    backgroundColor: tokens.color.fill,
+    backgroundColor: t.color.fill,
     borderRadius: tokens.radius.full,
     padding: 3,
   },
@@ -247,11 +259,11 @@ const s = StyleSheet.create({
     borderRadius: tokens.radius.full,
   },
   segBtnOn: {
-    backgroundColor: tokens.color.brand,
-    ...tokens.shadow.card,
+    backgroundColor: t.color.brand,
+    ...t.shadow.card,
   },
-  segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
-  segTxtOn: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi },
+  segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  segTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   sheetBody: { gap: tokens.space.md },
   quickWrap: { flexDirection: "row", gap: tokens.space.sm },
   quickBtn: {
@@ -273,8 +285,10 @@ const s = StyleSheet.create({
     minHeight: 44,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.line,
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
-  rescanTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  rescanTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

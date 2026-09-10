@@ -1,24 +1,28 @@
 import { View, Text, StyleSheet } from "react-native";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function StatusBadge({
   label, tone = "neutral", dot = false,
 }: {
   label: string; tone?: "neutral" | "brand" | "grn" | "amb" | "red"; dot?: boolean;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const bg = {
-    neutral: tokens.color.fill,
-    brand: tokens.color.brandWash,
-    grn: tokens.color.grnWash,
-    amb: tokens.color.ambWash,
-    red: tokens.color.redWash,
+    neutral: t.color.fill,
+    brand: t.color.brandWash,
+    grn: t.color.grnWash,
+    amb: t.color.ambWash,
+    red: t.color.redWash,
   }[tone];
   const fg = {
-    neutral: tokens.color.ink3,
-    brand: tokens.color.brand,
-    grn: tokens.color.grn,
-    amb: tokens.color.amb,
-    red: tokens.color.red,
+    neutral: t.color.ink3,
+    brand: t.color.brand,
+    grn: t.color.grn,
+    amb: t.color.amb,
+    red: t.color.red,
   }[tone];
   return (
     <View style={[s.pill, { backgroundColor: bg }]}>
@@ -28,7 +32,11 @@ export function StatusBadge({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -40,3 +48,5 @@ const s = StyleSheet.create({
   dot: { width: 5, height: 5, borderRadius: 999 },
   txt: { fontFamily: tokens.font.sansSemi, fontSize: 11 },
 });
+  }, [palette]);
+};

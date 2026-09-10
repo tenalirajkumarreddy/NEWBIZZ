@@ -11,6 +11,7 @@ import { linkStoreQr } from "@/data/qr";
 import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function LinkQrSheet({
   visible, code, onClose,
@@ -19,6 +20,8 @@ export function LinkQrSheet({
   code: string;
   onClose: () => void;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const stores = useStores();
   const [q, setQ] = useState("");
@@ -70,13 +73,13 @@ export function LinkQrSheet({
   return (
     <Sheet visible={visible} onClose={close} title="Link code to a store">
       <View style={s.searchWrap}>
-        <Search size={15} color={tokens.color.ink4} />
+        <Search size={15} color={t.color.ink4} />
         <TextInput
           style={s.searchInput}
           value={q}
           onChangeText={setQ}
           placeholder="Search stores..."
-          placeholderTextColor={tokens.color.ink4}
+          placeholderTextColor={t.color.ink4}
         />
       </View>
 
@@ -84,7 +87,7 @@ export function LinkQrSheet({
         <View style={s.confirmCard}>
           <View style={s.confirmRow}>
             <View style={s.chip}>
-              <StoreIcon size={15} color={tokens.color.brand} />
+              <StoreIcon size={15} color={t.color.brand} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.confirmName} numberOfLines={1}>{selected.name}</Text>
@@ -126,7 +129,7 @@ export function LinkQrSheet({
                 key={st.id}
                 onPress={() => setSelectedId(st.id)}
                 accessibilityLabel={`Select store ${st.name}`}
-                style={({ pressed }) => [s.row, pressed && { backgroundColor: tokens.color.fill }]}
+                style={({ pressed }) => [s.row, pressed && { backgroundColor: t.color.fill }]}
               >
                 <View style={s.rowMain}>
                   <Text style={s.rowName} numberOfLines={1}>{st.name}</Text>
@@ -143,17 +146,21 @@ export function LinkQrSheet({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   searchWrap: {
     flexDirection: "row", alignItems: "center", gap: tokens.space.sm,
-    backgroundColor: tokens.color.fill,
-    borderWidth: 1, borderColor: tokens.color.line,
+    backgroundColor: t.color.fill,
+    borderWidth: 1, borderColor: t.color.line,
     borderRadius: tokens.radius.md,
     paddingHorizontal: tokens.space.md,
     minHeight: 44,
   },
   searchInput: {
-    flex: 1, color: tokens.color.ink,
+    flex: 1, color: t.color.ink,
     fontFamily: tokens.font.sans, fontSize: tokens.size.sm,
     paddingVertical: 0,
   },
@@ -164,11 +171,11 @@ const s = StyleSheet.create({
     paddingHorizontal: tokens.space.sm, paddingVertical: tokens.space.sm,
   },
   rowMain: { flex: 1 },
-  rowName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  rowSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  rowName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  rowSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   confirmCard: {
     marginTop: tokens.space.md,
-    backgroundColor: tokens.color.grnWash,
+    backgroundColor: t.color.grnWash,
     borderRadius: tokens.radius.md,
     padding: tokens.space.md,
     gap: tokens.space.md,
@@ -176,19 +183,21 @@ const s = StyleSheet.create({
   confirmRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   chip: {
     width: 34, height: 34, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     alignItems: "center", justifyContent: "center",
   },
-  confirmName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  confirmSub: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
-  confirmCode: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
-  codeMono: { fontFamily: tokens.font.monoBold, color: tokens.color.ink, fontVariant: ["tabular-nums"] },
+  confirmName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  confirmSub: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  confirmCode: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  codeMono: { fontFamily: tokens.font.monoBold, color: t.color.ink, fontVariant: ["tabular-nums"] },
   confirmBtn: {
     minHeight: 44, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignItems: "center", justifyContent: "center",
   },
-  confirmBtnTxt: { color: tokens.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  confirmBtnTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   changeBtn: { minHeight: 44, alignItems: "center", justifyContent: "center" },
-  changeTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  changeTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

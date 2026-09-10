@@ -19,6 +19,7 @@ import { qk } from "@/data/keys";
 import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 interface QrRow {
   id: string;
@@ -46,6 +47,8 @@ function useStoreQrCodes(storeId: string | null) {
 }
 
 export default function StoreQrAdminScreen() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const qc = useQueryClient();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -141,13 +144,13 @@ export default function StoreQrAdminScreen() {
         {!selected ? (
           <>
             <View style={s.searchBox}>
-              <Search size={15} color={tokens.color.ink4} />
+              <Search size={15} color={t.color.ink4} />
               <TextInput
                 style={s.searchInput}
                 value={search}
                 onChangeText={setSearch}
                 placeholder="Search stores to manage QR codes"
-                placeholderTextColor={tokens.color.ink4}
+                placeholderTextColor={t.color.ink4}
                 accessible
                 accessibilityLabel="Search stores"
               />
@@ -166,7 +169,7 @@ export default function StoreQrAdminScreen() {
                     key={st.id}
                     onPress={() => setSelectedId(st.id)}
                     accessibilityLabel={`Manage QR codes for ${st.name}`}
-                    style={({ pressed }) => [s.row, pressed && { backgroundColor: tokens.color.fill }]}
+                    style={({ pressed }) => [s.row, pressed && { backgroundColor: t.color.fill }]}
                   >
                     <View style={s.rowChip}>
                       <Text style={s.rowChipTxt}>{st.name.slice(0, 1).toUpperCase()}</Text>
@@ -229,8 +232,8 @@ export default function StoreQrAdminScreen() {
                         accessibilityLabel="Show QR code full screen"
                         style={({ pressed }) => [s.fullBtn, pressed && { opacity: 0.85 }]}
                       >
-                        <Maximize2 size={14} color={tokens.color.brand} />
-                        <Text style={[s.fullBtnTxt, { color: tokens.color.brand }]}>Show full screen</Text>
+                        <Maximize2 size={14} color={t.color.brand} />
+                        <Text style={[s.fullBtnTxt, { color: t.color.brand }]}>Show full screen</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -277,8 +280,12 @@ export default function StoreQrAdminScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: tokens.color.bg },
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.color.bg },
   flex: { flex: 1 },
   body: {
     paddingHorizontal: tokens.space.lg,
@@ -298,14 +305,14 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
   },
   searchInput: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
     paddingVertical: 0,
@@ -320,23 +327,23 @@ const s = StyleSheet.create({
     paddingVertical: tokens.space.sm,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
-    backgroundColor: tokens.color.surface,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
   },
   rowChip: {
     width: 40,
     height: 40,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brandWash,
+    backgroundColor: t.color.brandWash,
     alignItems: "center",
     justifyContent: "center",
   },
-  rowChipTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
+  rowChipTxt: { color: t.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
   rowMain: { flex: 1, minWidth: 0 },
-  rowName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-  rowSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
+  rowName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  rowSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 1 },
   rowCode: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
@@ -349,21 +356,21 @@ const s = StyleSheet.create({
     padding: tokens.space.md,
     borderRadius: tokens.radius.md,
     borderWidth: 1,
-    borderColor: tokens.color.brand,
-    backgroundColor: tokens.color.brandWash,
+    borderColor: t.color.brand,
+    backgroundColor: t.color.brandWash,
   },
   pickedChip: {
     width: 40,
     height: 40,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  pickedChipTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
-  changeTxt: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  pickedChipTxt: { color: t.color.brand, fontFamily: tokens.font.sansBold, fontSize: tokens.size.base },
+  changeTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   sectionTitle: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
     marginTop: tokens.space.xs,
@@ -374,9 +381,9 @@ const s = StyleSheet.create({
     padding: tokens.space.md,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
-    backgroundColor: tokens.color.surface,
-    ...tokens.shadow.card,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
+    ...t.shadow.card,
   },
   qrWrap: {
     width: 200,
@@ -388,14 +395,14 @@ const s = StyleSheet.create({
   },
   codeMeta: { flex: 1, minWidth: 0, gap: tokens.space.xs },
   codeVal: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
   },
-  codeLabel: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  codeLabel: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   codeDate: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.mono,
     fontSize: tokens.size.eyebrow,
     fontVariant: ["tabular-nums"],
@@ -417,7 +424,7 @@ const s = StyleSheet.create({
     gap: tokens.space.sm,
     minHeight: 48,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
   },
   genBtnTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   fullModal: {
@@ -434,14 +441,16 @@ const s = StyleSheet.create({
     gap: tokens.space.md,
   },
   fullCodeTxt: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
   },
   fullHint: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
   },
 });
+  }, [palette]);
+};

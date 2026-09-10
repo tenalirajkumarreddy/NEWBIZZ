@@ -5,8 +5,12 @@ import { SkeletonRows } from "@/components/SkeletonRows";
 import { useStockHoldings } from "@/data/holdings";
 import { moneyCompact } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function VanStockCard() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const { data, isLoading, isError } = useStockHoldings();
   const rows = data ?? [];
   const units = rows.reduce((sum, h) => sum + h.qty, 0);
@@ -16,7 +20,7 @@ export function VanStockCard() {
     <View style={s.card}>
       <View style={s.head}>
         <View style={s.chip}>
-          <Package size={13} color={tokens.color.brand} />
+          <Package size={13} color={t.color.brand} />
         </View>
         <Text style={s.title}>Van stock</Text>
       </View>
@@ -74,32 +78,36 @@ export function VanStockCard() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   head: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   chip: {
     width: 26, height: 26, borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.brandWash, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.brandWash, alignItems: "center", justifyContent: "center",
   },
-  title: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm, flex: 1 },
+  title: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm, flex: 1 },
   tiles: { flexDirection: "row", gap: tokens.space.sm, marginTop: tokens.space.lg },
   tile: {
-    flex: 1, backgroundColor: tokens.color.fill,
+    flex: 1, backgroundColor: t.color.fill,
     borderRadius: tokens.radius.md, padding: tokens.space.sm,
   },
   tileLabel: {
-    color: tokens.color.ink4, fontFamily: tokens.font.sansSemi,
+    color: t.color.ink4, fontFamily: tokens.font.sansSemi,
     fontSize: 9, letterSpacing: 0.6,
   },
   tileVal: {
-    color: tokens.color.ink, fontFamily: tokens.font.monoBold,
+    color: t.color.ink, fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm, marginTop: 2, fontVariant: ["tabular-nums"],
   },
   body: { marginTop: tokens.space.lg },
@@ -107,27 +115,29 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center" },
   rowRight: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   val: {
-    color: tokens.color.ink2, fontFamily: tokens.font.mono,
+    color: t.color.ink2, fontFamily: tokens.font.mono,
     fontSize: tokens.size.xs, fontVariant: ["tabular-nums"],
   },
   rowTxt: { flex: 1, marginRight: tokens.space.md },
-  name: { color: tokens.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  name: { color: t.color.ink, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   sku: {
-    color: tokens.color.ink4, fontFamily: tokens.font.mono,
+    color: t.color.ink4, fontFamily: tokens.font.mono,
     fontSize: 10, marginTop: 1,
   },
   qty: {
-    color: tokens.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.sm,
-    backgroundColor: tokens.color.fill, borderRadius: tokens.radius.sm,
+    color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.sm,
+    backgroundColor: t.color.fill, borderRadius: tokens.radius.sm,
     paddingHorizontal: tokens.space.sm, paddingVertical: 3,
     overflow: "hidden", fontVariant: ["tabular-nums"],
   },
   more: {
-    color: tokens.color.ink4, fontFamily: tokens.font.sans,
+    color: t.color.ink4, fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow, marginTop: 2,
   },
   err: {
-    color: tokens.color.ink3, fontFamily: tokens.font.sans,
+    color: t.color.ink3, fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs, marginTop: tokens.space.md,
   },
 });
+  }, [palette]);
+};

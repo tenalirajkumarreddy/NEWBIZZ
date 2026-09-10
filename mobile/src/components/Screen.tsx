@@ -1,6 +1,7 @@
 import { View, StyleSheet, ScrollView, RefreshControl, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function Screen({
   children, refreshing, onRefresh, scroll = true, style,
@@ -11,6 +12,8 @@ export function Screen({
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const insets = useSafeAreaInsets();
 
   if (!scroll) {
@@ -32,8 +35,8 @@ export function Screen({
             <RefreshControl
               refreshing={refreshing ?? false}
               onRefresh={onRefresh}
-              tintColor={tokens.color.brand}
-              colors={[tokens.color.brand]}
+              tintColor={t.color.brand}
+              colors={[t.color.brand]}
             />
           ) : undefined
         }
@@ -44,12 +47,18 @@ export function Screen({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: tokens.color.bg,
+    backgroundColor: t.color.bg,
   },
   content: {
     paddingBottom: 96,
   },
 });
+  }, [palette]);
+};

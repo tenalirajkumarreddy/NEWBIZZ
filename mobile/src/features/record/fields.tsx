@@ -1,5 +1,7 @@
 import { Text, TextInput, View, StyleSheet } from "react-native";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function parseMoney(txt: string): number {
   const n = Number(txt.trim().replace(/,/g, ""));
@@ -22,6 +24,8 @@ export function FieldInput({
   multiline?: boolean;
   accessibilityLabel?: string;
 }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   return (
     <View style={s.wrap}>
       <Text style={s.label}>{label}</Text>
@@ -30,7 +34,7 @@ export function FieldInput({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={tokens.color.ink4}
+        placeholderTextColor={t.color.ink4}
         keyboardType={money ? "decimal-pad" : "default"}
         multiline={multiline}
         accessible
@@ -40,10 +44,14 @@ export function FieldInput({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   wrap: { gap: 6 },
   label: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.4,
@@ -51,12 +59,12 @@ const s = StyleSheet.create({
   input: {
     minHeight: 44,
     borderWidth: 1,
-    borderColor: tokens.color.line,
+    borderColor: t.color.line,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     paddingHorizontal: tokens.space.md,
     paddingVertical: 10,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.sm,
   },
@@ -66,3 +74,5 @@ const s = StyleSheet.create({
   },
   multiline: { minHeight: 72, textAlignVertical: "top" },
 });
+  }, [palette]);
+};

@@ -5,8 +5,11 @@ import { SkeletonRows } from "@/components/SkeletonRows";
 import { useTodayKpis, useTodaySplit } from "@/data/sales";
 import { moneyCompact } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function RevenueCard() {
+  const s = useStyles();
   const kpis = useTodayKpis();
   const split = useTodaySplit();
 
@@ -69,40 +72,44 @@ export function RevenueCard() {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   card: {
     borderRadius: tokens.radius.lg,
     padding: tokens.space.lg,
-    ...tokens.shadow.pop,
+    ...t.shadow.pop,
   },
   skeletonWrap: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.lg,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   head: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
   chip: {
     width: 24, height: 24, borderRadius: tokens.radius.sm,
-    backgroundColor: tokens.color.white15, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.white15, alignItems: "center", justifyContent: "center",
   },
   eyebrow: {
-    color: tokens.color.white30, fontFamily: tokens.font.sansSemi,
+    color: t.color.white30, fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow, letterSpacing: 0.8,
   },
   cols: { flexDirection: "row", alignItems: "center", marginTop: tokens.space.lg },
   col: { flex: 1 },
   colLabel: {
-    color: tokens.color.white30, fontFamily: tokens.font.sansSemi,
+    color: t.color.white30, fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.xs,
   },
   colValue: {
     color: "#ffffff", fontFamily: tokens.font.monoBold, fontSize: tokens.size.xxl,
     marginTop: 2, fontVariant: ["tabular-nums"],
   },
-  divider: { width: 1, height: 34, backgroundColor: tokens.color.white15, marginHorizontal: tokens.space.lg },
+  divider: { width: 1, height: 34, backgroundColor: t.color.white15, marginHorizontal: tokens.space.lg },
   delta: {
     color: "#6ee7b7", fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.xs, marginTop: tokens.space.sm,
@@ -112,11 +119,13 @@ const s = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   legendTxt: {
-    color: tokens.color.white30, fontFamily: tokens.font.sansMed,
+    color: t.color.white30, fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.xs, fontVariant: ["tabular-nums"],
   },
   err: {
-    color: tokens.color.white30, fontFamily: tokens.font.sans,
+    color: t.color.white30, fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow, marginTop: tokens.space.sm,
   },
 });
+  }, [palette]);
+};

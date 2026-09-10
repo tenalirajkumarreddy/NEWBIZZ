@@ -23,8 +23,11 @@ import {
 import { useActiveSessionsCount } from "@/data/routes";
 import { usePendingExpenses } from "@/data/expenses";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export default function DashScreen() {
+  const { palette: t } = useTheme();
+  const st = useStyles();
   const { claims, can } = useSession();
   const qc = useQueryClient();
   const router = useRouter();
@@ -119,8 +122,8 @@ export default function DashScreen() {
 
         <View style={st.card}>
           <View style={st.cardHead}>
-            <View style={[st.chip, { backgroundColor: tokens.color.redWash }]}>
-              <AlertTriangle size={13} color={tokens.color.red} />
+            <View style={[st.chip, { backgroundColor: t.color.redWash }]}>
+              <AlertTriangle size={13} color={t.color.red} />
             </View>
             <Text style={st.cardTitle}>Needs attention</Text>
           </View>
@@ -157,8 +160,8 @@ export default function DashScreen() {
               accessibilityLabel="Review pending expenses"
               style={({ pressed }) => [st.pendingRow, pressed && { opacity: 0.85 }]}
             >
-              <View style={[st.chip, { backgroundColor: tokens.color.ambWash }]}>
-                <Wallet size={13} color={tokens.color.amb} />
+              <View style={[st.chip, { backgroundColor: t.color.ambWash }]}>
+                <Wallet size={13} color={t.color.amb} />
               </View>
               <View style={st.arMain}>
                 <Text style={st.arName}>Expense approvals</Text>
@@ -167,7 +170,7 @@ export default function DashScreen() {
                 </Text>
               </View>
               <Text style={st.pendingCount}>{pendingExpenses.data!.length}</Text>
-              <ChevronRight size={16} color={tokens.color.ink4} />
+              <ChevronRight size={16} color={t.color.ink4} />
             </Pressable>
           ) : null}
           <Pressable
@@ -176,15 +179,15 @@ export default function DashScreen() {
             accessibilityLabel="Open approvals"
             style={({ pressed }) => [st.pendingRow, pressed && { opacity: 0.85 }]}
           >
-            <View style={[st.chip, { backgroundColor: tokens.color.brandWash }]}>
-              <ClipboardList size={13} color={tokens.color.brand} />
+            <View style={[st.chip, { backgroundColor: t.color.brandWash }]}>
+              <ClipboardList size={13} color={t.color.brand} />
             </View>
             <View style={st.arMain}>
               <Text style={st.arName}>Pending approvals</Text>
               <Text style={st.arSub}>Review and invoice orders</Text>
             </View>
             <Text style={st.pendingCount}>{pendingApprovals}</Text>
-            <ChevronRight size={16} color={tokens.color.ink4} />
+            <ChevronRight size={16} color={t.color.ink4} />
           </Pressable>
         </View>
 
@@ -212,9 +215,9 @@ export default function DashScreen() {
                             backgroundColor:
                               d.total > 0
                                 ? d.isToday
-                                  ? tokens.color.brand
-                                  : tokens.color.brandWash
-                                : tokens.color.line,
+                                  ? t.color.brand
+                                  : t.color.brandWash
+                                : t.color.line,
                           },
                         ]}
                       />
@@ -230,7 +233,7 @@ export default function DashScreen() {
         <View style={st.card}>
           <View style={st.cardHead}>
             <Text style={st.cardTitle}>Top due customers</Text>
-            <ReceiptText size={14} color={tokens.color.ink4} />
+            <ReceiptText size={14} color={t.color.ink4} />
           </View>
           {aging.isLoading ? (
             <SkeletonRows rows={3} />
@@ -252,15 +255,19 @@ export default function DashScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   hero: {
     marginTop: tokens.space.lg,
-    backgroundColor: tokens.color.white15,
+    backgroundColor: t.color.white15,
     borderRadius: tokens.radius.lg,
     padding: tokens.space.md,
   },
   heroEyebrow: {
-    color: tokens.color.white30,
+    color: t.color.white30,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
     letterSpacing: 0.8,
@@ -273,7 +280,7 @@ const st = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   heroSub: {
-    color: tokens.color.white30,
+    color: t.color.white30,
     fontFamily: tokens.font.sansMed,
     fontSize: tokens.size.xs,
     marginTop: 2,
@@ -285,13 +292,13 @@ const st = StyleSheet.create({
   },
   gridRow: { flexDirection: "row", gap: tokens.space.sm },
   card: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
+    borderColor: t.color.line,
     padding: tokens.space.md,
     gap: tokens.space.xs,
-    ...tokens.shadow.card,
+    ...t.shadow.card,
   },
   cardHead: {
     flexDirection: "row",
@@ -308,7 +315,7 @@ const st = StyleSheet.create({
   },
   cardTitle: {
     flex: 1,
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.sm,
   },
@@ -319,17 +326,17 @@ const st = StyleSheet.create({
     minHeight: 40,
   },
   arMain: { flex: 1, minWidth: 0 },
-  arName: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  arSub: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
+  arName: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  arSub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1 },
   arAmount: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
   },
-  summary: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
-  muted: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
-  divider: { height: 1, backgroundColor: tokens.color.lineSoft, marginVertical: tokens.space.xs },
+  summary: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  muted: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  divider: { height: 1, backgroundColor: t.color.lineSoft, marginVertical: tokens.space.xs },
   pendingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -337,13 +344,13 @@ const st = StyleSheet.create({
     minHeight: 44,
   },
   pendingCount: {
-    color: tokens.color.brand,
+    color: t.color.brand,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.sm,
     fontVariant: ["tabular-nums"],
   },
   weekTotal: {
-    color: tokens.color.ink,
+    color: t.color.ink,
     fontFamily: tokens.font.monoBold,
     fontSize: tokens.size.xs,
     fontVariant: ["tabular-nums"],
@@ -358,9 +365,11 @@ const st = StyleSheet.create({
   barTrack: { height: 84, width: "100%", justifyContent: "flex-end" },
   bar: { width: "100%", borderRadius: 4 },
   colLabel: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.eyebrow,
   },
-  colLabelToday: { color: tokens.color.brand, fontFamily: tokens.font.sansBold },
+  colLabelToday: { color: t.color.brand, fontFamily: tokens.font.sansBold },
 });
+  }, [palette]);
+};

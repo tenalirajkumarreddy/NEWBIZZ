@@ -2,12 +2,15 @@ import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function GradientHeader({
   title, subtitle, children, right,
 }: {
   title: string; subtitle?: string; children?: React.ReactNode; right?: React.ReactNode;
 }) {
+  const s = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <LinearGradient
@@ -29,7 +32,11 @@ export function GradientHeader({
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   wrap: {
     paddingHorizontal: tokens.space.lg,
     paddingBottom: tokens.space.lg,
@@ -39,9 +46,11 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   logo: {
     width: 34, height: 34, borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.white15, alignItems: "center", justifyContent: "center",
+    backgroundColor: t.color.white15, alignItems: "center", justifyContent: "center",
   },
   logoTxt: { color: "#fff", fontFamily: tokens.font.sansBold, fontSize: 15 },
   title: { color: "#fff", fontFamily: tokens.font.sansBold, fontSize: tokens.size.lg, letterSpacing: -0.2 },
-  sub: { color: tokens.color.white30, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
+  sub: { color: t.color.white30, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
 });
+  }, [palette]);
+};

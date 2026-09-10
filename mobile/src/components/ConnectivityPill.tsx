@@ -1,22 +1,30 @@
 import { Text, StyleSheet, View } from "react-native";
 import * as Network from "expo-network";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export function ConnectivityPill() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const state = Network.useNetworkState();
   const online = state.isConnected !== false && state.isInternetReachable !== false;
 
   return (
-    <View style={[s.pill, { backgroundColor: online ? tokens.color.grnWash : tokens.color.redWash }]}>
-      <View style={[s.dot, { backgroundColor: online ? tokens.color.grn : tokens.color.red }]} />
-      <Text style={[s.txt, { color: online ? tokens.color.grn : tokens.color.red }]}>
+    <View style={[s.pill, { backgroundColor: online ? t.color.grnWash : t.color.redWash }]}>
+      <View style={[s.dot, { backgroundColor: online ? t.color.grn : t.color.red }]} />
+      <Text style={[s.txt, { color: online ? t.color.grn : t.color.red }]}>
         {online ? "Online" : "Offline"}
       </Text>
     </View>
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
@@ -35,3 +43,5 @@ const s = StyleSheet.create({
     fontSize: 11,
   },
 });
+  }, [palette]);
+};

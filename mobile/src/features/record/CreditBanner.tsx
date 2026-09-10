@@ -2,6 +2,8 @@ import { View, Text, StyleSheet } from "react-native";
 import { AlertTriangle, LoaderCircle, ShieldAlert } from "lucide-react-native";
 import { moneyINR } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
+import { useMemo } from "react";
+import { useTheme } from "@/theme/ThemeContext";
 
 export type CreditState =
   | { level: "none" }
@@ -26,15 +28,17 @@ export function computeCreditState(
 }
 
 export function CreditBanner({ state }: { state: CreditState }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   if (state.level === "none" || state.level === "ok") return null;
 
   if (state.level === "loading") {
     return (
       <View style={[s.banner, s.amber]}>
-        <LoaderCircle size={16} color={tokens.color.amb} />
+        <LoaderCircle size={16} color={t.color.amb} />
         <View style={s.txtWrap}>
-          <Text style={[s.title, { color: tokens.color.amb }]}>Checking credit limit…</Text>
-          <Text style={[s.msg, { color: tokens.color.amb }]}>
+          <Text style={[s.title, { color: t.color.amb }]}>Checking credit limit…</Text>
+          <Text style={[s.msg, { color: t.color.amb }]}>
             Credit check is still loading — submit unlocks once it resolves.
           </Text>
         </View>
@@ -45,10 +49,10 @@ export function CreditBanner({ state }: { state: CreditState }) {
   if (state.level === "unavailable") {
     return (
       <View style={[s.banner, s.amber]}>
-        <ShieldAlert size={16} color={tokens.color.amb} />
+        <ShieldAlert size={16} color={t.color.amb} />
         <View style={s.txtWrap}>
-          <Text style={[s.title, { color: tokens.color.amb }]}>Credit check unavailable</Text>
-          <Text style={[s.msg, { color: tokens.color.amb }]}>
+          <Text style={[s.title, { color: t.color.amb }]}>Credit check unavailable</Text>
+          <Text style={[s.msg, { color: t.color.amb }]}>
             Could not load the customer&apos;s outstanding. The server will still enforce the credit limit.
           </Text>
         </View>
@@ -59,10 +63,10 @@ export function CreditBanner({ state }: { state: CreditState }) {
   if (state.level === "exceeded") {
     return (
       <View style={[s.banner, s.red]}>
-        <ShieldAlert size={16} color={tokens.color.red} />
+        <ShieldAlert size={16} color={t.color.red} />
         <View style={s.txtWrap}>
-          <Text style={[s.title, { color: tokens.color.red }]}>Credit limit exceeded</Text>
-          <Text style={[s.msg, { color: tokens.color.red }]}>
+          <Text style={[s.title, { color: t.color.red }]}>Credit limit exceeded</Text>
+          <Text style={[s.msg, { color: t.color.red }]}>
             Outstanding {moneyINR(state.outstanding)} + this sale&apos;s credit portion would reach{" "}
             {moneyINR(state.after)} against a limit of {moneyINR(state.limit)}.
           </Text>
@@ -74,10 +78,10 @@ export function CreditBanner({ state }: { state: CreditState }) {
 
   return (
     <View style={[s.banner, s.amber]}>
-      <AlertTriangle size={16} color={tokens.color.amb} />
+      <AlertTriangle size={16} color={t.color.amb} />
       <View style={s.txtWrap}>
-        <Text style={[s.title, { color: tokens.color.amb }]}>Credit limit warning</Text>
-        <Text style={[s.msg, { color: tokens.color.amb }]}>
+        <Text style={[s.title, { color: t.color.amb }]}>Credit limit warning</Text>
+        <Text style={[s.msg, { color: t.color.amb }]}>
           Outstanding is {Math.round(state.pct * 100)}% of the {moneyINR(state.limit)} limit.
         </Text>
         <Text style={s.basis}>Sale value is a GST-inclusive estimate.</Text>
@@ -86,7 +90,11 @@ export function CreditBanner({ state }: { state: CreditState }) {
   );
 }
 
-const s = StyleSheet.create({
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
   banner: {
     flexDirection: "row",
     gap: tokens.space.md,
@@ -94,10 +102,12 @@ const s = StyleSheet.create({
     borderRadius: tokens.radius.md,
     padding: tokens.space.md,
   },
-  red: { backgroundColor: tokens.color.redWash },
-  amber: { backgroundColor: tokens.color.ambWash },
+  red: { backgroundColor: t.color.redWash },
+  amber: { backgroundColor: t.color.ambWash },
   txtWrap: { flex: 1, gap: 2 },
   title: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
   msg: { fontFamily: tokens.font.sans, fontSize: tokens.size.xs, lineHeight: 17 },
-  basis: { color: tokens.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, lineHeight: 16 },
+  basis: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, lineHeight: 16 },
 });
+  }, [palette]);
+};

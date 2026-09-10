@@ -16,22 +16,18 @@ import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { timeAgoIST } from "@/lib/format";
 import { tokens } from "@/theme/tokens";
-
-const SEV: Record<string, { fg: string }> = {
-  info: { fg: tokens.color.brand },
-  success: { fg: tokens.color.grn },
-  warning: { fg: tokens.color.amb },
-  critical: { fg: tokens.color.red },
-};
+import { useTheme } from "@/theme/ThemeContext";
 
 function NotificationRowItem({ n, onPress }: { n: NotificationRow; onPress: (n: NotificationRow) => void }) {
-  const sev = SEV[n.severity] ?? SEV.info;
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  const sevFg = ({ info: t.color.brand, success: t.color.grn, warning: t.color.amb, critical: t.color.red } as Record<string, string>)[n.severity] ?? t.color.brand;
   const unread = n.status === "unread";
   return (
     <PressCard onPress={() => onPress(n)}>
       <View style={s.row}>
         <View style={s.dotWrap}>
-          <View style={[s.dot, { backgroundColor: sev.fg, opacity: unread ? 1 : 0.35 }]} />
+          <View style={[s.dot, { backgroundColor: sevFg, opacity: unread ? 1 : 0.35 }]} />
         </View>
         <View style={s.main}>
           <Text style={[s.title, unread && s.titleUnread]}>{n.title}</Text>
@@ -57,6 +53,8 @@ const CHANNELS: { key: NotifChannel; label: string }[] = [
 ];
 
 function PrefsSection() {
+  const { palette: t } = useTheme();
+  const s = useStyles();
   const { user } = useSession();
   const prefs = useNotifPrefs();
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -89,7 +87,7 @@ function PrefsSection() {
         accessibilityState={{ expanded: show }}
         style={({ pressed }) => [s.prefsHead, pressed && { opacity: 0.85 }]}
       >
-        <Settings2 size={15} color={tokens.color.ink2} />
+        <Settings2 size={15} color={t.color.ink2} />
         <Text style={s.prefsTitle}>Notification settings</Text>
         <Text style={s.prefsHint}>{show ? "Hide" : "Manage"}</Text>
       </Pressable>
@@ -112,7 +110,7 @@ function PrefsSection() {
                           value={on}
                           disabled={busyKey === `${c.key}:${ch.key}`}
                           onValueChange={(v) => void toggle(c.key, ch.key, v)}
-                          trackColor={{ true: tokens.color.brand, false: tokens.color.line }}
+                          trackColor={{ true: t.color.brand, false: t.color.line }}
                           thumbColor="#ffffff"
                           accessibilityLabel={`${ch.label} notifications for ${c.label}`}
                         />
@@ -130,6 +128,7 @@ function PrefsSection() {
 }
 
 export default function NotificationsScreen() {
+  const s = useStyles();
   const qc = useQueryClient();
   const router = useRouter();
   const notifs = useNotifications();
@@ -228,8 +227,12 @@ export default function NotificationsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: tokens.color.bg },
+const useStyles = () => {
+  const { palette } = useTheme();
+  return useMemo(() => {
+    const t = palette;
+    return StyleSheet.create({
+  root: { flex: 1, backgroundColor: t.color.bg },
   markAll: {
     flexDirection: "row",
     alignItems: "center",
@@ -237,7 +240,7 @@ const s = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: tokens.space.sm,
     borderRadius: tokens.radius.md,
-    backgroundColor: tokens.color.white15,
+    backgroundColor: t.color.white15,
   },
   markAllTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   backBtn: {
@@ -254,11 +257,11 @@ const s = StyleSheet.create({
   },
   list: { gap: tokens.space.sm },
   prefsCard: {
-    backgroundColor: tokens.color.surface,
+    backgroundColor: t.color.surface,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.6)",
-    ...tokens.shadow.card,
+    borderColor: t.color.line,
+    ...t.shadow.card,
   },
   prefsHead: {
     flexDirection: "row",
@@ -267,12 +270,12 @@ const s = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: tokens.space.md,
   },
-  prefsTitle: { flex: 1, color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  prefsHint: { color: tokens.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  prefsTitle: { flex: 1, color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  prefsHint: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   prefsBody: { paddingHorizontal: tokens.space.md, paddingBottom: tokens.space.md },
   prefCat: { gap: 2, paddingVertical: tokens.space.xs },
-  prefLabel: { color: tokens.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-  prefSub: { color: tokens.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  prefLabel: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  prefSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
   prefChannels: { marginTop: tokens.space.xs, gap: tokens.space.xs },
   prefRow: {
     flexDirection: "row",
@@ -280,25 +283,25 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     minHeight: 40,
   },
-  prefChannel: { color: tokens.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  prefChannel: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
   row: { flexDirection: "row", gap: tokens.space.md, padding: tokens.space.md },
   dotWrap: { paddingTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   main: { flex: 1, minWidth: 0, gap: 2 },
   title: {
-    color: tokens.color.ink2,
+    color: t.color.ink2,
     fontFamily: tokens.font.sansSemi,
     fontSize: tokens.size.xs,
   },
-  titleUnread: { color: tokens.color.ink, fontFamily: tokens.font.sansBold },
+  titleUnread: { color: t.color.ink, fontFamily: tokens.font.sansBold },
   bodyTxt: {
-    color: tokens.color.ink3,
+    color: t.color.ink3,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.xs,
     lineHeight: 17,
   },
   time: {
-    color: tokens.color.ink4,
+    color: t.color.ink4,
     fontFamily: tokens.font.sans,
     fontSize: tokens.size.eyebrow,
     marginTop: 1,
@@ -307,8 +310,10 @@ const s = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: tokens.color.brand,
+    backgroundColor: t.color.brand,
     alignSelf: "flex-start",
     marginTop: 6,
   },
 });
+  }, [palette]);
+};
