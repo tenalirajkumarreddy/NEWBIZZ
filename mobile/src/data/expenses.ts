@@ -57,6 +57,60 @@ export function useMyExpenses() {
   });
 }
 
+export interface PendingExpenseRow {
+  id: string;
+  expenseNo: string;
+  expenseDate: string;
+  category: ExpenseCategory;
+  source: "user_holding" | "petty_cash" | "bank";
+  amount: number;
+  note: string | null;
+  spenderName: string | null;
+  createdAt: string;
+}
+
+/** Manager queue: every pending expense, newest first. */
+export function usePendingExpenses() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.pendingExpenses(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<PendingExpenseRow[]> => {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select(
+          "id, expense_no, expense_date, category, source, amount, note, created_at, " +
+            "spender:users!expenses_user_id_fkey(full_name)",
+        )
+        .eq("status", "pending")
+        .order("created_at", { ascending: true })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        id: r.id,
+        expenseNo: r.expense_no,
+        expenseDate: r.expense_date,
+        category: r.category,
+        source: r.source,
+        amount: Number(r.amount ?? 0),
+        note: r.note ?? null,
+        spenderName: (r.spender?.full_name as string | undefined) ?? null,
+        createdAt: r.created_at as string,
+      }));
+    },
+  });
+}
+
+/** Approve a pending expense (expense.manage) - posts Dr category / Cr source. */
+export async function approveExpense(expenseId: string): Promise<string> {
+  return rpc<string>("approve_expense", { p_id: expenseId });
+}
+
+/** Reject a pending expense (expense.manage) - terminal, no ledger movement. */
+export async function rejectExpense(expenseId: string, reason?: string | null): Promise<void> {
+  await rpc("reject_expense", reason?.trim() ? { p_id: expenseId, p_reason: reason.trim() } : { p_id: expenseId });
+}
+
 /**
  * Submit a field expense from the signer's own cash custody. It stays
  * pending until a manager approves (money leaves custody only on approval).

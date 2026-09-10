@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { roleLabel } from "@/lib/claims";
 import { useSession } from "@/lib/session";
+import { useRouter } from "expo-router";
 import { friendlyError } from "@/lib/rpc";
 import { gotoTab } from "@/lib/tabBus";
 import { moneyINR, moneyCompact } from "@/lib/format";
@@ -20,11 +21,13 @@ import {
   useArAging, useOrders, useTodayCollectionsTotal, useTodayKpis, useWeeklySales,
 } from "@/data/sales";
 import { useActiveSessionsCount } from "@/data/routes";
+import { usePendingExpenses } from "@/data/expenses";
 import { tokens } from "@/theme/tokens";
 
 export default function DashScreen() {
-  const { claims } = useSession();
+  const { claims, can } = useSession();
   const qc = useQueryClient();
+  const router = useRouter();
   const fetching = useIsFetching();
 
   const kpis = useTodayKpis();
@@ -33,6 +36,7 @@ export default function DashScreen() {
   const aging = useArAging();
   const weekly = useWeeklySales();
   const sessions = useActiveSessionsCount();
+  const pendingExpenses = usePendingExpenses();
 
   const totalOutstanding = useMemo(
     () => (aging.data ?? []).reduce((sum, r) => sum + r.outstanding, 0),
@@ -143,6 +147,29 @@ export default function DashScreen() {
             </>
           )}
           <View style={st.divider} />
+          {can("expense.manage") && (pendingExpenses.data?.length ?? 0) > 0 ? (
+            <Pressable
+              onPress={() => {
+                gotoTab("approvals");
+                router.setParams({ seg: "expenses" });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Review pending expenses"
+              style={({ pressed }) => [st.pendingRow, pressed && { opacity: 0.85 }]}
+            >
+              <View style={[st.chip, { backgroundColor: tokens.color.ambWash }]}>
+                <Wallet size={13} color={tokens.color.amb} />
+              </View>
+              <View style={st.arMain}>
+                <Text style={st.arName}>Expense approvals</Text>
+                <Text style={st.arSub}>
+                  {pendingExpenses.data!.length} submission{pendingExpenses.data!.length === 1 ? "" : "s"} waiting
+                </Text>
+              </View>
+              <Text style={st.pendingCount}>{pendingExpenses.data!.length}</Text>
+              <ChevronRight size={16} color={tokens.color.ink4} />
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() => gotoTab("approvals")}
             accessibilityRole="button"

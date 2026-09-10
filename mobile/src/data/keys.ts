@@ -21,6 +21,7 @@ export const qk = {
   custody: () => ["custody"] as const,
   activity: () => ["activity"] as const,
   expenses: () => ["expenses"] as const,
+  pendingExpenses: () => ["pendingExpenses"] as const,
   notifications: () => ["notifications"] as const,
   unread: () => ["unread"] as const,
   holdings: () => ["stockHoldings"] as const,

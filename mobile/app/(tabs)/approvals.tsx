@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, ClipboardList, Eye, FileText, Info } from "lucide-react-native";
+import { useLocalSearchParams } from "expo-router";
+import { CheckCheck, ClipboardList, Eye, FileText, Info, Wallet, X } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
@@ -13,12 +14,17 @@ import { SkeletonRows } from "@/components/SkeletonRows";
 import { roleLabel } from "@/lib/claims";
 import { useSession } from "@/lib/session";
 import { friendlyError } from "@/lib/rpc";
-import { moneyINR } from "@/lib/format";
+import { moneyINR, dateIST } from "@/lib/format";
 import { qk } from "@/data/keys";
 import {
   postInvoiceFromOrder, useOrders, type OrderRow,
 } from "@/data/sales";
+import {
+  approveExpense, rejectExpense, usePendingExpenses, type PendingExpenseRow,
+} from "@/data/expenses";
 import { tokens } from "@/theme/tokens";
+
+type Segment = "orders" | "expenses";
 
 export default function ApprovalsScreen() {
   const { claims, can } = useSession();
@@ -27,8 +33,13 @@ export default function ApprovalsScreen() {
   const confirmed = useOrders("confirmed");
   const approved = useOrders("approved");
   const openOrders = useOrders();
+  const pendingExpenses = usePendingExpenses();
+  const params = useLocalSearchParams<{ seg?: string }>();
+  const [seg, setSeg] = useState<Segment>(params.seg === "expenses" ? "expenses" : "orders");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detail, setDetail] = useState<OrderRow | null>(null);
+  const [rejecting, setRejecting] = useState<PendingExpenseRow | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const pending = useMemo(
     () => ordersAll(confirmed, approved).sort((a, b) => (a.orderDate < b.orderDate ? 1 : -1)),
@@ -55,65 +66,158 @@ export default function ApprovalsScreen() {
     }
   }
 
-  return (
-    <Screen refreshing={fetching > 0} onRefresh={async () => {
+  async function onApproveExpense(row: PendingExpenseRow) {
+    if (busyId) return;
+    setBusyId(row.id);
+    try {
+      await approveExpense(row.id);
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ["orders"] }),
-        qc.invalidateQueries({ queryKey: qk.today() }),
-        qc.invalidateQueries({ queryKey: qk.aging() }),
+        qc.invalidateQueries({ queryKey: qk.pendingExpenses() }),
+        qc.invalidateQueries({ queryKey: qk.expenses() }),
+        qc.invalidateQueries({ queryKey: qk.custody() }),
       ]);
-    }}>
+      Toast.show({ type: "success", text1: "Expense approved", text2: `${row.expenseNo} - ${moneyINR(row.amount)}` });
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Could not approve expense", text2: friendlyError(e) });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function onRejectExpense(row: PendingExpenseRow) {
+    setRejectReason("");
+    setRejecting(row);
+  }
+
+  async function confirmReject() {
+    const row = rejecting;
+    if (!row || busyId) return;
+    setBusyId(row.id);
+    try {
+      await rejectExpense(row.id, rejectReason.trim() || null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.pendingExpenses() }),
+        qc.invalidateQueries({ queryKey: qk.expenses() }),
+      ]);
+      Toast.show({ type: "success", text1: "Expense rejected", text2: row.expenseNo });
+      setRejecting(null);
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Could not reject expense", text2: friendlyError(e) });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onRefresh() {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["orders"] }),
+      qc.invalidateQueries({ queryKey: qk.pendingExpenses() }),
+      qc.invalidateQueries({ queryKey: qk.today() }),
+      qc.invalidateQueries({ queryKey: qk.aging() }),
+    ]);
+  }
+
+  const canManageExpenses = can("expense.manage");
+
+  return (
+    <Screen refreshing={fetching > 0} onRefresh={onRefresh}>
       <GradientHeader title="Approvals" subtitle={roleLabel(claims)} right={<HeaderRight />} />
 
       <View style={st.body}>
-        <View style={st.gridRow}>
-          <StatTile
-            label="Pending approvals"
-            value={String(confirmed.isLoading || approved.isLoading ? "…" : pending.length)}
-            tone="amb"
-            icon={ClipboardList}
-          />
-          <StatTile
-            label="Open orders"
-            value={String(openOrders.isLoading ? "…" : (openOrders.data ?? []).length)}
-            tone="brand"
-            icon={FileText}
-          />
-        </View>
-
-
-        <View style={st.note}>
-          <Info size={13} color={tokens.color.ink3} />
-          <Text style={st.noteTxt}>
-            Approving creates an official GST invoice. Server enforces credit limits on invoicing.
-          </Text>
-        </View>
-
-        {confirmed.isLoading || approved.isLoading ? (
-          <SkeletonRows rows={4} />
-        ) : confirmed.isError || approved.isError ? (
-          <EmptyState
-            title="Could not load orders"
-            message={friendlyError(confirmed.error ?? approved.error)}
-          />
-        ) : pending.length === 0 ? (
-          <EmptyState
-            icon={CheckCheck}
-            title="No orders awaiting approval"
-            message="Confirmed and approved orders will appear here for invoicing."
-          />
-        ) : (
-          pending.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              busy={busyId === order.id}
-              canInvoice={can("invoice.create")}
-              canView={can("order.view")}
-              onApprove={() => void onApprove(order)}
-              onView={() => setDetail(order)}
+        <View style={st.segWrap}>
+          <SegmentBtn label="Orders" count={pending.length} active={seg === "orders"} onPress={() => setSeg("orders")} />
+          {canManageExpenses ? (
+            <SegmentBtn
+              label="Expenses"
+              count={pendingExpenses.data?.length ?? 0}
+              active={seg === "expenses"}
+              onPress={() => setSeg("expenses")}
             />
-          ))
+          ) : null}
+        </View>
+
+        {seg === "orders" ? (
+          <>
+            <View style={st.gridRow}>
+              <StatTile
+                label="Pending approvals"
+                value={String(confirmed.isLoading || approved.isLoading ? "…" : pending.length)}
+                tone="amb"
+                icon={ClipboardList}
+              />
+              <StatTile
+                label="Open orders"
+                value={String(openOrders.isLoading ? "…" : (openOrders.data ?? []).length)}
+                tone="brand"
+                icon={FileText}
+              />
+            </View>
+
+            <View style={st.note}>
+              <Info size={13} color={tokens.color.ink3} />
+              <Text style={st.noteTxt}>
+                Approving creates an official GST invoice. Server enforces credit limits on invoicing.
+              </Text>
+            </View>
+
+            {confirmed.isLoading || approved.isLoading ? (
+              <SkeletonRows rows={4} />
+            ) : confirmed.isError || approved.isError ? (
+              <EmptyState
+                title="Could not load orders"
+                message={friendlyError(confirmed.error ?? approved.error)}
+              />
+            ) : pending.length === 0 ? (
+              <EmptyState
+                icon={CheckCheck}
+                title="No orders awaiting approval"
+                message="Confirmed and approved orders will appear here for invoicing."
+              />
+            ) : (
+              pending.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  busy={busyId === order.id}
+                  canInvoice={can("invoice.create")}
+                  canView={can("order.view")}
+                  onApprove={() => void onApprove(order)}
+                  onView={() => setDetail(order)}
+                />
+              ))
+            )}
+          </>
+        ) : (
+          <>
+            <View style={st.note}>
+              <Info size={13} color={tokens.color.ink3} />
+              <Text style={st.noteTxt}>
+                Approving deducts the amount from the spender's cash custody. Rejected expenses move nothing.
+              </Text>
+            </View>
+
+            {pendingExpenses.isLoading ? (
+              <SkeletonRows rows={4} />
+            ) : pendingExpenses.isError ? (
+              <EmptyState title="Could not load expenses" message={friendlyError(pendingExpenses.error)} />
+            ) : (pendingExpenses.data?.length ?? 0) === 0 ? (
+              <EmptyState
+                icon={CheckCheck}
+                title="No expenses awaiting approval"
+                message="Field expense submissions will appear here."
+              />
+            ) : (
+              (pendingExpenses.data ?? []).map((row) => (
+                <ExpenseCard
+                  key={row.id}
+                  row={row}
+                  busy={busyId === row.id}
+                  onApprove={() => void onApproveExpense(row)}
+                  onReject={() => onRejectExpense(row)}
+                />
+              ))
+            )}
+          </>
         )}
       </View>
 
@@ -141,7 +245,105 @@ export default function ApprovalsScreen() {
           </View>
         ) : null}
       </Sheet>
+
+      <Sheet visible={rejecting != null} onClose={() => setRejecting(null)} title="Reject expense">
+        {rejecting ? (
+          <View style={st.detailBody}>
+            <Text style={st.detailStore}>{rejecting.expenseNo} - {moneyINR(rejecting.amount)}</Text>
+            <Text style={st.detailNotes}>
+              {rejecting.spenderName ?? "Agent"} · {rejecting.category.replace("_", " ")}
+            </Text>
+            <TextInput
+              style={st.rejectInput}
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              placeholder="Reason (optional)"
+              placeholderTextColor={tokens.color.ink4}
+              maxLength={200}
+              multiline
+              accessibilityLabel="Rejection reason"
+            />
+            <View style={st.actions}>
+              <Pressable
+                onPress={() => void confirmReject()}
+                disabled={busyId === rejecting.id}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm reject"
+                style={({ pressed }) => [st.btn, st.btnRed, (pressed || busyId === rejecting.id) && { opacity: 0.8 }]}
+              >
+                <X size={14} color="#ffffff" />
+                <Text style={st.btnTxt}>{busyId === rejecting.id ? "Rejecting…" : "Reject expense"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+      </Sheet>
     </Screen>
+  );
+}
+
+function SegmentBtn({ label, count, active, onPress }: { label: string; count: number; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      style={[st.segBtn, active && st.segBtnOn]}
+    >
+      <Text style={[st.segTxt, active && st.segTxtOn]} numberOfLines={1}>{label}</Text>
+      <View style={[st.segCount, active && st.segCountOn]}>
+        <Text style={[st.segCountTxt, active && st.segCountTxtOn]}>{count}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function ExpenseCard({
+  row, busy, onApprove, onReject,
+}: {
+  row: PendingExpenseRow;
+  busy: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <View style={st.card}>
+      <View style={st.cardHead}>
+        <View style={[st.expChip]}>
+          <Wallet size={14} color={tokens.color.amb} />
+        </View>
+        <View style={st.arMain}>
+          <Text style={st.orderNo}>{row.expenseNo}</Text>
+          <Text style={st.storeName} numberOfLines={1}>
+            {row.spenderName ?? "Agent"} · {row.category.replace("_", " ")} · {dateIST(row.expenseDate)}
+          </Text>
+          {row.note ? <Text style={st.expNote} numberOfLines={1}>"{row.note}"</Text> : null}
+        </View>
+        <Text style={st.total} numberOfLines={1}>{moneyINR(row.amount)}</Text>
+      </View>
+      <View style={st.actions}>
+        <Pressable
+          onPress={onApprove}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={`Approve ${row.expenseNo}`}
+          style={({ pressed }) => [st.btn, st.btnGrn, (pressed || busy) && { opacity: 0.8 }]}
+        >
+          <CheckCheck size={14} color="#ffffff" />
+          <Text style={st.btnTxt}>{busy ? "Approving…" : "Approve"}</Text>
+        </Pressable>
+        <Pressable
+          onPress={onReject}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={`Reject ${row.expenseNo}`}
+          style={({ pressed }) => [st.btn, st.btnGhost, (pressed || busy) && { opacity: 0.7 }]}
+        >
+          <X size={14} color={tokens.color.red} />
+          <Text style={[st.btnTxt, { color: tokens.color.red }]}>Reject</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -217,6 +419,79 @@ const st = StyleSheet.create({
     paddingHorizontal: tokens.space.lg,
     paddingTop: tokens.space.lg,
     gap: tokens.space.md,
+  },
+  segWrap: {
+    flexDirection: "row",
+    backgroundColor: tokens.color.fill,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    padding: 3,
+    gap: 3,
+  },
+  segBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 44,
+    borderRadius: tokens.radius.sm,
+    paddingHorizontal: 4,
+  },
+  segBtnOn: { backgroundColor: tokens.color.surface, ...tokens.shadow.card },
+  segTxt: { color: tokens.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  segTxtOn: { color: tokens.color.brand },
+  segCount: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: tokens.color.ambWash,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  segCountOn: { backgroundColor: tokens.color.brand },
+  segCountTxt: {
+    color: tokens.color.amb,
+    fontFamily: tokens.font.monoBold,
+    fontSize: 11,
+    fontVariant: ["tabular-nums"],
+  },
+  segCountTxtOn: { color: "#ffffff" },
+  expChip: {
+    width: 30,
+    height: 30,
+    borderRadius: tokens.radius.sm,
+    backgroundColor: tokens.color.ambWash,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expNote: {
+    color: tokens.color.ink4,
+    fontFamily: tokens.font.sans,
+    fontSize: tokens.size.eyebrow,
+    fontStyle: "italic",
+    marginTop: 1,
+  },
+  rejectInput: {
+    minHeight: 72,
+    textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: tokens.color.line,
+    borderRadius: tokens.radius.md,
+    backgroundColor: tokens.color.surface,
+    paddingHorizontal: tokens.space.md,
+    paddingVertical: tokens.space.sm,
+    color: tokens.color.ink,
+    fontFamily: tokens.font.sans,
+    fontSize: tokens.size.sm,
+  },
+  btnRed: { backgroundColor: tokens.color.red },
+  btnGhost: {
+    backgroundColor: tokens.color.surface,
+    borderWidth: 1,
+    borderColor: tokens.color.line,
   },
   gridRow: { flexDirection: "row", gap: tokens.space.sm },
   note: {
