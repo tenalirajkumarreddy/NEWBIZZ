@@ -109,6 +109,9 @@ android {
         // %USERPROFILE%\.gradle\gradle.properties on the release machine and
         // are never committed). Falls back to the debug keystore — loudly —
         // when the release keystore is missing so plain builds still work.
+        // NOTE: `expo prebuild` REGENERATES this file and wipes the release
+        // block + NEWBIZZ props in gradle.properties — re-apply after any
+        // prebuild (see mobile/README.md).
         release {
             def configuredStoreFile = (findProperty('NEWBIZZ_UPLOAD_STORE_FILE') ?: '').toString()
             def storeFileResolved = configuredStoreFile ? rootProject.file(configuredStoreFile) : null

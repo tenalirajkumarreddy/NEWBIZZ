@@ -9,6 +9,11 @@ buildscript {
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    // FCM push (expo-notifications). Plugin activates in app/build.gradle
+    // only when mobile/google-services.json exists.
+    // NOTE: prebuild --clean wipes this block - re-add together with the
+    // cmake override below.
+    classpath 'com.google.gms:google-services:4.4.2'
   }
 }
 
@@ -33,6 +38,16 @@ subprojects {
   }
   pluginManager.withPlugin("com.android.application") {
     android.externalNativeBuild.cmake.version = "3.30.5"
+  }
+}
+
+// Activate the google-services plugin only when the Firebase config exists
+// (mobile/android/app/google-services.json, synced from mobile/ by prebuild).
+subprojects {
+  pluginManager.withPlugin("com.android.application") {
+    if (file("google-services.json").exists()) {
+      apply plugin: "com.google.gms.google-services"
+    }
   }
 }
 
