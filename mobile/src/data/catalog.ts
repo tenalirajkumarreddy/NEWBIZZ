@@ -3,6 +3,27 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { qk } from "./keys";
 
+/** The branch-wide fallback price list (server: price_lists where is_default). */
+export function useDefaultPriceListId() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: ["defaultPriceList"],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase
+        .from("price_lists")
+        .select("id")
+        .eq("is_default", true)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.id as string) ?? null;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export interface SellableItem {
   id: string;
   name: string;

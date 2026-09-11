@@ -10,12 +10,21 @@ import { useTheme } from "@/theme/ThemeContext";
 
 const MAX_QTY = 999_999;
 
-export function effectivePrice(item: SellableItem | undefined, qty: number): number {
+/**
+ * Mirror of the server's effective_price(resolve_price_list(store)): only
+ * rows belonging to the store's resolved price list are eligible; fall back
+ * to the item's default_price when that list has no row for the qty.
+ */
+export function effectivePrice(
+  item: SellableItem | undefined,
+  qty: number,
+  priceListId: string | null,
+): number {
   if (!item) return 0;
   const rows = item.priceLists;
-  if (!rows || rows.length === 0) return item.defaultPrice;
-  const eligible = rows.filter((r) => qty >= r.minQty);
-  if (eligible.length === 0) return rows[0].price;
+  if (!priceListId || !rows || rows.length === 0) return item.defaultPrice;
+  const eligible = rows.filter((r) => r.priceListId === priceListId && qty >= r.minQty);
+  if (eligible.length === 0) return item.defaultPrice;
   return eligible.reduce((best, r) => (r.minQty > best.minQty ? r : best), eligible[0]).price;
 }
 
@@ -24,7 +33,7 @@ function fmtQty(n: number): string {
 }
 
 export function ItemList({
-  items, qtyByItem, priceOverride, onQty, loading, errorText,
+  items, qtyByItem, priceOverride, onQty, loading, errorText, priceListId,
 }: {
   items: SellableItem[];
   qtyByItem: Record<string, number>;
@@ -32,6 +41,7 @@ export function ItemList({
   onQty: (itemId: string, qty: number) => void;
   loading: boolean;
   errorText: string | null;
+  priceListId: string | null;
 }) {
   const s = useStyles();
   if (loading) return <SkeletonRows rows={6} />;
@@ -53,6 +63,7 @@ export function ItemList({
           item={item}
           qty={qtyByItem[item.id] ?? 0}
           override={priceOverride[item.id]}
+          priceListId={priceListId}
           onQty={onQty}
         />
       ))}
@@ -61,16 +72,17 @@ export function ItemList({
 }
 
 function ItemRow({
-  item, qty, override, onQty,
+  item, qty, override, onQty, priceListId,
 }: {
   item: SellableItem;
   qty: number;
   override: number | undefined;
   onQty: (itemId: string, qty: number) => void;
+  priceListId: string | null;
 }) {
   const { palette: t } = useTheme();
   const s = useStyles();
-  const price = override ?? effectivePrice(item, qty);
+  const price = override ?? effectivePrice(item, qty, priceListId);
   const selected = qty > 0;
   const [txt, setTxt] = useState(qty > 0 ? fmtQty(qty) : "");
 

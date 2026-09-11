@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
-import { ScanLine, MapPin, IndianRupee, HandCoins, Footprints } from "lucide-react-native";
+import { ScanLine, MapPin, IndianRupee, HandCoins, Footprints, UserPlus, Store as StoreIcon } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -194,7 +194,7 @@ function QuickActions() {
     { key: "visit", label: "Mark visit", icon: Footprints, tone: "brand", href: "/mark-visit", show: can("field.routes") },
   ];
   const visible = actions.filter((a) => a.show);
-  if (visible.length === 0) return null;
+  if (visible.length === 0 && !can("customer.manage")) return null;
 
   return (
     <View style={s.quickWrap}>
@@ -214,6 +214,26 @@ function QuickActions() {
           </Pressable>
         );
       })}
+      {can("customer.manage") ? (
+        <>
+          <Pressable
+            onPress={() => router.push("/stores?add=1&mode=customer")}
+            accessibilityLabel="Create customer"
+            style={({ pressed }) => [s.quickBtn, { backgroundColor: t.color.fill }, pressed && { opacity: 0.85 }]}
+          >
+            <UserPlus size={16} color={t.color.ink2} />
+            <Text style={[s.quickTxt, { color: t.color.ink2 }]} numberOfLines={1}>Create customer</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/stores?add=1")}
+            accessibilityLabel="Create store"
+            style={({ pressed }) => [s.quickBtn, { backgroundColor: t.color.fill }, pressed && { opacity: 0.85 }]}
+          >
+            <StoreIcon size={16} color={t.color.ink2} />
+            <Text style={[s.quickTxt, { color: t.color.ink2 }]} numberOfLines={1}>Create store</Text>
+          </Pressable>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -265,7 +285,7 @@ const useStyles = () => {
   segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   segTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   sheetBody: { gap: tokens.space.md },
-  quickWrap: { flexDirection: "row", gap: tokens.space.sm },
+  quickWrap: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
   quickBtn: {
     flex: 1,
     flexDirection: "row",

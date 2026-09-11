@@ -74,12 +74,14 @@ function RoutePick({
 }
 
 export function AddStoreWizard({
-  visible, onClose, linkCode,
+  visible, onClose, linkCode, customerOnly,
 }: {
   visible: boolean;
   onClose: () => void;
   /** Scanned QR code to auto-link to the newly created store (optional). */
   linkCode?: string | null;
+  /** Customer-creation-only mode: skip store steps entirely. */
+  customerOnly?: boolean;
 }) {
   const { palette: t } = useTheme();
   const s = useStyles();
@@ -129,6 +131,11 @@ export function AddStoreWizard({
       setLng(null);
     }
   }, [visible]);
+
+  // customer-only mode never offers the existing-customer branch
+  useEffect(() => {
+    if (visible && customerOnly) setCustMode("new");
+  }, [visible, customerOnly]);
 
   const phoneValid = /^\d{10}$/.test(custPhone.trim());
   const pickedId: string = pickedCustomer != null ? pickedCustomer.id : "";
@@ -285,21 +292,49 @@ export function AddStoreWizard({
     }
   }
 
+  async function submitCustomerOnly() {
+    if (busy || custMode !== "new") return;
+    setBusy(true);
+    try {
+      const { data: custCode } = await supabase.rpc("next_entity_code", { p_entity_type: "customer" });
+      if (!custCode) throw new RpcError("Could not generate customer code");
+      const { error: custErr } = await supabase
+        .from("customers")
+        .insert({
+          code: custCode as string,
+          name: custName.trim(),
+          phone: custPhone.trim(),
+          status: "active",
+        });
+      if (custErr) throw custErr;
+      await qc.invalidateQueries({ queryKey: ["stores"] });
+      Toast.show({ type: "success", text1: "Customer created", text2: custName.trim() });
+      onClose();
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Could not create customer", text2: friendlyError(e) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Sheet
       visible={visible}
       onClose={onClose}
       title={
-        step === 1
-          ? "Add store — customer"
-          : step === 2
-            ? "Add store — details"
-            : "Add store — review"
+        customerOnly
+          ? "New customer"
+          : step === 1
+            ? "Add store - customer"
+            : step === 2
+              ? "Add store - details"
+              : "Add store - review"
       }
     >
       {step === 1 ? (
         <View style={s.stepBody}>
           <View style={s.modeRow}>
+            {customerOnly ? null : (
             <Pressable
               onPress={() => setCustMode("new")}
               accessibilityLabel="New customer"
@@ -309,6 +344,8 @@ export function AddStoreWizard({
               <UserPlus size={14} color={custMode === "new" ? t.color.surface : t.color.ink3} />
               <Text style={[s.modeTxt, custMode === "new" && s.modeTxtOn]}>New customer</Text>
             </Pressable>
+            )}
+            {customerOnly ? null : (
             <Pressable
               onPress={() => setCustMode("existing")}
               accessibilityLabel="Existing customer"
@@ -318,6 +355,7 @@ export function AddStoreWizard({
               <Users size={14} color={custMode === "existing" ? t.color.surface : t.color.ink3} />
               <Text style={[s.modeTxt, custMode === "existing" && s.modeTxtOn]}>Existing</Text>
             </Pressable>
+            )}
           </View>
 
           {custMode === "new" ? (
@@ -566,7 +604,7 @@ export function AddStoreWizard({
       )}
 
       <View style={s.navRow}>
-        {step > 1 ? (
+        {!customerOnly && step > 1 ? (
           <Pressable
             onPress={() => setStep((p) => (p === 3 ? 2 : 1) as 1 | 2)}
             disabled={busy}
@@ -580,20 +618,26 @@ export function AddStoreWizard({
           <View style={s.navSpacer} />
         )}
         <Pressable
-          onPress={() => (step === 3 ? void submit() : setStep((p) => (p === 1 ? 2 : 3) as 2 | 3))}
-          disabled={busy || (step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
-          accessibilityLabel={step === 3 ? "Create store" : "Continue"}
+          onPress={() =>
+            customerOnly
+              ? void submitCustomerOnly()
+              : step === 3
+                ? void submit()
+                : setStep((p) => (p === 1 ? 2 : 3) as 2 | 3)
+          }
+          disabled={busy || (step === 1 && !step1Valid) || (!customerOnly && step === 2 && !step2Valid)}
+          accessibilityLabel={customerOnly ? "Create customer" : step === 3 ? "Create store" : "Continue"}
           style={({ pressed }) => [
             s.navNext,
             pressed && { opacity: 0.9 },
-            (busy || (step === 1 && !step1Valid) || (step === 2 && !step2Valid)) && { opacity: 0.5 },
+            (busy || (step === 1 && !step1Valid) || (!customerOnly && step === 2 && !step2Valid)) && { opacity: 0.5 },
           ]}
         >
           {busy ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
             <Text style={s.navNextTxt}>
-              {step === 1 ? "Continue" : step === 2 ? "Review" : "Create store"}
+              {customerOnly ? "Create customer" : step === 1 ? "Continue" : step === 2 ? "Review" : "Create store"}
             </Text>
           )}
         </Pressable>

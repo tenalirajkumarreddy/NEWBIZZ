@@ -1,9 +1,15 @@
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Modal, View, Text, Pressable, ScrollView, StyleSheet, Keyboard, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tokens } from "@/theme/tokens";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/theme/ThemeContext";
 
+/**
+ * Bottom sheet. Because `statusBarTranslucent` disables Android's automatic
+ * window resize inside transparent Modals, the keyboard would otherwise
+ * cover the lower inputs — we track the keyboard height and pad the scroll
+ * content so the focused field always stays visible.
+ */
 export function Sheet({
   visible, onClose, title, children,
 }: {
@@ -14,6 +20,22 @@ export function Sheet({
 }) {
   const s = useStyles();
   const insets = useSafeAreaInsets();
+  const [kbHeight, setKbHeight] = useState(0);
+
+  useEffect(() => {
+    if (!visible) {
+      setKbHeight(0);
+      return;
+    }
+    const showEv = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEv = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const show = Keyboard.addListener(showEv, (e) => setKbHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener(hideEv, () => setKbHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [visible]);
 
   return (
     <Modal
@@ -30,7 +52,7 @@ export function Sheet({
           {title ? <Text style={s.title}>{title}</Text> : null}
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={s.content}
+            contentContainerStyle={[s.content, kbHeight > 0 ? { paddingBottom: kbHeight } : null]}
           >
             {children}
           </ScrollView>

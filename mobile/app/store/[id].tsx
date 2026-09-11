@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import {
-  View, Text, StyleSheet, Pressable, Platform, Linking, ScrollView,
+  View, Text, StyleSheet, Pressable, Platform, Linking, ScrollView, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -168,6 +168,14 @@ export default function StoreProfileScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={s.hero}>
+            {(store as any).image_url ? (
+              <Pressable
+                onPress={() => void Linking.openURL((store as any).image_url as string)}
+                accessibilityLabel="Open store photo"
+              >
+                <Image source={{ uri: (store as any).image_url as string }} style={s.heroPhoto} />
+              </Pressable>
+            ) : null}
             <View style={s.heroTop}>
               <View style={s.chip}>
                 <Text style={s.chipTxt}>{store.name.slice(0, 1).toUpperCase()}</Text>
@@ -291,6 +299,12 @@ const useStyles = () => {
     padding: tokens.space.md,
     gap: tokens.space.md,
     ...t.shadow.card,
+  },
+  heroPhoto: {
+    width: "100%",
+    height: 170,
+    borderRadius: tokens.radius.md,
+    backgroundColor: t.color.fill,
   },
   heroTop: { flexDirection: "row", alignItems: "center", gap: tokens.space.md },
   chip: {

@@ -15,9 +15,10 @@ export default function StoresScreen() {
   // Deep-link from the scanner's "no store found" popup:
   // /stores?add=1&qrCode=<code> opens the add wizard and auto-links the QR
   // after the store is created.
-  const params = useLocalSearchParams<{ add?: string; qrCode?: string }>();
+  const params = useLocalSearchParams<{ add?: string; qrCode?: string; mode?: string }>();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [customerOnly, setCustomerOnly] = useState(false);
   const consumed = useRef(false);
   const { refreshing, onRefresh } = useStoresRefresh();
 
@@ -26,9 +27,10 @@ export default function StoresScreen() {
     if (params.add === "1") {
       consumed.current = true;
       setLinkCode(typeof params.qrCode === "string" ? params.qrCode : null);
+      setCustomerOnly(params.mode === "customer");
       setWizardOpen(true);
     }
-  }, [params.add, params.qrCode]);
+  }, [params.add, params.qrCode, params.mode]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -49,9 +51,11 @@ export default function StoresScreen() {
       <AddStoreWizard
         visible={wizardOpen}
         linkCode={linkCode}
+        customerOnly={customerOnly}
         onClose={() => {
           setWizardOpen(false);
           setLinkCode(null);
+          setCustomerOnly(false);
         }}
       />
     </View>

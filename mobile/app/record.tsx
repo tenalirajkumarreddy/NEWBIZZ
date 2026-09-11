@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { StorePickerSheet, type PickedStore } from "@/features/record/StorePickerSheet";
 import { ItemList, effectivePrice } from "@/features/record/ItemList";
+import { useDefaultPriceListId } from "@/data/catalog";
 import { PaymentSplit } from "@/features/record/PaymentSplit";
 import { CreditBanner, computeCreditState, type CreditState } from "@/features/record/CreditBanner";
 import { ReceiptModal, type ReceiptResult } from "@/features/record/ReceiptModal";
@@ -159,6 +160,12 @@ export default function RecordScreen() {
     | null | undefined;
   const customerId = customer?.id ?? null;
   const outstandingQ = useCustomerOutstanding(customerId);
+  const defaultListQ = useDefaultPriceListId();
+  // Price-list resolution mirrors the server: store -> customer -> default.
+  const detailStore = detail.data?.store as any;
+  const detailCustomer = detailStore?.customer as any;
+  const priceListId: string | null =
+    detailStore?.price_list_id ?? detailCustomer?.price_list_id ?? defaultListQ.data ?? null;
 
   const prefillDone = useRef(false);
   useEffect(() => {
@@ -201,7 +208,7 @@ export default function RecordScreen() {
       .map(([itemId, q]) => {
         const item = items.find((i) => i.id === itemId);
         const override = priceOverride[itemId];
-        const price = override ?? effectivePrice(item, q);
+        const price = override ?? effectivePrice(item, q, priceListId);
         return { itemId, qty: q, unitPrice: round2(price) };
       });
   }, [qty, priceOverride, items]);
@@ -239,13 +246,17 @@ export default function RecordScreen() {
     if (!(limit > 0)) return { level: "none" };
     if (outstandingQ.isLoading) return { level: "loading" };
     if (outstandingQ.isError) return { level: "unavailable" };
-    return computeCreditState(limit, outstandingQ.data ?? 0, postTaxTotal, collected);
+    // Server judges exposure by grand total: post-tax for official invoices,
+    // taxable-only for cash memos. Mirror that.
+    return computeCreditState(limit, outstandingQ.data ?? 0, official ? postTaxTotal : cartTotal, collected);
   }, [
     outstandingQ.isLoading,
     outstandingQ.isError,
     outstandingQ.data,
     customer?.credit_limit,
     postTaxTotal,
+    cartTotal,
+    official,
     collected,
   ]);
 
@@ -497,6 +508,7 @@ export default function RecordScreen() {
                 onQty={(id, q) => setQty((prev) => ({ ...prev, [id]: Math.min(q, MAX_QTY) }))}
                 loading={itemsQ.isLoading}
                 errorText={itemsQ.isError ? friendlyError(itemsQ.error) : null}
+                priceListId={priceListId}
               />
 
               {lines.length > 0 ? (

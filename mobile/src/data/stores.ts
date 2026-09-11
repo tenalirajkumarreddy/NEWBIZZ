@@ -43,7 +43,7 @@ export function useStoreDetail(id: string) {
     queryFn: async () => {
       const { data: store, error } = await supabase
         .from("customer_stores")
-        .select(`*, route:routes(name), customer:customers(id, name, phone, credit_limit)`)
+        .select(`*, route:routes(name), customer:customers(id, name, phone, credit_limit, price_list_id)`)
         .eq("id", id).single();
       if (error) throw error;
       const { data: outstanding } = await supabase.rpc("store_outstanding", { p_store: id });
