@@ -114,6 +114,7 @@ export interface CustomerDetail {
   overLimit: boolean;
   aging: { bucket: string; amount: number }[];
   stores: StoreListRow[];
+  priceListId: string | null;
 }
 
 const AGE_BUCKET_ORDER = ["current", "0-30", "31-60", "61-90", "90+"];
@@ -123,7 +124,7 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
   const [custRes, storesRes, outRes, agingRes] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, code, name, gstin, pan, phone, email, state_code, image_url, credit_limit, credit_days, status")
+      .select("id, code, name, gstin, pan, phone, email, state_code, image_url, credit_limit, credit_days, status, price_list_id")
       .eq("id", id)
       .maybeSingle()
       .returns<{
@@ -131,6 +132,7 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
         gstin: string | null; pan: string | null; phone: string | null;
         email: string | null; state_code: string; image_url: string | null;
         credit_limit: number; credit_days: number; status: string;
+        price_list_id: string | null;
       } | null>(),
     supabase
       .from("customer_stores")
@@ -176,6 +178,7 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
     creditUtilisation: creditLimit > 0 ? outstanding / creditLimit : 0,
     overLimit: creditLimit > 0 && outstanding > creditLimit,
     aging,
+    priceListId: c.price_list_id,
     stores: stores.map((s) => ({
       id: s.id,
       code: s.code,
@@ -211,6 +214,7 @@ export interface StoreDetail {
   isPrimary: boolean;
   status: string;
   imageUrl: string | null;
+  priceListId: string | null;
   priceListName: string | null;
   routeName: string | null;
   outstanding: number;
@@ -224,7 +228,7 @@ export async function getStore(storeId: string): Promise<StoreDetail | null> {
       .select(
         "id, customer_id, code, name, kind, contact_name, phone, address_line, area, city, pincode, " +
           "state_code, geo_lat, geo_lng, is_primary, status, image_url, " +
-          "customer:customers(name), price_list:price_lists(name), route:routes(name)",
+          "customer:customers(name), price_list:price_lists(id, name), route:routes(name)",
       )
       .eq("id", storeId)
       .maybeSingle()
@@ -235,7 +239,7 @@ export async function getStore(storeId: string): Promise<StoreDetail | null> {
         geo_lat: number | null; geo_lng: number | null; is_primary: boolean; status: string;
         image_url: string | null;
         customer: { name: string } | null;
-        price_list: { name: string } | null;
+        price_list: { id: string; name: string } | null;
         route: { name: string } | null;
       } | null>(),
     supabase.rpc("store_outstanding", { p_store: storeId }),
@@ -262,6 +266,7 @@ export async function getStore(storeId: string): Promise<StoreDetail | null> {
     isPrimary: s.is_primary,
     status: s.status,
     imageUrl: s.image_url,
+    priceListId: s.price_list?.id ?? null,
     priceListName: s.price_list?.name ?? null,
     routeName: s.route?.name ?? null,
     outstanding: Number(outRes.data ?? 0),

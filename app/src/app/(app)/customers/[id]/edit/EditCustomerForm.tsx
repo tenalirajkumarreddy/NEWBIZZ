@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { updateCustomer } from "@/lib/actions/customers";
 import type { CustomerDetail } from "@/lib/data/customers";
+import type { PriceListRow } from "@/lib/data/catalog";
 
 const STATE_CODES = [
   { code: "01", name: "Jammu & Kashmir" }, { code: "02", name: "Himachal Pradesh" },
@@ -29,7 +30,13 @@ const STATE_CODES = [
   { code: "36", name: "Telangana" }, { code: "37", name: "Andhra Pradesh" },
 ];
 
-export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
+export function EditCustomerForm({
+  customer,
+  priceLists,
+}: {
+  customer: CustomerDetail;
+  priceLists: PriceListRow[];
+}) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -45,6 +52,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
   const [creditLimit, setCreditLimit] = useState(String(customer.creditLimit || ""));
   const [creditDays, setCreditDays] = useState(String(customer.creditDays || ""));
   const [status, setStatus] = useState(customer.status);
+  const [priceListId, setPriceListId] = useState(customer.priceListId ?? "");
 
   const canSubmit = !!name.trim() && !!phone.trim() && !pending;
 
@@ -61,6 +69,7 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
         credit_limit: Number(creditLimit) || 0,
         credit_days: Number(creditDays) || 0,
         status,
+        price_list_id: priceListId || null,
       });
       if (res.ok) {
         reset();
@@ -102,6 +111,18 @@ export function EditCustomerForm({ customer }: { customer: CustomerDetail }) {
           </Field>
           <Field label="Email" htmlFor="email">
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+          <Field
+            label="Price list"
+            htmlFor="price_list"
+            hint="Optional — tier for all this customer's stores"
+          >
+            <Select id="price_list" value={priceListId} onChange={(e) => setPriceListId(e.target.value)}>
+              <option value="">Leave empty to use the store-kind list</option>
+              {priceLists.filter((p) => p.status === "active").map((p) => (
+                <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
+              ))}
+            </Select>
           </Field>
         </div>
       </Panel>

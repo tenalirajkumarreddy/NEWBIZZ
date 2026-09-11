@@ -131,9 +131,13 @@ export function NewStoreForm({
               ))}
             </Select>
           </Field>
-          <Field label="Price list override" htmlFor="pricelist" hint="Inherits customer default if blank">
+          <Field
+            label="Price list override (optional)"
+            htmlFor="pricelist"
+            hint="Leave empty to use the store-kind list"
+          >
             <Select id="pricelist" value={priceListId} onChange={(e) => setPriceListId(e.target.value)}>
-              <option value="">Inherit from customer</option>
+              <option value="">Automatic — store-kind / default list</option>
               {priceLists.filter((p) => p.status === "active").map((p) => (
                 <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
               ))}

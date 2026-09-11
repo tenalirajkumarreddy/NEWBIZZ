@@ -8,6 +8,7 @@ import { Field, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { Select } from "@/components/ui/Field";
 import { updateStore, setStoreStatus } from "@/lib/actions/customers";
+import type { PriceListRow } from "@/lib/data/catalog";
 
 const KINDS = [
   { value: "retail", label: "Retail" },
@@ -27,17 +28,20 @@ interface StoreEditFields {
   state_code: string;
   geo_lat: string;
   geo_lng: string;
+  price_list_id: string;
 }
 
 export function StoreProfileActions({
   storeId,
   customerId,
   status,
+  priceLists,
   initial,
 }: {
   storeId: string;
   customerId: string;
   status: string;
+  priceLists: PriceListRow[];
   initial: StoreEditFields;
 }) {
   const router = useRouter();
@@ -86,6 +90,7 @@ export function StoreProfileActions({
         state_code: f.state_code,
         geo_lat: f.geo_lat ? parseFloat(f.geo_lat) : null,
         geo_lng: f.geo_lng ? parseFloat(f.geo_lng) : null,
+        price_list_id: f.price_list_id || null,
       });
       if (res.ok) {
         toast.success("Store updated", "Details saved.");
@@ -146,6 +151,18 @@ export function StoreProfileActions({
             <Field label="City"><Input value={f.city} onChange={(e) => set("city", e.target.value)} /></Field>
             <Field label="Pincode"><Input mono value={f.pincode} onChange={(e) => set("pincode", e.target.value)} /></Field>
             <Field label="State code" hint="Place of supply"><Input mono value={f.state_code} onChange={(e) => set("state_code", e.target.value)} /></Field>
+            <Field
+              label="Price list override (optional)"
+              className="col-span-2"
+              hint="Leave empty to use the store-kind list"
+            >
+              <Select value={f.price_list_id} onChange={(e) => set("price_list_id", e.target.value)}>
+                <option value="">Automatic — store-kind / default list</option>
+                {priceLists.filter((p) => p.status === "active").map((p) => (
+                  <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
+                ))}
+              </Select>
+            </Field>
             <Field label="Latitude"><Input mono inputMode="decimal" value={f.geo_lat} onChange={(e) => set("geo_lat", e.target.value)} placeholder="e.g. 12.971599" /></Field>
             <Field label="Longitude"><Input mono inputMode="decimal" value={f.geo_lng} onChange={(e) => set("geo_lng", e.target.value)} placeholder="e.g. 77.594566" /></Field>
           </div>

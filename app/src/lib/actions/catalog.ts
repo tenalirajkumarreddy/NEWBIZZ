@@ -123,13 +123,21 @@ export interface CreatePriceListInput {
   is_default?: boolean;
   valid_from?: string;
   valid_to?: string;
+  /** Store kind this list prices (retail/wholesale/distributor/institution); null = untagged. */
+  kind?: string | null;
 }
+
+const PRICE_LIST_KINDS = ["retail", "wholesale", "distributor", "institution"] as const;
 
 export async function createPriceList(
   input: CreatePriceListInput,
 ): Promise<CatalogResult<{ priceListId: string }>> {
   if (!input.code?.trim()) return { ok: false, error: "Code is required." };
   if (!input.name?.trim()) return { ok: false, error: "Name is required." };
+  const kind = (input.kind || null) as (typeof PRICE_LIST_KINDS)[number] | null;
+  if (kind && !PRICE_LIST_KINDS.includes(kind)) {
+    return { ok: false, error: "Invalid store kind." };
+  }
 
   const supabase = createClient();
   const { data, error } = await supabase
@@ -140,6 +148,7 @@ export async function createPriceList(
       is_default: input.is_default ?? false,
       valid_from: input.valid_from ?? new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }),
       valid_to: input.valid_to || null,
+      kind,
     })
     .select("id")
     .single();

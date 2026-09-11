@@ -23,6 +23,8 @@ export interface CreateCustomerInput {
   state_code?: string;
   credit_limit?: number;
   credit_days?: number;
+  /** Customer pricing tier (customers.price_list_id); null = resolve via store-kind list. */
+  price_list_id?: string | null;
 }
 
 async function checkPhoneUnique(
@@ -61,6 +63,7 @@ export async function createCustomer(
       state_code: input.state_code || "33",
       credit_limit: input.credit_limit ?? 0,
       credit_days: input.credit_days ?? 0,
+      price_list_id: input.price_list_id || null,
     })
     .select("id, code")
     .single();
@@ -80,6 +83,7 @@ export interface UpdateCustomerInput {
   credit_limit?: number;
   credit_days?: number;
   status?: string;
+  price_list_id?: string | null;
 }
 
 export async function updateCustomer(
@@ -105,6 +109,7 @@ export async function updateCustomer(
   if (input.credit_limit !== undefined) patch.credit_limit = input.credit_limit;
   if (input.credit_days !== undefined) patch.credit_days = input.credit_days;
   if (input.status !== undefined) patch.status = input.status;
+  if (input.price_list_id !== undefined) patch.price_list_id = input.price_list_id || null;
 
   const { error } = await supabase.from("customers").update(patch).eq("id", id);
   if (error) return fail("updateCustomer", error.message);

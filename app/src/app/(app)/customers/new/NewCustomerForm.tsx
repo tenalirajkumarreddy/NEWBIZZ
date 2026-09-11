@@ -8,6 +8,7 @@ import { Field, Select, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createCustomer } from "@/lib/actions/customers";
+import type { PriceListRow } from "@/lib/data/catalog";
 
 const STATE_CODES = [
   { code: "01", name: "Jammu & Kashmir" }, { code: "02", name: "Himachal Pradesh" },
@@ -28,7 +29,7 @@ const STATE_CODES = [
   { code: "36", name: "Telangana" }, { code: "37", name: "Andhra Pradesh" },
 ];
 
-export function NewCustomerForm() {
+export function NewCustomerForm({ priceLists }: { priceLists: PriceListRow[] }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -43,6 +44,7 @@ export function NewCustomerForm() {
   const [stateCode, setStateCode] = useState("33");
   const [creditLimit, setCreditLimit] = useState("");
   const [creditDays, setCreditDays] = useState("");
+  const [priceListId, setPriceListId] = useState("");
 
   const canSubmit = !!name.trim() && !!phone.trim() && !pending;
 
@@ -58,6 +60,7 @@ export function NewCustomerForm() {
         state_code: stateCode,
         credit_limit: Number(creditLimit) || 0,
         credit_days: Number(creditDays) || 0,
+        price_list_id: priceListId || undefined,
       });
       if (res.ok) {
         reset();
@@ -99,6 +102,18 @@ export function NewCustomerForm() {
           </Field>
           <Field label="Email" htmlFor="email">
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@example.com" />
+          </Field>
+          <Field
+            label="Price list"
+            htmlFor="price_list"
+            hint="Optional — tier for all this customer's stores"
+          >
+            <Select id="price_list" value={priceListId} onChange={(e) => setPriceListId(e.target.value)}>
+              <option value="">Leave empty to use the store-kind list</option>
+              {priceLists.filter((p) => p.status === "active").map((p) => (
+                <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
+              ))}
+            </Select>
           </Field>
         </div>
       </Panel>

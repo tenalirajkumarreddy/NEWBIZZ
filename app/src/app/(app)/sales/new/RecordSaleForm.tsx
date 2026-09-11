@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -9,11 +9,14 @@ import { Money } from "@/components/ui/Money";
 import { useToast } from "@/components/ui/Toast";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { recordSale } from "@/lib/actions/sales";
+import { createClient } from "@/lib/supabase/client";
 import type { StoreOption, ItemOption } from "@/lib/data/sales";
 
-// One editable sale line. Price defaults from the item's list price but stays
-// editable; the server re-resolves the effective price when a row omits one, so
-// this is a convenience, not the source of truth.
+// One editable sale line. Price prefills from the store's resolved price
+// (pricing hierarchy: store override → customer tier → store-kind list →
+// default → base, via the store_item_prices RPC) and stays editable — user
+// edits always win; the server re-resolves the effective price when a row
+// omits one, so this is a convenience, not the source of truth.
 interface DraftLine {
   key: number;
   itemId: string;
@@ -50,8 +53,16 @@ export function RecordSaleForm({
   const [seq, setSeq] = useState(1);
   const [lines, setLines] = useState<DraftLine[]>([{ key: 0, itemId: "", qty: "", price: "" }]);
 
+  // Resolved unit prices per item for the picked store (pricing hierarchy).
+  const [storePrices, setStorePrices] = useState<Map<string, number>>(new Map());
+  // Line keys whose price the user typed into — their edits are never overwritten.
+  const manuallyEdited = useRef<Set<number>>(new Set());
+
   const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const store = useMemo(() => stores.find((s) => s.id === storeId) ?? null, [stores, storeId]);
+
+  const priceForItem = (itemId: string) =>
+    storePrices.get(itemId) ?? itemsById.get(itemId)?.defaultPrice ?? 0;
 
   // Same state as us → CGST+SGST; different state → IGST (§1.9). Until a store
   // is chosen we can't know, so the preview holds tax at zero.
@@ -70,12 +81,44 @@ export function RecordSaleForm({
     setLines((xs) => xs.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
 
+  // When the store changes, resolve its effective prices (p_items null = all
+  // sellable items) and re-prefill already-picked lines the user hasn't
+  // manually edited. Lines with manual edits keep their price.
+  useEffect(() => {
+    if (!storeId) return;
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("store_item_prices", {
+        p_store: storeId,
+        p_items: null,
+        p_qty: 1,
+      });
+      if (cancelled || error || !data) return;
+      const map = new Map<string, number>();
+      for (const row of data) map.set(row.item_id, Number(row.unit_price));
+      setStorePrices(map);
+      setLines((xs) =>
+        xs.map((l) =>
+          l.itemId && !manuallyEdited.current.has(l.key)
+            ? { ...l, price: String(map.get(l.itemId) ?? itemsById.get(l.itemId)?.defaultPrice ?? 0) }
+            : l,
+        ),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // itemsById is stable for a given items prop; only a store change refetches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId]);
+
   const selectedItemIds = useMemo(() => new Set(lines.map((l) => l.itemId).filter(Boolean)), [lines]);
 
-  // When an item is picked, prefill the price with its default list price.
+  // When an item is picked, prefill its resolved price for the store
+  // (falls back to the item's base price before the store list loads).
   function onItemChange(key: number, itemId: string) {
-    const it = itemId ? itemsById.get(itemId) : undefined;
-    patchLine(key, { itemId, price: it ? String(it.defaultPrice) : "" });
+    patchLine(key, { itemId, price: itemId ? String(priceForItem(itemId)) : "" });
   }
 
   // Live money preview: taxable + GST per the picked store's place of supply.
@@ -248,7 +291,10 @@ export function RecordSaleForm({
                       inputMode="decimal"
                       className="text-right"
                       value={l.price}
-                      onChange={(e) => patchLine(l.key, { price: e.target.value })}
+                      onChange={(e) => {
+                        manuallyEdited.current.add(l.key);
+                        patchLine(l.key, { price: e.target.value });
+                      }}
                       placeholder="0.00"
                     />
                   </TD>

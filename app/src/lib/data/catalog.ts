@@ -185,6 +185,7 @@ export interface PriceListRow {
   validTo: string | null;
   status: string;
   itemCount: number;
+  kind: string | null;
 }
 
 type RawPriceList = {
@@ -195,6 +196,7 @@ type RawPriceList = {
   valid_from: string;
   valid_to: string | null;
   status: string;
+  kind: string | null;
   price_list_items: { count: number }[];
 };
 
@@ -202,7 +204,7 @@ export async function listPriceLists(): Promise<PriceListRow[]> {
   const supabase = createClient();
   const res = await supabase
     .from("price_lists")
-    .select("id, code, name, is_default, valid_from, valid_to, status, price_list_items(count)")
+    .select("id, code, name, is_default, valid_from, valid_to, status, kind, price_list_items(count)")
     .order("is_default", { ascending: false })
     .order("name")
     .returns<RawPriceList[]>();
@@ -216,6 +218,7 @@ export async function listPriceLists(): Promise<PriceListRow[]> {
     validTo: r.valid_to,
     status: r.status,
     itemCount: r.price_list_items?.[0]?.count ?? 0,
+    kind: r.kind,
   }));
 }
 

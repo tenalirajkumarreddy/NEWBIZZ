@@ -4,10 +4,17 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Field, Input } from "@/components/ui/Field";
+import { Field, Input, Select } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { UnsavedGuard, useFormDirty } from "@/components/ui";
 import { createPriceList } from "@/lib/actions/catalog";
+
+const KINDS = [
+  { value: "retail", label: "Retail" },
+  { value: "wholesale", label: "Wholesale" },
+  { value: "distributor", label: "Distributor" },
+  { value: "institution", label: "Institution" },
+] as const;
 
 export function NewPriceListForm() {
   const router = useRouter();
@@ -19,6 +26,7 @@ export function NewPriceListForm() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
+  const [kind, setKind] = useState("");
   const [validFrom, setValidFrom] = useState(
     new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }),
   );
@@ -35,6 +43,7 @@ export function NewPriceListForm() {
         is_default: isDefault,
         valid_from: validFrom,
         valid_to: validTo || undefined,
+        kind: kind || undefined,
       });
       if (res.ok) {
         reset();
@@ -86,6 +95,18 @@ export function NewPriceListForm() {
               value={validTo}
               onChange={(e) => setValidTo(e.target.value)}
             />
+          </Field>
+          <Field
+            label="Store kind"
+            htmlFor="kind"
+            hint="Optional — tags this list as the price list for that store kind"
+          >
+            <Select id="kind" value={kind} onChange={(e) => setKind(e.target.value)}>
+              <option value="">None</option>
+              {KINDS.map((k) => (
+                <option key={k.value} value={k.value}>{k.label}</option>
+              ))}
+            </Select>
           </Field>
           <div className="flex items-center gap-2 pt-1">
             <input

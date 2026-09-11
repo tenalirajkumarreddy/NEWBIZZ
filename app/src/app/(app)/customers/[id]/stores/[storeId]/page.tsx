@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStore, getCustomerActivity } from "@/lib/data/customers";
 import { getStore360, listInteractions, listComplaints } from "@/lib/data/crm";
+import { listPriceLists } from "@/lib/data/catalog";
+import { getSession } from "@/lib/auth/session";
+import { can } from "@/lib/auth/claims";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Kpi, PageContainer } from "@/components/ui";
@@ -16,11 +19,15 @@ export default async function StoreProfilePage({ params }: { params: { id: strin
   const store = await getStore(storeId);
   if (!store || store.customerId !== id) notFound();
 
-  const [data, interactions, complaints, activity] = await Promise.all([
+  const session = await getSession();
+  const canManage = session?.claims ? can(session.claims, "customer.manage") : false;
+
+  const [data, interactions, complaints, activity, priceLists] = await Promise.all([
     getStore360(storeId),
     listInteractions({ storeId }),
     listComplaints({ storeId }),
     getCustomerActivity(store.customerId, { storeId: store.id }),
+    canManage ? listPriceLists() : Promise.resolve([]),
   ]);
 
   const mapsUrl =
@@ -50,23 +57,27 @@ export default async function StoreProfilePage({ params }: { params: { id: strin
           <Link href={`/receipts/new?customer=${store.customerId}&store=${store.id}`}>
             <Button variant="secondary" size="sm">Record payment</Button>
           </Link>
-          <StoreProfileActions
-            storeId={store.id}
-            customerId={store.customerId}
-            status={store.status}
-            initial={{
-              kind: store.kind,
-              contact_name: store.contactName ?? "",
-              phone: store.phone ?? "",
-              address_line: store.addressLine ?? "",
-              area: store.area ?? "",
-              city: store.city ?? "",
-              pincode: store.pincode ?? "",
-              state_code: store.stateCode,
-              geo_lat: store.geoLat ? String(store.geoLat) : "",
-              geo_lng: store.geoLng ? String(store.geoLng) : "",
-            }}
-          />
+          {canManage && (
+            <StoreProfileActions
+              storeId={store.id}
+              customerId={store.customerId}
+              status={store.status}
+              priceLists={priceLists}
+              initial={{
+                kind: store.kind,
+                contact_name: store.contactName ?? "",
+                phone: store.phone ?? "",
+                address_line: store.addressLine ?? "",
+                area: store.area ?? "",
+                city: store.city ?? "",
+                pincode: store.pincode ?? "",
+                state_code: store.stateCode,
+                geo_lat: store.geoLat ? String(store.geoLat) : "",
+                geo_lng: store.geoLng ? String(store.geoLng) : "",
+                price_list_id: store.priceListId ?? "",
+              }}
+            />
+          )}
           <MoveStoreAction
             storeId={store.id}
             currentCustomerId={store.customerId}

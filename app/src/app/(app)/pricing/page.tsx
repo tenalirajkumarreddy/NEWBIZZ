@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer, PageHeader } from "@/components/ui";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
-import { count as fmtCount, dateIST } from "@/lib/format";
+import { count as fmtCount, dateIST, titleCase } from "@/lib/format";
 
 export const metadata = { title: "Rate Master — NEWBIZZ" };
 export default async function PricingPage() {
@@ -41,6 +41,7 @@ export default async function PricingPage() {
               <TR>
                 <TH>Code</TH>
                 <TH>Name</TH>
+                <TH>Store kind</TH>
                 <TH>Default</TH>
                 <TH>Valid from</TH>
                 <TH>Valid to</TH>
@@ -60,6 +61,18 @@ export default async function PricingPage() {
                     </Link>
                   </TD>
                   <TD className="font-medium text-ink">{pl.name}</TD>
+                  <TD>
+                    {pl.kind && (
+                      <Badge
+                        tone={
+                          ({ retail: "grn", wholesale: "brand", distributor: "amb", institution: "slate" } as Record<string, "grn" | "brand" | "amb" | "slate">)[pl.kind] ?? "slate"
+                        }
+                        size="sm"
+                      >
+                        {titleCase(pl.kind)}
+                      </Badge>
+                    )}
+                  </TD>
                   <TD>
                     {pl.isDefault && <Badge tone="grn" size="sm">Default</Badge>}
                   </TD>
