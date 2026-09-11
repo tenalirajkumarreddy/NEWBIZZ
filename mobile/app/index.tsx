@@ -23,7 +23,8 @@ export default function Gate() {
   }
   if (!session) return <Redirect href="/login" />;
   if (isGatedStatus(claims.status)) return <Redirect href="/pending" />;
-  return <Redirect href="/(tabs)/home" />;
+  const homeTab = claims.roles.includes("operator") ? "jobs" : "home";
+  return <Redirect href={`/(tabs)/${homeTab}`} />;
 }
 
 const useStyles = () => {

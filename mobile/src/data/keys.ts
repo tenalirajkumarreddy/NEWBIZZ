@@ -27,6 +27,8 @@ export const qk = {
   notifPrefs: () => ["notifPrefs"] as const,
   txnImages: (entityType: string, entityId: string) => ["txnImages", entityType, entityId] as const,
   storePrices: (storeId: string) => ["storePrices", storeId] as const,
+  jobCards: () => ["jobCards"] as const,
+  stockLevels: () => ["stockLevels"] as const,
   holdings: () => ["stockHoldings"] as const,
   qr: (code: string) => ["qr", code] as const,
 };

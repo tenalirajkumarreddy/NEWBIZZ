@@ -63,6 +63,7 @@ export function can(claims: AppClaims, perm: string): boolean {
 
 export function roleLabel(claims: AppClaims): string {
   if (claims.roles.includes("agent")) return "Field agent";
+  if (claims.roles.includes("operator")) return "Plant operator";
   if (claims.roles.includes("admin") || claims.roles.includes("manager")) return "Manager";
   return "Staff";
 }

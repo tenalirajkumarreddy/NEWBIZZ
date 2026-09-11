@@ -3,11 +3,13 @@ import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import {
   Home, Map, ScanLine, Users, History, LayoutDashboard, ClipboardCheck, Plus, Menu,
+  Factory, Package, FlaskConical,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/lib/session";
 import { onGotoTab } from "@/lib/tabBus";
+import ProfileScreen from "../profile";
 
 import HomeScreen from "./home";
 import RouteScreen from "./route";
@@ -18,6 +20,8 @@ import DashScreen from "./dash";
 import ApprovalsScreen from "./approvals";
 import CustomersScreen from "./customers";
 import MoreScreen from "./more";
+import JobsScreen from "./jobs";
+import StockScreen from "./stock";
 import { useTheme } from "@/theme/ThemeContext";
 
 interface TabDef {
@@ -58,19 +62,35 @@ const MANAGER_SCREENS: Record<string, ComponentType> = {
   more: MoreScreen,
 };
 
+const OPERATOR_TABS: TabDef[] = [
+  { id: "jobs", label: "Jobs", icon: Factory },
+  { id: "stock", label: "Stock", icon: Package },
+  { id: "run", label: "Run", icon: FlaskConical, center: true },
+  { id: "profile", label: "Profile", icon: Menu },
+];
+
+const OPERATOR_SCREENS: Record<string, ComponentType> = {
+  jobs: JobsScreen,
+  stock: StockScreen,
+  profile: ProfileScreen,
+};
+
 export default function TabsLayout() {
   const s = useStyles();
   const { claims } = useSession();
   const router = useRouter();
+  const isOperator = claims.roles.includes("operator");
   const isAgent = claims.roles.includes("agent");
-  const tabs = isAgent ? AGENT_TABS : MANAGER_TABS;
-  const screens = isAgent ? AGENT_SCREENS : MANAGER_SCREENS;
-  const [active, setActive] = useState(isAgent ? "home" : "dash");
+  const tabs = isOperator ? OPERATOR_TABS : isAgent ? AGENT_TABS : MANAGER_TABS;
+  const screens = isOperator ? OPERATOR_SCREENS : isAgent ? AGENT_SCREENS : MANAGER_SCREENS;
+  const homeTab = isOperator ? "jobs" : isAgent ? "home" : "dash";
+  const [active, setActive] = useState(homeTab);
   const pushingSell = useRef(false);
+  const pushingRun = useRef(false);
 
   useEffect(() => {
-    setActive(isAgent ? "home" : "dash");
-  }, [isAgent]);
+    setActive(homeTab);
+  }, [homeTab]);
 
   const Active = screens[active] ?? screens[tabs[0].id];
 
@@ -83,9 +103,22 @@ export default function TabsLayout() {
     }, 600);
   }
 
+  function openRun() {
+    if (pushingRun.current) return;
+    pushingRun.current = true;
+    router.push("/post-run");
+    setTimeout(() => {
+      pushingRun.current = false;
+    }, 600);
+  }
+
   function onChange(id: string) {
     if (id === "sell") {
       openSell();
+      return;
+    }
+    if (id === "run") {
+      openRun();
       return;
     }
     setActive(id);
@@ -95,6 +128,10 @@ export default function TabsLayout() {
     return onGotoTab((id) => {
       if (id === "sell") {
         openSell();
+        return;
+      }
+      if (id === "run") {
+        openRun();
         return;
       }
       setActive(id);
