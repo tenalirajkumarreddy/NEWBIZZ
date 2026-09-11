@@ -4483,6 +4483,7 @@ export type Database = {
           currency: string
           id: string
           is_default: boolean
+          kind: Database["public"]["Enums"]["customer_kind"] | null
           name: string
           status: string
           valid_from: string
@@ -4494,6 +4495,7 @@ export type Database = {
           currency?: string
           id?: string
           is_default?: boolean
+          kind?: Database["public"]["Enums"]["customer_kind"] | null
           name: string
           status?: string
           valid_from?: string
@@ -4505,6 +4507,7 @@ export type Database = {
           currency?: string
           id?: string
           is_default?: boolean
+          kind?: Database["public"]["Enums"]["customer_kind"] | null
           name?: string
           status?: string
           valid_from?: string
@@ -8400,6 +8403,22 @@ export type Database = {
         Returns: undefined
       }
       stock_qty_for_portal: { Args: { p_item: string }; Returns: number }
+      store_item_prices:
+        | {
+            Args: { p_items: string[]; p_store: string }
+            Returns: {
+              item_id: string
+              unit_price: number
+            }[]
+          }
+        | {
+            Args: { p_items: string[]; p_qty?: number; p_store: string }
+            Returns: {
+              item_id: string
+              name: string
+              unit_price: number
+            }[]
+          }
       store_outstanding: { Args: { p_store: string }; Returns: number }
       submit_my_expense: { Args: { p_header: Json }; Returns: string }
       supplier_opening_balance: {

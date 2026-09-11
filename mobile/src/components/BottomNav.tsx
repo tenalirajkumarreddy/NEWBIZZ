@@ -111,7 +111,9 @@ const useStyles = () => {
     marginTop: 2,
   },
   centerWrap: {
-    height: 54,
+    // Slot matches the regular icon row height so the label below lines up
+    // with the other tab labels; the FAB itself lifts out via translateY.
+    height: 28,
     alignItems: "center",
     justifyContent: "flex-end",
     transform: [{ translateY: -26 }],
@@ -129,7 +131,6 @@ const useStyles = () => {
     fontFamily: tokens.font.sansSemi,
     fontSize: 10,
     marginTop: 2,
-    height: 12,
   },
   badge: {
     position: "absolute",

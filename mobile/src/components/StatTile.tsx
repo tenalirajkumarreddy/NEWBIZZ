@@ -5,10 +5,12 @@ import { useMemo } from "react";
 import { useTheme } from "@/theme/ThemeContext";
 
 export function StatTile({
-  label, value, delta, tone = "brand", icon: Icon,
+  label, value, delta, tone = "brand", icon: Icon, valueColor,
 }: {
   label: string; value: string; delta?: string;
   tone?: "brand" | "grn" | "amb" | "red"; icon?: LucideIcon;
+  /** Overrides the value text color (e.g. debt-direction convention). */
+  valueColor?: string;
 }) {
   const { palette: t } = useTheme();
   const s = useStyles();
@@ -24,7 +26,14 @@ export function StatTile({
           </View>
         ) : null}
       </View>
-      <Text style={s.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{value}</Text>
+      <Text
+        style={[s.value, valueColor ? { color: valueColor } : null]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
+        {value}
+      </Text>
       {delta ? <Text style={[s.delta, { color: delta.startsWith("▲") ? t.color.grn : delta.startsWith("▼") ? t.color.red : t.color.ink4 }]}>{delta}</Text> : null}
     </View>
   );

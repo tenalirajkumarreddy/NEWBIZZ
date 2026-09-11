@@ -60,7 +60,8 @@ export function BalanceOverview({
           />
           <StatTile
             label="Cash in hand"
-            value={moneyCompact(custodyBalance)}
+            value={custodyBalance > 0 ? `+${moneyCompact(custodyBalance)}` : custodyBalance < 0 ? `-${moneyCompact(Math.abs(custodyBalance))}` : moneyCompact(0)}
+            valueColor={custodyBalance > 0 ? tokens.color.red : custodyBalance < 0 ? tokens.color.grn : undefined}
             tone={custodyBalance > 0 ? "red" : "brand"}
             icon={Wallet}
           />

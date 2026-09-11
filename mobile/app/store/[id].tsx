@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, FileText, HandCoins, IndianRupee, Navigation, Phone, Receipt,
+  ArrowLeft, FileText, HandCoins, IndianRupee, MessageCircle, Navigation, Phone, Receipt,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { GradientHeader } from "@/components/GradientHeader";
@@ -90,6 +90,23 @@ export default function StoreProfileScreen() {
       })
     | undefined;
   const outstanding = detail.data?.outstanding ?? 0;
+
+  // Effective per-store prices via the server's hierarchy (store override ->
+  // customer -> store kind -> default -> base).
+  const prices = useQuery({
+    queryKey: qk.storePrices(storeId),
+    enabled: !!store,
+    queryFn: async (): Promise<{ item_id: string; name: string; unit_price: number }[]> => {
+      const { data, error } = await supabase.rpc("store_item_prices", {
+        p_store: storeId,
+        p_items: null as unknown as string[],
+        p_qty: 1,
+      });
+      if (error) throw error;
+      return (data ?? []) as any;
+    },
+    staleTime: 60_000,
+  });
 
   const from = useMemo(() => {
     const d = new Date();
@@ -209,7 +226,42 @@ export default function StoreProfileScreen() {
                   <Text style={[s.heroBtnTxt, { color: t.color.grn }]}>Call</Text>
                 </Pressable>
               ) : null}
+              {store.phone ? (
+                <Pressable
+                  onPress={() => {
+                    const digits = store.phone!.replace(/\D/g, "");
+                    const withCc = digits.length === 10 ? `91${digits}` : digits;
+                    void Linking.openURL(`https://wa.me/${withCc}`);
+                  }}
+                  accessibilityLabel="WhatsApp store"
+                  style={({ pressed }) => [s.heroBtn, { backgroundColor: t.color.ambWash }, pressed && { opacity: 0.85 }]}
+                >
+                  <MessageCircle size={14} color={t.color.amb} />
+                  <Text style={[s.heroBtnTxt, { color: t.color.amb }]}>WhatsApp</Text>
+                </Pressable>
+              ) : null}
             </View>
+          </View>
+
+          <View style={s.card}>
+            <View style={s.pricesHead}>
+              <Text style={s.pricesTitle}>Effective prices</Text>
+              <Text style={s.pricesSub}>This store's price list</Text>
+            </View>
+            {prices.isLoading ? (
+              <SkeletonRows rows={4} />
+            ) : prices.isError ? (
+              <Text style={s.pricesEmpty}>Could not load prices.</Text>
+            ) : (prices.data?.length ?? 0) === 0 ? (
+              <Text style={s.pricesEmpty}>No sellable items.</Text>
+            ) : (
+              (prices.data ?? []).map((p) => (
+                <View key={p.item_id} style={s.priceRow}>
+                  <Text style={s.priceName} numberOfLines={1}>{p.name}</Text>
+                  <Text style={s.priceVal}>{moneyINR(Number(p.unit_price))}</Text>
+                </View>
+              ))
+            )}
           </View>
 
           <View style={s.tiles}>
@@ -321,6 +373,33 @@ const useStyles = () => {
     marginTop: 2, fontVariant: ["tabular-nums"],
   },
   heroActions: { flexDirection: "row", gap: tokens.space.sm },
+  card: {
+    backgroundColor: t.color.surface,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: t.color.line,
+    padding: tokens.space.md,
+    gap: tokens.space.xs,
+    ...t.shadow.card,
+  },
+  pricesHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  pricesTitle: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  pricesSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+  pricesEmpty: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 38,
+    gap: tokens.space.md,
+  },
+  priceName: { flex: 1, color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs },
+  priceVal: {
+    color: t.color.ink,
+    fontFamily: tokens.font.monoBold,
+    fontSize: tokens.size.xs,
+    fontVariant: ["tabular-nums"],
+  },
   heroBtn: {
     flexDirection: "row",
     alignItems: "center",

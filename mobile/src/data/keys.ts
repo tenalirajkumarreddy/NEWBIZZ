@@ -26,6 +26,7 @@ export const qk = {
   unread: () => ["unread"] as const,
   notifPrefs: () => ["notifPrefs"] as const,
   txnImages: (entityType: string, entityId: string) => ["txnImages", entityType, entityId] as const,
+  storePrices: (storeId: string) => ["storePrices", storeId] as const,
   holdings: () => ["stockHoldings"] as const,
   qr: (code: string) => ["qr", code] as const,
 };

@@ -26,6 +26,7 @@ as $function$
     from item_list
   )
   select i.id as item_id,
+         i.name as name,
          coalesce(b.unit_price, i.default_price) as unit_price
   from items i
   left join best b on b.item_id = i.id and b.rn = 1

@@ -196,26 +196,37 @@ function QuickActions() {
   const visible = actions.filter((a) => a.show);
   if (visible.length === 0 && !can("customer.manage")) return null;
 
+  const byKey = (key: string) => visible.find((a) => a.key === key);
+
+  function QuickBtn({ a, neutral }: { a: (typeof actions)[number]; neutral?: boolean }) {
+    const Icon = a.icon;
+    const wash = neutral ? t.color.fill : { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[a.tone];
+    const fg = neutral ? t.color.ink2 : { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[a.tone];
+    return (
+      <Pressable
+        onPress={() => router.push(a.href as never)}
+        accessibilityLabel={a.label}
+        style={({ pressed }) => [s.quickBtn, { backgroundColor: wash }, pressed && { opacity: 0.85 }]}
+      >
+        <Icon size={16} color={fg} />
+        <Text style={[s.quickTxt, { color: fg }]} numberOfLines={1}>{a.label}</Text>
+      </Pressable>
+    );
+  }
+
+  // Layout: 3 action buttons in the first row, create buttons in the second.
+  const row1 = visible.filter((a) => a.key !== "customer" && a.key !== "store");
+
   return (
     <View style={s.quickWrap}>
-      {visible.map((a) => {
-        const Icon = a.icon;
-        const wash = { brand: t.color.brandWash, grn: t.color.grnWash, amb: t.color.ambWash }[a.tone];
-        const fg = { brand: t.color.brand, grn: t.color.grn, amb: t.color.amb }[a.tone];
-        return (
-          <Pressable
-            key={a.key}
-            onPress={() => router.push(a.href as never)}
-            accessibilityLabel={a.label}
-            style={({ pressed }) => [s.quickBtn, { backgroundColor: wash }, pressed && { opacity: 0.85 }]}
-          >
-            <Icon size={16} color={fg} />
-            <Text style={[s.quickTxt, { color: fg }]} numberOfLines={1}>{a.label}</Text>
-          </Pressable>
-        );
-      })}
+      <View style={s.quickRow}>
+        {row1.map((a) => (
+          <QuickBtn key={a.key} a={a} />
+        ))}
+      </View>
       {can("customer.manage") ? (
-        <>
+        <View style={s.quickRow}>
+          {byKey("sale") ? null : null}
           <Pressable
             onPress={() => router.push("/stores?add=1&mode=customer")}
             accessibilityLabel="Create customer"
@@ -232,7 +243,7 @@ function QuickActions() {
             <StoreIcon size={16} color={t.color.ink2} />
             <Text style={[s.quickTxt, { color: t.color.ink2 }]} numberOfLines={1}>Create store</Text>
           </Pressable>
-        </>
+        </View>
       ) : null}
     </View>
   );
@@ -285,7 +296,8 @@ const useStyles = () => {
   segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansMed, fontSize: tokens.size.xs },
   segTxtOn: { color: t.color.surface, fontFamily: tokens.font.sansSemi },
   sheetBody: { gap: tokens.space.md },
-  quickWrap: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.sm },
+  quickWrap: { gap: tokens.space.sm },
+  quickRow: { flexDirection: "row", gap: tokens.space.sm },
   quickBtn: {
     flex: 1,
     flexDirection: "row",

@@ -95,6 +95,11 @@ export function DropdownSelect({
                       accessibilityState={{ selected: active }}
                       style={({ pressed }) => [s.row, active && s.rowActive, pressed && { opacity: 0.85 }]}
                     >
+                      <View style={s.avatar}>
+                        <Text style={s.avatarTxt}>
+                          {item.label.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?"}
+                        </Text>
+                      </View>
                       <View style={s.rowMain}>
                         <Text style={[s.rowLabel, active && s.rowLabelActive]} numberOfLines={1}>
                           {item.label}
@@ -149,14 +154,15 @@ const useStyles = () => {
       flexDirection: "row",
       alignItems: "center",
       gap: tokens.space.sm,
-      minHeight: 44,
+      minHeight: 46,
       marginHorizontal: tokens.space.lg,
-      marginTop: tokens.space.sm,
+      marginTop: tokens.space.md,
+      marginBottom: tokens.space.xs,
       paddingHorizontal: tokens.space.md,
       borderWidth: 1,
       borderColor: t.color.line,
       borderRadius: tokens.radius.md,
-      backgroundColor: t.color.surface,
+      backgroundColor: t.color.fill,
     },
     searchInput: {
       flex: 1,
@@ -171,15 +177,31 @@ const useStyles = () => {
       fontSize: tokens.size.xs,
       paddingHorizontal: tokens.space.lg,
       paddingVertical: tokens.space.lg,
+      textAlign: "center",
     },
     row: {
       flexDirection: "row",
       alignItems: "center",
       gap: tokens.space.md,
-      minHeight: 48,
-      paddingHorizontal: tokens.space.lg,
+      minHeight: 56,
+      marginHorizontal: tokens.space.md,
+      marginTop: tokens.space.xs,
+      paddingHorizontal: tokens.space.md,
+      borderRadius: tokens.radius.md,
+      borderWidth: 1,
+      borderColor: "transparent",
+      backgroundColor: t.color.surface,
     },
-    rowActive: { backgroundColor: t.color.brandWash },
+    rowActive: { backgroundColor: t.color.brandWash, borderColor: t.color.brand },
+    avatar: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: t.color.brandWash,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     rowMain: { flex: 1, minWidth: 0 },
     rowLabel: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     rowLabelActive: { color: t.color.brand },
