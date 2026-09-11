@@ -3,6 +3,28 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { qk } from "./keys";
 
+/** All active price lists with their store-kind tags (for tier resolution). */
+export function usePriceLists() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: ["priceLists"],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<{ id: string; kind: string | null; isDefault: boolean }[]> => {
+      const { data, error } = await supabase
+        .from("price_lists")
+        .select("id, kind, is_default")
+        .eq("status", "active");
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        id: r.id as string,
+        kind: (r.kind as string | null) ?? null,
+        isDefault: r.is_default === true,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 /** The branch-wide fallback price list (server: price_lists where is_default). */
 export function useDefaultPriceListId() {
   const { user } = useSession();

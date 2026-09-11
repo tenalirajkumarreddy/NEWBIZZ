@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { StorePickerSheet, type PickedStore } from "@/features/record/StorePickerSheet";
 import { ItemList, effectivePrice } from "@/features/record/ItemList";
-import { useDefaultPriceListId } from "@/data/catalog";
+import { usePriceLists } from "@/data/catalog";
 import { PaymentSplit } from "@/features/record/PaymentSplit";
 import { CreditBanner, computeCreditState, type CreditState } from "@/features/record/CreditBanner";
 import { ReceiptModal, type ReceiptResult } from "@/features/record/ReceiptModal";
@@ -160,12 +160,19 @@ export default function RecordScreen() {
     | null | undefined;
   const customerId = customer?.id ?? null;
   const outstandingQ = useCustomerOutstanding(customerId);
-  const defaultListQ = useDefaultPriceListId();
-  // Price-list resolution mirrors the server: store -> customer -> default.
+  const listsQ = usePriceLists();
+  // Price-list resolution mirrors the server's resolve_price_list: store
+  // override -> customer -> store KIND list -> default list.
   const detailStore = detail.data?.store as any;
   const detailCustomer = detailStore?.customer as any;
-  const priceListId: string | null =
-    detailStore?.price_list_id ?? detailCustomer?.price_list_id ?? defaultListQ.data ?? null;
+  const priceListId: string | null = useMemo(() => {
+    if (detailStore?.price_list_id) return detailStore.price_list_id as string;
+    if (detailCustomer?.price_list_id) return detailCustomer.price_list_id as string;
+    const kind = detailStore?.kind as string | undefined;
+    const kindList = kind ? (listsQ.data ?? []).find((l) => l.kind === kind) : null;
+    if (kindList) return kindList.id;
+    return (listsQ.data ?? []).find((l) => l.isDefault)?.id ?? null;
+  }, [detailStore, detailCustomer, listsQ.data]);
 
   const prefillDone = useRef(false);
   useEffect(() => {
