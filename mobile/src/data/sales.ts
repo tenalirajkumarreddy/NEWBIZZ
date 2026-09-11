@@ -238,8 +238,18 @@ export async function placeOrder(header: JsonHeader, lines: JsonLine[]): Promise
   return rpc<string>("place_order", { p_header: header, p_lines: lines });
 }
 
-export async function postInvoice(header: JsonHeader, lines: JsonLine[]): Promise<string> {
-  return rpc<string>("post_invoice", { p_header: header, p_lines: lines });
+/**
+ * Post a sale. official=true -> GST invoice (SL, invoice.create);
+ * official=false -> cash memo (CM, cashmemo.create, no GST). Agents always
+ * create cash memos; managers may choose official.
+ */
+export async function postInvoice(
+  header: JsonHeader,
+  lines: JsonLine[],
+  official = true,
+): Promise<string> {
+  const fullHeader = { ...header, is_official: String(official) };
+  return rpc<string>("post_invoice", { p_header: fullHeader, p_lines: lines });
 }
 
 export async function postInvoiceFromOrder(orderId: string, isOfficial: boolean): Promise<string> {

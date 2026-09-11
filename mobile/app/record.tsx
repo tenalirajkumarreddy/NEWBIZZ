@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Switch,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -143,6 +143,10 @@ export default function RecordScreen() {
   const [upi, setUpi] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptResult | null>(null);
+  // Sales default to CASH MEMO (unofficial, no GST). Only invoice.create
+  // holders (manager/admin) may post an official GST invoice directly.
+  const canOfficial = can("invoice.create");
+  const [official, setOfficial] = useState(false);
 
   const orderId = typeof params.orderId === "string" && params.orderId ? params.orderId : null;
   const orderQ = useOrder(orderId);
@@ -293,6 +297,7 @@ export default function RecordScreen() {
           place_of_supply: null,
         },
         lines.map((l): JsonLine => ({ item_id: l.itemId, qty: l.qty, unit_price: l.unitPrice })),
+        official,
       );
 
       let receiptFailed = false;
@@ -379,9 +384,10 @@ export default function RecordScreen() {
         receiptFailed,
         receiptError,
         advanceNote: null,
-        estimateNote:
-          serverTotal == null
-            ? "Invoice total is a pre-tax estimate — the server total (with GST) may be slightly higher."
+        estimateNote: !official
+          ? "Cash memo - unofficial sale. No GST applied. A manager can convert it to a GST invoice."
+          : serverTotal == null
+            ? "Invoice total is a pre-tax estimate - the server total (with GST) may be slightly higher."
             : null,
       });
     } catch (e) {
@@ -521,6 +527,25 @@ export default function RecordScreen() {
                     total={cartTotal}
                   />
                   <CreditBanner state={creditState} />
+                  {canOfficial ? (
+                    <View style={s.officialRow}>
+                      <View style={s.officialMain}>
+                        <Text style={s.officialLabel}>Official GST invoice</Text>
+                        <Text style={s.officialSub}>
+                          {official
+                            ? "SL series, GST applied - counts in official returns"
+                            : "Cash memo (CM) - unofficial sale, no GST"}
+                        </Text>
+                      </View>
+                      <Switch
+                        value={official}
+                        onValueChange={setOfficial}
+                        trackColor={{ true: tokens.color.brand, false: tokens.color.line }}
+                        thumbColor="#ffffff"
+                        accessibilityLabel="Official GST invoice"
+                      />
+                    </View>
+                  ) : null}
                   <Pressable
                     onPress={submitSaleWithOverride}
                     disabled={submitting || !saleReady || creditBlocked}
@@ -534,7 +559,9 @@ export default function RecordScreen() {
                     {submitting ? (
                       <ActivityIndicator color="#ffffff" size="small" />
                     ) : (
-                      <Text style={s.submitTxt}>Record sale · {moneyINR(cartTotal)}</Text>
+                      <Text style={s.submitTxt}>
+                        {official ? "Record invoice" : "Record cash memo"} · {moneyINR(cartTotal)}
+                      </Text>
                     )}
                   </Pressable>
                 </View>
@@ -713,6 +740,19 @@ const useStyles = () => {
     justifyContent: "center",
   },
   submitTxt: { color: t.color.surface, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
+  officialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md,
+    padding: tokens.space.md,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
+  },
+  officialMain: { flex: 1, minWidth: 0 },
+  officialLabel: { color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+  officialSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, marginTop: 1, lineHeight: 15 },
 });
   }, [palette]);
 };
