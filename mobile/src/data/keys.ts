@@ -13,6 +13,7 @@ export const qk = {
   aging: () => ["arAging"] as const,
   activeSessionsCount: () => ["activeSessionsCount"] as const,
   orders: (status?: string) => ["orders", status ?? "all"] as const,
+  ordersPrefix: () => ["orders"] as const,
   routes: () => ["routes"] as const,
   routeStores: (routeId: string) => ["routeStores", routeId] as const,
   activeSession: () => ["activeSession"] as const,

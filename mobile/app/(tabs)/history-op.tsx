@@ -242,7 +242,7 @@ export default function HistoryOpScreen() {
             <EmptyState
               icon={History}
               title="No recent activity"
-              message="Sales, collections and production runs from the last 7 days will appear here."
+              message="Your runs, sales and collections from recent days will appear here."
             />
           ) : (
             <View style={s.list}>

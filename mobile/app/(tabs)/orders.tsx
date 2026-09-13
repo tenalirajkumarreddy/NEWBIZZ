@@ -46,7 +46,7 @@ export default function OrdersScreen() {
   const challans = useChallans();
 
   function invalidateOrders() {
-    void qc.invalidateQueries({ queryKey: ["orders"] });
+    void qc.invalidateQueries({ queryKey: qk.ordersPrefix() });
     void qc.invalidateQueries({ queryKey: qk.opChallans() });
     void qc.invalidateQueries({ queryKey: qk.stockLevels() });
     void qc.invalidateQueries({ queryKey: qk.today() });

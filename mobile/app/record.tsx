@@ -278,7 +278,7 @@ export default function RecordScreen() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: qk.today() }),
       qc.invalidateQueries({ queryKey: qk.todaySplit() }),
-      qc.invalidateQueries({ queryKey: ["orders"] }),
+      qc.invalidateQueries({ queryKey: qk.ordersPrefix() }),
       qc.invalidateQueries({ queryKey: qk.holdings() }),
       store ? qc.invalidateQueries({ queryKey: qk.store(store) }) : Promise.resolve(),
       customerId ? qc.invalidateQueries({ queryKey: qk.customerOutstanding(customerId) }) : Promise.resolve(),

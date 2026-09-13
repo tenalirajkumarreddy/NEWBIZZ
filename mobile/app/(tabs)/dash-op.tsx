@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useIsFetching } from "@tanstack/react-query";
 import {
-  Boxes, ChevronRight, Factory, IndianRupee, ClipboardList, Users, Store, ReceiptText,
+  Boxes, ChevronRight, Factory, IndianRupee, ClipboardList, Users, Store, ReceiptText, History,
 } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
@@ -14,7 +14,7 @@ import { PressCard } from "@/components/PressCard";
 import { useSession } from "@/lib/session";
 import { roleLabel } from "@/lib/claims";
 import { friendlyError } from "@/lib/rpc";
-import { moneyCompact } from "@/lib/format";
+import { moneyCompact, moneyINR } from "@/lib/format";
 import { gotoTab } from "@/lib/tabBus";
 import { useRouter } from "expo-router";
 import { useTodayProduction, useAttendanceToday } from "@/data/operator";
@@ -47,6 +47,7 @@ export default function OperatorDashboard() {
     { key: "orders", label: "Stores & Orders", sub: "Orders, challans and delivery", icon: Store, go: () => gotoTab("orders") },
     { key: "inv", label: "Inventory", sub: "Stock levels and reorder alerts", icon: Boxes, go: () => gotoTab("inventory") },
     { key: "workers", label: "Workers", sub: "Attendance and payroll", icon: Users, go: () => gotoTab("workers") },
+    { key: "history", label: "History", sub: "Runs, sales, payments and handovers", icon: History, go: () => gotoTab("history") },
   ];
 
   return (
@@ -101,7 +102,7 @@ export default function OperatorDashboard() {
               ))}
               {(prod.data?.wastage ?? 0) > 0 ? (
                 <Text style={s.stageSub}>
-                  Abnormal wastage today: {"₹"}{(prod.data!.wastage).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                  Abnormal wastage today: {moneyINR(prod.data!.wastage)}
                 </Text>
               ) : null}
             </>
