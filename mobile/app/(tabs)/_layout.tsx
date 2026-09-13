@@ -21,7 +21,7 @@ import DashScreen from "./dash";
 import ApprovalsScreen from "./approvals";
 import CustomersScreen from "./customers";
 import MoreScreen from "./more";
-import JobsScreen from "./jobs";
+import JobsScreen from "./production";
 import StockScreen from "./stock";
 import { useTheme } from "@/theme/ThemeContext";
 

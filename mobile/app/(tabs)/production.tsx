@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { CircleCheck, Factory, Play, X } from "lucide-react-native";
+import { CircleCheck, Factory, FlaskConical, Play, X } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -12,28 +13,39 @@ import { SkeletonRows } from "@/components/SkeletonRows";
 import { useSession } from "@/lib/session";
 import { roleLabel } from "@/lib/claims";
 import { friendlyError } from "@/lib/rpc";
-import { dateIST } from "@/lib/format";
+import { dateIST, moneyINR } from "@/lib/format";
 import {
   useJobCards, setJobCardStatus, postProductionRun, type JobCardRow,
 } from "@/data/production";
+import { useRunHistory, type RunHistoryRow } from "@/data/operator";
 import { qk } from "@/data/keys";
 import { tokens } from "@/theme/tokens";
 
-type Filter = "pending" | "in_progress" | "completed";
+type Filter = "pending" | "in_progress" | "completed" | "runs";
 
 function stageLabel(stage: number): string {
   return stage === 1 ? "Blowing" : "Filling";
 }
 
-export default function JobsScreen() {
+export default function ProductionScreen() {
   const { claims } = useSession();
   const s = useStyles();
+  const router = useRouter();
   const qc = useQueryClient();
   const fetching = useIsFetching();
   const jobs = useJobCards();
+  const runs = useRunHistory();
   const [filter, setFilter] = useState<Filter>("pending");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [completing, setCompleting] = useState<JobCardRow | null>(null);
+
+  function invalidateOps() {
+    void qc.invalidateQueries({ queryKey: qk.jobCards() });
+    void qc.invalidateQueries({ queryKey: qk.opTodayProduction() });
+    void qc.invalidateQueries({ queryKey: qk.opRunHistory() });
+    void qc.invalidateQueries({ queryKey: qk.myRuns() });
+    void qc.invalidateQueries({ queryKey: qk.stockLevels() });
+  }
 
   const rows = useMemo(() => (jobs.data ?? []).filter((j) => j.status === filter), [jobs.data, filter]);
   const counts = useMemo(() => {
@@ -49,7 +61,7 @@ export default function JobsScreen() {
     setBusyId(j.id);
     try {
       await setJobCardStatus(j.id, "in_progress");
-      await qc.invalidateQueries({ queryKey: qk.jobCards() });
+      invalidateOps();
       Toast.show({ type: "success", text1: "Job started", text2: j.jobNo });
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not start job", text2: friendlyError(e) });
@@ -70,7 +82,7 @@ export default function JobsScreen() {
             setBusyId(j.id);
             try {
               await setJobCardStatus(j.id, "cancelled");
-              await qc.invalidateQueries({ queryKey: qk.jobCards() });
+              invalidateOps();
               Toast.show({ type: "success", text1: "Job cancelled" });
             } catch (e) {
               Toast.show({ type: "error", text1: "Could not cancel", text2: friendlyError(e) });
@@ -96,7 +108,7 @@ export default function JobsScreen() {
         notes: notes ?? null,
       });
       await setJobCardStatus(j.id, "completed", runId);
-      await qc.invalidateQueries({ queryKey: qk.jobCards() });
+      invalidateOps();
       Toast.show({ type: "success", text1: "Run posted", text2: `${j.jobNo} completed` });
       setCompleting(null);
     } catch (e) {
@@ -108,37 +120,72 @@ export default function JobsScreen() {
 
   return (
     <Screen refreshing={fetching > 0} onRefresh={() => qc.invalidateQueries({ queryKey: qk.jobCards() })}>
-      <GradientHeader title="Production jobs" subtitle={roleLabel(claims)} right={<HeaderRight />} />
+      <GradientHeader title="Production" subtitle={roleLabel(claims)} right={<HeaderRight />} />
+
+      <Pressable
+        onPress={() => router.push("/post-run")}
+        style={({ pressed }) => [s.postRun, pressed && { opacity: 0.85 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Post production run"
+      >
+        <FlaskConical size={15} color="#ffffff" />
+        <Text style={s.postRunTxt}>Post run</Text>
+      </Pressable>
 
       <View style={s.body}>
         <View style={s.filters}>
           <FilterBtn label={`Pending ${counts.pending || ""}`} active={filter === "pending"} onPress={() => setFilter("pending")} />
           <FilterBtn label={`Running ${counts.in_progress || ""}`} active={filter === "in_progress"} onPress={() => setFilter("in_progress")} />
           <FilterBtn label={`Done ${counts.completed || ""}`} active={filter === "completed"} onPress={() => setFilter("completed")} />
+          <FilterBtn label={`Runs (${runs.data?.length ?? 0})`} active={filter === "runs"} onPress={() => setFilter("runs")} />
         </View>
 
-        {jobs.isLoading ? (
-          <SkeletonRows rows={5} />
-        ) : jobs.isError ? (
-          <EmptyState title="Could not load jobs" message={friendlyError(jobs.error)} />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            icon={Factory}
-            title={filter === "pending" ? "No pending jobs" : filter === "in_progress" ? "Nothing running" : "Nothing completed yet"}
-            message="Job cards created by the manager will appear here."
-          />
-        ) : (
-          rows.map((j) => (
-            <JobCard
-              key={j.id}
-              job={j}
-              busy={busyId === j.id}
-              onStart={() => void onStart(j)}
-              onCancelJob={() => onCancelJob(j)}
-              onComplete={() => setCompleting(j)}
+        {filter !== "runs" && (
+          jobs.isLoading ? (
+            <SkeletonRows rows={5} />
+          ) : jobs.isError ? (
+            <EmptyState title="Could not load jobs" message={friendlyError(jobs.error)} />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              icon={Factory}
+              title={filter === "pending" ? "No pending jobs" : filter === "in_progress" ? "Nothing running" : "Nothing completed yet"}
+              message="Job cards created by the manager will appear here."
             />
-          ))
+          ) : (
+            rows.map((j) => (
+              <JobCard
+                key={j.id}
+                job={j}
+                busy={busyId === j.id}
+                onStart={() => void onStart(j)}
+                onCancelJob={() => onCancelJob(j)}
+                onComplete={() => setCompleting(j)}
+              />
+            ))
+          )
         )}
+
+        {filter === "runs" ? (
+          runs.isLoading ? <SkeletonRows rows={6} />
+          : runs.isError ? <EmptyState title="Could not load runs" message={friendlyError(runs.error)} />
+          : (runs.data ?? []).length === 0 ? <EmptyState title="No runs in the last 14 days" />
+          : (
+            <View style={s.list}>
+              {(runs.data ?? []).map((r: RunHistoryRow) => (
+                <View key={r.id} style={s.runCard}>
+                  <View style={s.runHead}>
+                    <Text style={s.runNo}>{r.runNo}</Text>
+                    <StatusBadge label={r.status} tone={r.status === "posted" ? "grn" : "red"} />
+                  </View>
+                  <Text style={s.runBody} numberOfLines={1}>
+                    {r.stage === 1 ? "Blowing" : "Filling"} · {r.itemName ?? "Item"} · {r.outputQty.toLocaleString("en-IN")} @ {moneyINR(r.unitCost)}/unit
+                  </Text>
+                  <Text style={s.runSub}>{dateIST(r.runDate)} · {r.posterName ?? "—"}</Text>
+                </View>
+              ))}
+            </View>
+          )
+        ) : null}
       </View>
 
       {completing ? (
@@ -361,6 +408,37 @@ const useStyles = () => {
     filterBtnOn: { backgroundColor: t.color.surface, ...tokens.shadow.card },
     filterTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     filterTxtOn: { color: t.color.brand },
+    postRun: {
+      marginHorizontal: tokens.space.lg,
+      marginTop: tokens.space.sm,
+      minHeight: 44,
+      borderRadius: tokens.radius.md,
+      backgroundColor: t.color.brand,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: tokens.space.xs,
+    },
+    postRunTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+    list: { gap: tokens.space.md },
+    runCard: {
+      backgroundColor: t.color.surface,
+      borderRadius: tokens.radius.lg,
+      borderWidth: 1,
+      borderColor: "rgba(148,163,184,0.25)",
+      padding: tokens.space.md,
+      gap: tokens.space.sm,
+      ...tokens.shadow.card,
+    },
+    runHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    runNo: {
+      color: t.color.ink,
+      fontFamily: tokens.font.monoBold,
+      fontSize: tokens.size.xs,
+      fontVariant: ["tabular-nums"],
+    },
+    runBody: { color: t.color.ink2, fontFamily: tokens.font.sans, fontSize: tokens.size.xs, marginTop: 2 },
+    runSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
     card: {
       backgroundColor: t.color.surface,
       borderRadius: tokens.radius.lg,

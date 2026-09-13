@@ -10,6 +10,7 @@ import { HeaderRight } from "@/components/HeaderRight";
 import { DropdownSelect } from "@/components/DropdownSelect";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { postProductionRun, useOutputItems, type StageRow } from "@/data/production";
+import { qk } from "@/data/keys";
 import { friendlyError } from "@/lib/rpc";
 import { todayIST } from "@/lib/format";
 import { useTheme } from "@/theme/ThemeContext";
@@ -45,8 +46,11 @@ export default function PostRunScreen() {
         abnormalWastageValue: wastage ? Number(wastage) : null,
         notes: notes.trim() || null,
       });
-      await qc.invalidateQueries({ queryKey: ["jobCards"] });
-      await qc.invalidateQueries({ queryKey: ["stockLevels"] });
+      await qc.invalidateQueries({ queryKey: qk.jobCards() });
+      await qc.invalidateQueries({ queryKey: qk.stockLevels() });
+      await qc.invalidateQueries({ queryKey: qk.opTodayProduction() });
+      await qc.invalidateQueries({ queryKey: qk.opRunHistory() });
+      await qc.invalidateQueries({ queryKey: qk.myRuns() });
       Toast.show({ type: "success", text1: "Run posted", text2: `Run ${runId.slice(0, 8)}…` });
       router.back();
     } catch (e) {
