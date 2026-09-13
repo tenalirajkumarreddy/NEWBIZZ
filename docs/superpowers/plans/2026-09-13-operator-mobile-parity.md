@@ -1140,6 +1140,7 @@ export default function OrdersScreen() {
     </Screen>
   );
 }
+```
 
 ```tsx
 type ActTone = "brand" | "grn" | "amb" | "red" | "ghost";
