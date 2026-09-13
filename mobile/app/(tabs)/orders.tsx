@@ -65,11 +65,22 @@ export default function OrdersScreen() {
     }
   }
 
-  function onPrint(o: OrderRow) {
-    void act(o.id, async () => {
+  async function onPrint(o: OrderRow) {
+    setBusy(o.id);
+    try {
       const id = await createChallanForOrder(o);
-      await WebBrowser.openBrowserAsync(challanPdfUrl(id));
-    }, "Challan created");
+      Toast.show({ type: "success", text1: "Challan created" });
+      invalidateOrders();
+      try {
+        await WebBrowser.openBrowserAsync(challanPdfUrl(id));
+      } catch {
+        Toast.show({ type: "error", text1: "Could not open print view" });
+      }
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Action failed", text2: friendlyError(e) });
+    } finally {
+      setBusy(null);
+    }
   }
 
   function onDeliver(o: OrderRow) {
@@ -105,7 +116,13 @@ export default function OrdersScreen() {
       </View>
       <View style={s.segRow}>
         {(["orders", "challans"] as Seg[]).map((k) => (
-          <Pressable key={k} onPress={() => setSeg(k)} style={[s.segBtn, seg === k && s.segBtnOn]}>
+          <Pressable
+            key={k}
+            onPress={() => setSeg(k)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: seg === k }}
+            style={[s.segBtn, seg === k && s.segBtnOn]}
+          >
             <Text style={[s.segTxt, seg === k && s.segTxtOn]}>{k === "orders" ? "Orders" : "Challans"}</Text>
           </Pressable>
         ))}
@@ -122,7 +139,7 @@ export default function OrdersScreen() {
               const approved = o.status === "approved";
               return (
                 <View key={o.id} style={s.card}>
-                  <Pressable onPress={() => setOpen(isOpen ? null : o.id)} style={s.cardHead}>
+                  <Pressable onPress={() => setOpen(isOpen ? null : o.id)} style={s.cardHead} accessibilityRole="button" accessibilityLabel="Toggle order lines">
                     <View style={s.headLine}>
                       <Text style={s.docNo}>{o.orderNo}</Text>
                       <StatusBadge label={o.status.replace(/_/g, " ")} tone={ORDER_TONE[o.status] ?? "neutral"} />
@@ -146,7 +163,7 @@ export default function OrdersScreen() {
                   ) : null}
                   {approved ? (
                     <View style={s.actions}>
-                      <ActionBtn label="Print" icon={Printer} busy={busy === o.id} onPress={() => onPrint(o)} tone="brand" />
+                      <ActionBtn label="Print" icon={Printer} busy={busy === o.id} onPress={() => void onPrint(o)} tone="brand" />
                       <ActionBtn label="Deliver all" icon={Truck} busy={busy === o.id} onPress={() => onDeliver(o)} tone="grn" />
                       <ActionBtn label="Cash memo" icon={Banknote} busy={busy === o.id} onPress={() => onMemo(o)} tone="amb" />
                     </View>
@@ -246,7 +263,7 @@ const useStyles = () => {
     segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     segTxtOn: { color: t.color.surface },
     quick: {
-      flex: 1, minHeight: 40, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
+      flex: 1, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
       backgroundColor: t.color.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
     },
     quickTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, color: t.color.ink },
