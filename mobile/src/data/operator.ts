@@ -34,7 +34,7 @@ export function useTodayProduction() {
           .eq("run_date", today)
           .eq("status", "posted")
           .order("created_at", { ascending: false })
-          .limit(8),
+          .limit(200),
       ]);
       if (jobsRes.error) throw jobsRes.error;
       if (runsRes.error) throw runsRes.error;
@@ -51,12 +51,14 @@ export function useTodayProduction() {
       return {
         stages,
         wastage,
-        recent: runs.map((r) => ({
-          runNo: r.run_no,
-          name: r.item_name ?? "Item",
-          qty: Number(r.output_qty ?? 0),
-          stage: r.stage,
-        })),
+        recent: runs
+          .map((r) => ({
+            runNo: r.run_no,
+            name: r.item_name ?? "Item",
+            qty: Number(r.output_qty ?? 0),
+            stage: r.stage,
+          }))
+          .slice(0, 8),
       };
     },
   });
