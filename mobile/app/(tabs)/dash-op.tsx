@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import { useIsFetching } from "@tanstack/react-query";
 import {
-  Boxes, ChevronRight, Factory, IndianRupee, ClipboardList, Users, Cart, ReceiptText,
+  Boxes, ChevronRight, Factory, IndianRupee, ClipboardList, Users, Store, ReceiptText,
 } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
@@ -15,14 +15,17 @@ import { useSession } from "@/lib/session";
 import { roleLabel } from "@/lib/claims";
 import { friendlyError } from "@/lib/rpc";
 import { moneyCompact } from "@/lib/format";
+import { gotoTab } from "@/lib/tabBus";
 import { useRouter } from "expo-router";
-import { useTodayProduction, useAttendanceToday } from "@/data/production";
+import { useTodayProduction, useAttendanceToday } from "@/data/operator";
 import { useStockLevels } from "@/data/production";
 import { useTodayKpis } from "@/data/sales";
 import { tokens } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeContext";
 
 export default function OperatorDashboard() {
   const { claims } = useSession();
+  const router = useRouter();
   const { palette: t } = useTheme();
   const s = useStyles();
   const fetching = useIsFetching();
@@ -37,10 +40,13 @@ export default function OperatorDashboard() {
   const present = (attendance.data ?? []).length;
   const pendingJobs = stages.reduce((sum, st) => sum + st.jobs, 0);
 
-  const links: { label: string; sub: string; href: string; icon: typeof Boxes }[] = [
-    { label: "Inventory", sub: "Stock levels and reorder alerts", href: "/inv-op", icon: Boxes },
-    { label: "Stores & Orders", sub: "Orders, challans and delivery", href: "/stores-orders", icon: Cart },
-    { label: "Staff", sub: "Workers, attendance and payroll", href: "/staff", icon: Users },
+  const links: { key: string; label: string; sub: string; icon: typeof Boxes; go: () => void }[] = [
+    { key: "run", label: "Post run", sub: "Record production output", icon: Factory, go: () => router.push("/post-run") },
+    { key: "sale", label: "Record sale", sub: "Cash memo at the plant", icon: IndianRupee, go: () => router.push("/record?mode=sale" as never) },
+    { key: "collect", label: "Record collection", sub: "Payment from a store", icon: ReceiptText, go: () => router.push("/record?mode=collect" as never) },
+    { key: "orders", label: "Stores & Orders", sub: "Orders, challans and delivery", icon: Store, go: () => gotoTab("orders") },
+    { key: "inv", label: "Inventory", sub: "Stock levels and reorder alerts", icon: Boxes, go: () => gotoTab("inventory") },
+    { key: "workers", label: "Workers", sub: "Attendance and payroll", icon: Users, go: () => gotoTab("workers") },
   ];
 
   return (
@@ -93,6 +99,11 @@ export default function OperatorDashboard() {
                   <Text style={s.runQty}>{r.qty.toLocaleString("en-IN")}</Text>
                 </View>
               ))}
+              {(prod.data?.wastage ?? 0) > 0 ? (
+                <Text style={s.stageSub}>
+                  Abnormal wastage today: {"₹"}{(prod.data!.wastage).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                </Text>
+              ) : null}
             </>
           )}
         </View>
@@ -119,7 +130,7 @@ export default function OperatorDashboard() {
             attendance.isLoading ? (
               <Text style={s.attSub}>Loading…</Text>
             ) : (attendance.data?.length ?? 0) === 0 ? (
-              <Text style={s.attSub}>Nobody marked yet — open Staff to mark attendance.</Text>
+              <Text style={s.attSub}>Nobody marked yet — open Workers to mark attendance.</Text>
             ) : (
               (attendance.data ?? []).map((a) => (
                 <View key={a.id} style={s.attLine}>
@@ -135,7 +146,7 @@ export default function OperatorDashboard() {
         {links.map((l) => {
           const Icon = l.icon;
           return (
-            <PressCard key={l.href} onPress={() => router.push(l.href as never)} style={s.linkCard}>
+            <PressCard key={l.key} onPress={l.go} style={s.linkCard}>
               <View style={s.linkRow}>
                 <View style={s.linkChip}>
                   <Icon size={15} color={t.color.brand} />
