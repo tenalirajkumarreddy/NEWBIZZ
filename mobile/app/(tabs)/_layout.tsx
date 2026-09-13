@@ -9,7 +9,7 @@ import type { LucideIcon } from "lucide-react-native";
 import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/lib/session";
 import { onGotoTab } from "@/lib/tabBus";
-import DashOpScreen from "../dash-op";
+import DashOpScreen from "./dash-op";
 import ProfileScreen from "../profile";
 
 import HomeScreen from "./home";
@@ -72,7 +72,7 @@ const OPERATOR_TABS: TabDef[] = [
 ];
 
 const OPERATOR_SCREENS: Record<string, ComponentType> = {
-  dash-op: DashOpScreen,
+  "dash-op": DashOpScreen,
   jobs: JobsScreen,
   stock: StockScreen,
   profile: ProfileScreen,
