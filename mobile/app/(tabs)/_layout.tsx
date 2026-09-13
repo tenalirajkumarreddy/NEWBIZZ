@@ -22,7 +22,6 @@ import ApprovalsScreen from "./approvals";
 import CustomersScreen from "./customers";
 import MoreScreen from "./more";
 import JobsScreen from "./production";
-import StockScreen from "./stock";
 import { useTheme } from "@/theme/ThemeContext";
 
 interface TabDef {
@@ -74,7 +73,6 @@ const OPERATOR_TABS: TabDef[] = [
 const OPERATOR_SCREENS: Record<string, ComponentType> = {
   "dash-op": DashOpScreen,
   jobs: JobsScreen,
-  stock: StockScreen,
   profile: ProfileScreen,
 };
 
