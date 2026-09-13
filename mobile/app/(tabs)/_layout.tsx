@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState, type ComponentType, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  Home, Map, ScanLine, Users, History, LayoutDashboard, ClipboardCheck, Plus, Menu,
-  Factory, Package, FlaskConical,
-} from "lucide-react-native";
-import type { LucideIcon } from "lucide-react-native";
 import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/lib/session";
 import { onGotoTab } from "@/lib/tabBus";
+import { tabsForRole, HOME_TAB } from "@/lib/tabs";
 import DashOpScreen from "./dash-op";
-import ProfileScreen from "../profile";
-
 import HomeScreen from "./home";
 import RouteScreen from "./route";
 import ScanScreen from "./scan";
@@ -21,31 +15,15 @@ import DashScreen from "./dash";
 import ApprovalsScreen from "./approvals";
 import CustomersScreen from "./customers";
 import MoreScreen from "./more";
-import JobsScreen from "./production";
+import OrdersScreen from "./orders";
+import InventoryScreen from "./inventory";
+import ProductionScreen from "./production";
+import WorkersScreen from "./workers";
+import HistoryOpScreen from "./history-op";
+import { useMyCustody } from "@/data/transfers";
+import { useJobCards } from "@/data/production";
+import { useOrders } from "@/data/sales";
 import { useTheme } from "@/theme/ThemeContext";
-
-interface TabDef {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  center?: boolean;
-}
-
-const AGENT_TABS: TabDef[] = [
-  { id: "home", label: "Home", icon: Home },
-  { id: "routes", label: "Routes", icon: Map },
-  { id: "scan", label: "Scan", icon: ScanLine, center: true },
-  { id: "stores", label: "Stores", icon: Users },
-  { id: "history", label: "History", icon: History },
-];
-
-const MANAGER_TABS: TabDef[] = [
-  { id: "dash", label: "Dash", icon: LayoutDashboard },
-  { id: "approvals", label: "Approvals", icon: ClipboardCheck },
-  { id: "sell", label: "Sell", icon: Plus, center: true },
-  { id: "customers", label: "Customers", icon: Users },
-  { id: "more", label: "More", icon: Menu },
-];
 
 const AGENT_SCREENS: Record<string, ComponentType> = {
   home: HomeScreen,
@@ -62,38 +40,43 @@ const MANAGER_SCREENS: Record<string, ComponentType> = {
   more: MoreScreen,
 };
 
-const OPERATOR_TABS: TabDef[] = [
-  { id: "dash-op", label: "Dash", icon: Factory },
-  { id: "jobs", label: "Jobs", icon: Factory },
-  { id: "stock", label: "Stock", icon: Package },
-  { id: "run", label: "Run", icon: FlaskConical, center: true },
-  { id: "profile", label: "Profile", icon: Menu },
-];
-
 const OPERATOR_SCREENS: Record<string, ComponentType> = {
   "dash-op": DashOpScreen,
-  jobs: JobsScreen,
-  profile: ProfileScreen,
+  orders: OrdersScreen,
+  inventory: InventoryScreen,
+  production: ProductionScreen,
+  workers: WorkersScreen,
+  history: HistoryOpScreen,
 };
 
 export default function TabsLayout() {
   const s = useStyles();
-  const { claims } = useSession();
+  const { user, claims } = useSession();
   const router = useRouter();
   const isOperator = claims.roles.includes("operator");
   const isAgent = claims.roles.includes("agent");
-  const tabs = isOperator ? OPERATOR_TABS : isAgent ? AGENT_TABS : MANAGER_TABS;
+  const tabs = tabsForRole(claims.roles);
   const screens = isOperator ? OPERATOR_SCREENS : isAgent ? AGENT_SCREENS : MANAGER_SCREENS;
-  const homeTab = isOperator ? "jobs" : isAgent ? "home" : "dash";
-  const [active, setActive] = useState(homeTab);
+  const homeTab = isOperator ? HOME_TAB.operator : isAgent ? HOME_TAB.agent : HOME_TAB.manager;
+  const [active, setActive] = useState<string>(homeTab);
   const pushingSell = useRef(false);
-  const pushingRun = useRef(false);
+
+  const jobs = useJobCards(isOperator);
+  const ord = useOrders(undefined, isOperator);
+  const cust = useMyCustody(isOperator);
+  const badgeCounts = useMemo<Record<string, number>>(() => {
+    if (!isOperator) return {} as Record<string, number>;
+    const openJobs = (jobs.data ?? []).filter((j) => j.status === "pending" || j.status === "in_progress").length;
+    const approved = (ord.data ?? []).filter((o) => o.status === "approved").length;
+    const pending = (cust.data ?? []).filter((c) => c.status === "pending" && c.to_user_id === user?.id).length;
+    return { production: openJobs, orders: approved, history: pending };
+  }, [isOperator, jobs.data, ord.data, cust.data, user?.id]);
 
   useEffect(() => {
     setActive(homeTab);
   }, [homeTab]);
 
-  const Active = screens[active] ?? screens[tabs[0].id];
+  const Active = screens[active] ?? (active === "scan" ? ScanScreen : screens[tabs[0].id]);
 
   function openSell() {
     if (pushingSell.current) return;
@@ -104,22 +87,9 @@ export default function TabsLayout() {
     }, 600);
   }
 
-  function openRun() {
-    if (pushingRun.current) return;
-    pushingRun.current = true;
-    router.push("/post-run");
-    setTimeout(() => {
-      pushingRun.current = false;
-    }, 600);
-  }
-
   function onChange(id: string) {
     if (id === "sell") {
       openSell();
-      return;
-    }
-    if (id === "run") {
-      openRun();
       return;
     }
     setActive(id);
@@ -131,10 +101,6 @@ export default function TabsLayout() {
         openSell();
         return;
       }
-      if (id === "run") {
-        openRun();
-        return;
-      }
       setActive(id);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +109,13 @@ export default function TabsLayout() {
   return (
     <View style={s.root}>
       {Active ? <Active /> : null}
-      <BottomNav tabs={tabs} active={active} onChange={onChange} />
+      <BottomNav
+        tabs={tabs}
+        active={active}
+        onChange={onChange}
+        badgeCounts={badgeCounts}
+        compact={tabs.length >= 7}
+      />
     </View>
   );
 }
@@ -153,7 +125,7 @@ const useStyles = () => {
   return useMemo(() => {
     const t = palette;
     return StyleSheet.create({
-  root: { flex: 1, backgroundColor: t.color.bg },
-});
+      root: { flex: 1, backgroundColor: t.color.bg },
+    });
   }, [palette]);
 };

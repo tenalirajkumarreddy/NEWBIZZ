@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import { useSession } from "@/lib/session";
 import { isGatedStatus } from "@/lib/claims";
+import { HOME_TAB } from "@/lib/tabs";
 import { tokens } from "@/theme/tokens";
 import { useMemo } from "react";
 import { useTheme } from "@/theme/ThemeContext";
@@ -23,7 +24,7 @@ export default function Gate() {
   }
   if (!session) return <Redirect href="/login" />;
   if (isGatedStatus(claims.status)) return <Redirect href="/pending" />;
-  const homeTab = claims.roles.includes("operator") ? "jobs" : "home";
+  const homeTab = claims.roles.includes("operator") ? HOME_TAB.operator : claims.roles.includes("agent") ? HOME_TAB.agent : HOME_TAB.manager;
   return <Redirect href={`/(tabs)/${homeTab}`} />;
 }
 
