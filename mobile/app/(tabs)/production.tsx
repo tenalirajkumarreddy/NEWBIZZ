@@ -119,7 +119,7 @@ export default function ProductionScreen() {
   }
 
   return (
-    <Screen refreshing={fetching > 0} onRefresh={() => qc.invalidateQueries({ queryKey: qk.jobCards() })}>
+    <Screen refreshing={fetching > 0} onRefresh={() => invalidateOps()}>
       <GradientHeader title="Production" subtitle={roleLabel(claims)} right={<HeaderRight />} />
 
       <Pressable
