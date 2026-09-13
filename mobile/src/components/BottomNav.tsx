@@ -6,12 +6,13 @@ import { useMemo } from "react";
 import { useTheme } from "@/theme/ThemeContext";
 
 export function BottomNav({
-  tabs, active, onChange, badgeCounts = {},
+  tabs, active, onChange, badgeCounts = {}, compact = false,
 }: {
   tabs: { id: string; label: string; icon: LucideIcon; center?: boolean }[];
   active: string;
   onChange: (id: string) => void;
   badgeCounts?: Record<string, number>;
+  compact?: boolean;
 }) {
   const { palette: t } = useTheme();
   const s = useStyles();
@@ -51,7 +52,7 @@ export function BottomNav({
             <Pressable key={tab.id} style={s.slot} onPress={() => onChange(tab.id)}>
               {isActive ? <View style={s.pill} /> : null}
               <View style={s.iconWrap}>
-                <Icon size={20} color={isActive ? t.color.brand : t.color.ink4} />
+                <Icon size={compact ? 19 : 20} color={isActive ? t.color.brand : t.color.ink4} />
                 {count > 0 ? (
                   <View style={s.badge}>
                     <Text style={s.badgeTxt}>{count > 99 ? "99+" : count}</Text>
@@ -59,7 +60,7 @@ export function BottomNav({
                 ) : null}
               </View>
               <Text
-                style={[s.label, { color: isActive ? t.color.brand : t.color.ink4 }]}
+                style={[s.label, compact && { fontSize: 9 }, { color: isActive ? t.color.brand : t.color.ink4 }]}
                 numberOfLines={1}
               >
                 {tab.label}
