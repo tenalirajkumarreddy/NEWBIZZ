@@ -36,11 +36,11 @@ export async function myCustody(from?: string, to?: string): Promise<CustodyRow[
  * every row by the RPC — it is the current balance, so the most recent row
  * carries it).
  */
-export function useMyCustody() {
+export function useMyCustody(enabled = true) {
   const { user } = useSession();
   return useQuery({
     queryKey: qk.custody(),
-    enabled: !!user?.id,
+    enabled: !!user?.id && enabled,
     queryFn: () => myCustody(),
   });
 }

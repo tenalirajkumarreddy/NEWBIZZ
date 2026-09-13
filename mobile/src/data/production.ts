@@ -32,11 +32,11 @@ const SELECT =
   "run:production_runs!production_job_cards_run_id_fkey(run_no)";
 
 /** Production job cards, newest dates first. */
-export function useJobCards() {
+export function useJobCards(enabled = true) {
   const { user } = useSession();
   return useQuery({
     queryKey: qk.jobCards(),
-    enabled: !!user?.id,
+    enabled: !!user?.id && enabled,
     queryFn: async (): Promise<JobCardRow[]> => {
       const { data, error } = await supabase
         .from("production_job_cards")
@@ -131,6 +131,7 @@ export interface StockLevelRow {
   unit: string;
   qtyOnHand: number;
   reorderLevel: number;
+  cost: number;
 }
 
 /** Current stock on hand (all branches aggregated client-side is avoided:
@@ -144,7 +145,7 @@ export function useStockLevels() {
       const { data, error } = await supabase
         .from("stock")
         .select(
-          "item_id, qty_on_hand, " +
+          "item_id, qty_on_hand, avg_cost, " +
             "item:items(sku, name, reorder_level, base_unit:units!items_base_unit_id_fkey(code)), " +
             "branch:branches(name)",
         )
@@ -158,6 +159,44 @@ export function useStockLevels() {
         unit: (r.item?.base_unit?.code as string) ?? "",
         qtyOnHand: Number(r.qty_on_hand ?? 0),
         reorderLevel: Number(r.item?.reorder_level ?? 0),
+        cost: Number(r.avg_cost ?? 0),
+        branchName: (r.branch?.name as string) ?? "-",
+      }));
+    },
+  });
+}
+
+export interface StockLedgerRow {
+  id: string;
+  moveType: string;
+  qtyDelta: number;
+  qtyAfter: number;
+  unitCost: number;
+  movedAt: string;
+  branchName: string;
+}
+
+/** Last 10 ledger moves for an item (read-only audit trail). */
+export function useStockLedger(itemId: string | null) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.stockLedger(itemId ?? ""),
+    enabled: !!user?.id && !!itemId,
+    queryFn: async (): Promise<StockLedgerRow[]> => {
+      const { data, error } = await supabase
+        .from("stock_ledger")
+        .select("id, move_type, qty_delta, qty_after, unit_cost, moved_at, branch:branches(name)")
+        .eq("item_id", itemId!)
+        .order("moved_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        id: r.id as string,
+        moveType: r.move_type as string,
+        qtyDelta: Number(r.qty_delta ?? 0),
+        qtyAfter: Number(r.qty_after ?? 0),
+        unitCost: Number(r.unit_cost ?? 0),
+        movedAt: r.moved_at as string,
         branchName: (r.branch?.name as string) ?? "-",
       }));
     },

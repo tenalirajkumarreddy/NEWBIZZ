@@ -25,7 +25,7 @@ export interface OrderRow {
   storeId: string;
   storeName: string | null;
   notes: string | null;
-  lines: { itemId: string; qty: number; unitPrice: number; itemName: string | null }[];
+  lines: { lineId: string; itemId: string; qty: number; qtyFulfilled: number; unitPrice: number; itemName: string | null }[];
 }
 
 export function useTodayKpis() {
@@ -196,17 +196,17 @@ export function useTodaySplit() {
   });
 }
 
-export function useOrders(status?: string) {
+export function useOrders(status?: string, enabled = true) {
   const { user } = useSession();
   return useQuery({
     queryKey: qk.orders(status),
-    enabled: !!user?.id,
+    enabled: !!user?.id && enabled,
     queryFn: async (): Promise<OrderRow[]> => {
       const base = supabase
         .from("sales_orders")
         .select(`id, order_no, order_date, status, store_id, notes, created_at,
                  store:customer_stores(name),
-                 lines:sales_order_lines(item_id, qty, unit_price, item:items(name))`)
+                 lines:sales_order_lines(id, item_id, qty, qty_fulfilled, unit_price, item:items(name))`)
         .order("created_at", { ascending: false })
         .limit(200);
       // status filter: explicit status = exact match; no arg = open statuses
@@ -224,8 +224,10 @@ export function useOrders(status?: string) {
         storeName: r.store?.name ?? null,
         notes: r.notes,
         lines: (r.lines ?? []).map((l: any) => ({
+          lineId: l.id,
           itemId: l.item_id,
           qty: Number(l.qty ?? 0),
+          qtyFulfilled: Number(l.qty_fulfilled ?? 0),
           unitPrice: Number(l.unit_price ?? 0),
           itemName: l.item?.name ?? null,
         })),
@@ -312,7 +314,7 @@ export function useOrder(orderId: string | null | undefined) {
         .from("sales_orders")
         .select(`id, order_no, order_date, status, store_id, notes, created_at,
                  store:customer_stores(name),
-                 lines:sales_order_lines(item_id, qty, unit_price, item:items(name))`)
+                 lines:sales_order_lines(id, item_id, qty, qty_fulfilled, unit_price, item:items(name))`)
         .eq("id", orderId!)
         .maybeSingle();
       if (error) throw error;
@@ -326,8 +328,10 @@ export function useOrder(orderId: string | null | undefined) {
         storeName: data.store?.name ?? null,
         notes: data.notes,
         lines: (data.lines ?? []).map((l: any) => ({
+          lineId: l.id,
           itemId: l.item_id,
           qty: Number(l.qty ?? 0),
+          qtyFulfilled: Number(l.qty_fulfilled ?? 0),
           unitPrice: Number(l.unit_price ?? 0),
           itemName: l.item?.name ?? null,
         })),

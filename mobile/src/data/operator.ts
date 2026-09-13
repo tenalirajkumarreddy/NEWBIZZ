@@ -2,22 +2,24 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { qk } from "./keys";
+import type { Database } from "@/lib/db-types";
 import { todayIST } from "@/lib/format";
+import { rpc, RpcError } from "@/lib/rpc";
+import { isoDaysAgo } from "./transfers";
+import {
+  aggregateTodayProduction,
+  buildStockTransferHeader,
+  type StageProgress,
+} from "@/lib/opBuilders";
+export type { StageProgress };
 
 /** Operator dashboard + staff data. All reads RLS-gated server-side. */
-
-export interface StageProgress {
-  stage: number;
-  targetQty: number;
-  producedQty: number;
-  jobs: number;
-}
 
 /** Today's production targets (open job cards) vs posted run output, per stage. */
 export function useTodayProduction() {
   const { user } = useSession();
   return useQuery({
-    queryKey: ["opTodayProduction"],
+    queryKey: qk.opTodayProduction(),
     enabled: !!user?.id,
     queryFn: async (): Promise<{ stages: StageProgress[]; wastage: number; recent: { runNo: string; name: string; qty: number; stage: number }[] }> => {
       const today = todayIST();
@@ -28,7 +30,7 @@ export function useTodayProduction() {
           .eq("card_date", today),
         supabase
           .from("production_runs")
-          .select("run_no, stage, output_qty, output_item:items(name)")
+          .select("run_no, stage, output_qty, abnormal_wastage_value, output_item:items(name)")
           .eq("run_date", today)
           .eq("status", "posted")
           .order("created_at", { ascending: false })
@@ -36,116 +38,28 @@ export function useTodayProduction() {
       ]);
       if (jobsRes.error) throw jobsRes.error;
       if (runsRes.error) throw runsRes.error;
-
-      const stages = new Map<number, StageProgress>();
-      for (const stage of [1, 2]) {
-        stages.set(stage, { stage, targetQty: 0, producedQty: 0, jobs: 0 });
-      }
-      for (const j of jobsRes.data ?? []) {
-        const s = stages.get(Number(j.stage));
-        if (s && j.status !== "cancelled") {
-          s.targetQty += Number(j.target_qty ?? 0);
-          s.jobs++;
-        }
-      }
       const runs = (runsRes.data ?? []).map((r: any) => ({
-        runNo: r.run_no as string,
-        name: (r.output_item?.name as string) ?? "Item",
-        qty: Number(r.output_qty ?? 0),
+        run_no: r.run_no as string,
+        item_name: (r.output_item?.name as string) ?? null,
         stage: Number(r.stage),
+        output_qty: r.output_qty,
+        abnormal_wastage_value: r.abnormal_wastage_value,
       }));
-      for (const r of runs) {
-        const s = stages.get(r.stage);
-        if (s) s.producedQty += r.qty;
-      }
-      const wastage = (runsRes.data ?? []).length; // runs fetched; wastage summed below
-      void wastage;
-      return { stages: [...stages.values()], recent: runs, wastage: 0 };
+      const { stages, wastage } = aggregateTodayProduction(
+        (jobsRes.data ?? []) as any, runs,
+      );
+      return {
+        stages,
+        wastage,
+        recent: runs.map((r) => ({
+          runNo: r.run_no,
+          name: r.item_name ?? "Item",
+          qty: Number(r.output_qty ?? 0),
+          stage: r.stage,
+        })),
+      };
     },
   });
-}
-
-export interface OpOrderRow {
-  id: string;
-  orderNo: string;
-  orderDate: string;
-  status: string;
-  storeName: string | null;
-  total: number;
-}
-
-/** Orders (read-only for operators). */
-export function useOrders() {
-  const { user } = useSession();
-  return useQuery({
-    queryKey: ["opOrders"],
-    enabled: !!user?.id,
-    queryFn: async (): Promise<OpOrderRow[]> => {
-      const { data, error } = await supabase
-        .from("sales_orders")
-        .select(
-          "id, order_no, order_date, status, " +
-            "store:customer_stores(name), " +
-            "lines:sales_order_lines(qty, unit_price)",
-        )
-        .order("order_date", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return (data ?? []).map((r: any) => ({
-        id: r.id,
-        orderNo: r.order_no,
-        orderDate: r.order_date,
-        status: r.status,
-        storeName: (r.store?.name as string) ?? null,
-        total: (r.lines ?? []).reduce((s: number, l: any) => s + Number(l.qty ?? 0) * Number(l.unit_price ?? 0), 0),
-      }));
-    },
-  });
-}
-
-export interface ChallanRow {
-  id: string;
-  challanNo: string;
-  challanDate: string;
-  status: string;
-  orderNo: string | null;
-  orderId: string | null;
-}
-
-/** Delivery challans (read + status updates + PDF share). */
-export function useChallans() {
-  const { user } = useSession();
-  return useQuery({
-    queryKey: ["opChallans"],
-    enabled: !!user?.id,
-    queryFn: async (): Promise<ChallanRow[]> => {
-      const { data, error } = await supabase
-        .from("delivery_challans")
-        .select("id, challan_no, challan_date, status, order_id, order:sales_orders(order_no)")
-        .order("challan_date", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return (data ?? []).map((r: any) => ({
-        id: r.id,
-        challanNo: r.challan_no,
-        challanDate: r.challan_date,
-        status: r.status,
-        orderId: r.order_id as string | null,
-        orderNo: (r.order?.order_no as string) ?? null,
-      }));
-    },
-  });
-}
-
-export async function setChallanStatus(id: string, status: string): Promise<void> {
-  const { error } = await supabase.rpc("set_challan_status", { p_id: id, p_status: status });
-  if (error) throw error;
-}
-
-/** Challan PDF: opens the web print view (share target = PDF). */
-export function challanPdfUrl(challanId: string): string {
-  const base = process.env.EXPO_PUBLIC_WEB_URL ?? "https://newbizz-kappa.vercel.app";
-  return `${base}/challans/${challanId}/print`;
 }
 
 export interface WorkerRow {
@@ -160,7 +74,7 @@ export interface WorkerRow {
 export function useStaff() {
   const { user } = useSession();
   return useQuery({
-    queryKey: ["opStaff"],
+    queryKey: qk.opStaff(),
     enabled: !!user?.id,
     queryFn: async (): Promise<WorkerRow[]> => {
       const [usersRes, workersRes] = await Promise.all([
@@ -207,10 +121,10 @@ export async function markAttendance(rows: AttendanceMark[]): Promise<void> {
       hours: r.hours,
       ot_hours: r.otHours,
     };
-    const payload =
+    const payload: Database["public"]["Tables"]["attendance"]["Insert"] =
       r.entityType === "user"
-        ? { ...base, user_id: r.entityId }
-        : { ...base, worker_id: r.entityId };
+        ? { ...base, user_id: r.entityId, worker_id: null }
+        : { ...base, worker_id: r.entityId, user_id: null };
     const { error } = await supabase.from("attendance").upsert(payload, {
       onConflict: r.entityType === "user" ? "user_id,work_date" : "worker_id,work_date",
     });
@@ -221,6 +135,7 @@ export async function markAttendance(rows: AttendanceMark[]): Promise<void> {
 export interface AttendanceTodayRow {
   id: string;
   entityType: "user" | "worker";
+  entityId: string;
   name: string;
   status: string;
   hours: number;
@@ -230,7 +145,7 @@ export interface AttendanceTodayRow {
 export function useAttendanceToday() {
   const { user } = useSession();
   return useQuery({
-    queryKey: ["opAttendanceToday"],
+    queryKey: qk.opAttendanceToday(),
     enabled: !!user?.id,
     queryFn: async (): Promise<AttendanceTodayRow[]> => {
       const today = todayIST();
@@ -246,6 +161,7 @@ export function useAttendanceToday() {
       return (data ?? []).map((r: any) => ({
         id: r.id,
         entityType: r.user_id ? "user" : "worker",
+        entityId: (r.user_id ?? r.worker_id) as string,
         name: (r.u?.full_name as string) ?? (r.w?.full_name as string) ?? "—",
         status: r.status as string,
         hours: Number(r.hours ?? 0),
@@ -265,7 +181,7 @@ export interface PayrollRunRow {
 export function usePayrollRuns() {
   const { user } = useSession();
   return useQuery({
-    queryKey: ["opPayrollRuns"],
+    queryKey: qk.opPayrollRuns(),
     enabled: !!user?.id,
     queryFn: async (): Promise<PayrollRunRow[]> => {
       const { data, error } = await supabase
@@ -294,7 +210,7 @@ export interface PayrollLineRow {
 export function usePayrollLines(runId: string | null) {
   const { user } = useSession();
   return useQuery({
-    queryKey: ["opPayrollLines", runId],
+    queryKey: qk.opPayrollLines(runId ?? ""),
     enabled: !!user?.id && !!runId,
     queryFn: async (): Promise<PayrollLineRow[]> => {
       const { data, error } = await supabase
@@ -328,4 +244,124 @@ export async function addWorker(input: {
     .single();
   if (error) throw error;
   return data.id as string;
+}
+
+export interface RunHistoryRow {
+  id: string;
+  runNo: string;
+  runDate: string;
+  stage: number;
+  outputQty: number;
+  unitCost: number;
+  wastage: number;
+  status: string;
+  notes: string | null;
+  createdAt: string;
+  itemName: string | null;
+  posterName: string | null;
+}
+
+function mapRun(r: any): RunHistoryRow {
+  return {
+    id: r.id as string,
+    runNo: r.run_no as string,
+    runDate: r.run_date as string,
+    stage: Number(r.stage),
+    outputQty: Number(r.output_qty ?? 0),
+    unitCost: Number(r.output_unit_cost ?? 0),
+    wastage: Number(r.abnormal_wastage_value ?? 0),
+    status: r.status as string,
+    notes: (r.notes as string) ?? null,
+    createdAt: r.created_at as string,
+    itemName: (r.output_item?.name as string) ?? null,
+    posterName: (r.poster?.full_name as string) ?? null,
+  };
+}
+
+const RUN_SELECT =
+  "id, run_no, run_date, stage, output_qty, output_unit_cost, abnormal_wastage_value, status, notes, created_at, " +
+  "output_item:items(name), poster:users!production_runs_created_by_fkey(full_name)";
+
+/** Production runs, last N days, newest first (RLS: read_all_auth). */
+export function useRunHistory(days = 14) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.opRunHistory(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<RunHistoryRow[]> => {
+      const { data, error } = await supabase
+        .from("production_runs")
+        .select(RUN_SELECT)
+        .gte("run_date", isoDaysAgo(days - 1))
+        .order("run_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []).map(mapRun);
+    },
+  });
+}
+
+/** Runs posted by the signed-in user (operator Activity segment). */
+export function useMyRuns(days = 14) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.myRuns(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<RunHistoryRow[]> => {
+      const { data, error } = await supabase
+        .from("production_runs")
+        .select(RUN_SELECT)
+        .eq("created_by", user!.id)
+        .gte("run_date", isoDaysAgo(days - 1))
+        .order("run_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []).map(mapRun);
+    },
+  });
+}
+
+export interface BranchRow {
+  id: string;
+  name: string;
+  isWarehouse: boolean;
+}
+
+/** Branches for the stock-handover source picker. */
+export function useBranches() {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.branches(),
+    enabled: !!user?.id,
+    queryFn: async (): Promise<BranchRow[]> => {
+      const { data, error } = await supabase
+        .from("branches")
+        .select("id, name, is_warehouse")
+        .eq("status", "active")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []).map((b: any) => ({
+        id: b.id as string,
+        name: b.name as string,
+        isWarehouse: !!b.is_warehouse,
+      }));
+    },
+  });
+}
+
+/** Warehouse -> user stock handover (RLS: stock.transfer, RPC create_transfer). */
+export async function createStockTransfer(input: {
+  fromBranchId: string;
+  toUserId: string;
+  lines: { itemId: string; qty: number }[];
+  note?: string | null;
+}): Promise<string> {
+  const lines = input.lines.filter((l) => l.itemId && Number(l.qty) > 0);
+  if (lines.length === 0) throw new RpcError("Add at least one item with a quantity");
+  return rpc<string>("create_transfer", {
+    p_header: buildStockTransferHeader(input.fromBranchId, input.toUserId, input.note),
+    p_lines: lines.map((l) => ({ item_id: l.itemId, qty: Number(l.qty) })),
+  });
 }
