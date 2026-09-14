@@ -70,8 +70,8 @@ begin
   if v_status is null then
     raise exception 'cancel_order: unknown order %', p_order;
   end if;
-  if v_status not in ('draft','confirmed','approved') then
-    raise exception 'cancel_order: order % is % - only draft/confirmed/approved orders can be cancelled', v_no, v_status;
+  if v_status not in ('draft','confirmed','approved','challan_printed') then
+    raise exception 'cancel_order: order % is % - only draft/confirmed/approved/challan_printed orders can be cancelled', v_no, v_status;
   end if;
 
   select count(*) into v_delivered
