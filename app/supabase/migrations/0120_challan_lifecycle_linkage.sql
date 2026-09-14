@@ -37,7 +37,7 @@ create policy read_challan_lines on public.delivery_challan_lines
   );
 
 -- =====================================================================
--- 2. cancel_order: + approved, + delivered-challan guard, + open-challan cascade
+-- 2. cancel_order: + approved/challan_printed, + delivered-challan guard, + open-challan cascade
 -- =====================================================================
 create or replace function cancel_order(p_order uuid, p_reason text default null)
 returns uuid
@@ -96,12 +96,9 @@ begin
      for update
   loop
     update delivery_challans set status = 'cancelled' where id = v_c.id;
-    insert into document_releases (entity_type, entity_id, released_at, released_by)
-      select 'challans', v_c.id, now(), v_actor
-      where not exists (
-        select 1 from document_releases r
-        where r.entity_type = 'challans' and r.entity_id = v_c.id
-      );
+    insert into public.document_releases (entity_type, entity_id, released_at, released_by)
+      values ('challans', v_c.id, now(), v_actor)
+      on conflict (entity_type, entity_id) do nothing;
     perform write_audit('update','delivery_challans', v_c.id::text,
               format('Challan %s auto-cancelled: order %s cancelled', v_c.challan_no, v_no),
               jsonb_build_object('challan_no', v_c.challan_no, 'from', 'printed/in_transit', 'to', 'cancelled', 'order_no', v_no),
