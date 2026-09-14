@@ -1,5 +1,5 @@
 import {
-  aggregateTodayProduction, remainingOrderLines, buildStockTransferHeader,
+  aggregateTodayProduction, remainingOrderLines, buildStockTransferHeader, checkCountPost,
 } from "../opBuilders";
 
 describe("aggregateTodayProduction", () => {
@@ -55,5 +55,25 @@ describe("buildStockTransferHeader", () => {
     expect(buildStockTransferHeader("br-1", "u-2")).toEqual({
       type: "stock", from_branch_id: "br-1", to_user_id: "u-2",
     });
+  });
+});
+
+describe("checkCountPost", () => {
+  it("posts a positive delta above book", () => {
+    expect(checkCountPost(150, 50)).toBe("post");
+    expect(checkCountPost(50.5, 50)).toBe("post");
+  });
+  it("zero delta is nothing-to-post", () => {
+    expect(checkCountPost(50, 50)).toBe("zero");
+  });
+  it("count below book is short - never a negative run", () => {
+    expect(checkCountPost(40, 50)).toBe("short");
+    expect(checkCountPost(0, 50)).toBe("short");
+  });
+  it("empty or unusable inputs are incomplete", () => {
+    expect(checkCountPost(null, 50)).toBe("incomplete");
+    expect(checkCountPost(150, null)).toBe("incomplete");
+    expect(checkCountPost(0, 0)).toBe("incomplete");
+    expect(checkCountPost(Number.NaN, 50)).toBe("incomplete");
   });
 });

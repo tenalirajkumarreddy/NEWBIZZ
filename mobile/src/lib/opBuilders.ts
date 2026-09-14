@@ -60,3 +60,24 @@ export function buildStockTransferHeader(
   if (note?.trim()) header.note = note.trim();
   return header;
 }
+
+export type CountCheck = "incomplete" | "post" | "zero" | "short";
+
+/**
+ * Closing-stock mode: classify counted physical stock against the current
+ * book balance. "post" means a positive production delta exists
+ * (counted - book); "zero" means nothing to post; "short" means the count
+ * is BELOW the book (likely unposted sales/issues - reconcile, never post
+ * a negative run).
+ */
+export function checkCountPost(
+  counted: number | null, book: number | null,
+): CountCheck {
+  if (book == null || !Number.isFinite(book)) return "incomplete";
+  if (counted == null || !Number.isFinite(counted) || counted < 0) return "incomplete";
+  if (counted === 0 && book === 0) return "incomplete";
+  const delta = counted - book;
+  if (delta > 1e-9) return "post";
+  if (delta > -1e-9) return "zero";
+  return "short";
+}
