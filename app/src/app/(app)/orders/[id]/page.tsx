@@ -26,6 +26,7 @@ export default async function OrderDetailPage({
 
   const netTotal = order.lines.reduce((s, l) => s + l.qty * l.unit_price, 0);
   const canFulfil = order.status === "confirmed" || order.status === "approved";
+  const canChallan = ["confirmed", "approved", "challan_printed", "partially_fulfilled"].includes(order.status);
   const canCancel = order.status === "confirmed" || order.status === "approved" || order.status === "draft";
 
   return (
@@ -46,21 +47,21 @@ export default async function OrderDetailPage({
         actions={
           <>
             {canFulfil && (
-              <>
-                <FulfilOrderAction
-                  orderId={order.id}
-                  orderNo={order.order_no}
-                  lines={order.lines}
-                  storeStateCode={order.storeStateCode}
-                  homeStateCode={homeStateCode}
-                />
-                <RaiseChallanAction
-                  orderId={order.id}
-                  orderNo={order.order_no}
-                  lines={order.lines}
-                  autoOpen={searchParams.action === "challan"}
-                />
-              </>
+              <FulfilOrderAction
+                orderId={order.id}
+                orderNo={order.order_no}
+                lines={order.lines}
+                storeStateCode={order.storeStateCode}
+                homeStateCode={homeStateCode}
+              />
+            )}
+            {canChallan && (
+              <RaiseChallanAction
+                orderId={order.id}
+                orderNo={order.order_no}
+                lines={order.lines}
+                autoOpen={searchParams.action === "challan"}
+              />
             )}
             {canCancel && <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />}
             {order.status === "fulfilled" && (

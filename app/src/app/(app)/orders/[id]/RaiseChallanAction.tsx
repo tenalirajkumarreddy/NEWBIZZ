@@ -39,8 +39,8 @@ export function RaiseChallanAction({
   const entries = lines
     .map((l) => ({ line: l, qty: Number(qtys[l.id] ?? "") }))
     .filter((e) => Number.isFinite(e.qty) && e.qty > 0);
-  const over = entries.find((e) => e.qty > Math.max(e.line.qty - e.line.qtyFulfilled, 0));
-  const canSubmit = entries.length > 0 && !over && !pending;
+  const overs = entries.filter((e) => e.qty > Math.max(e.line.qty - e.line.qtyFulfilled, 0));
+  const canSubmit = entries.length > 0 && overs.length === 0 && !pending;
 
   function submit() {
     if (!canSubmit) return;
@@ -86,7 +86,7 @@ export function RaiseChallanAction({
               <TBody>
                 {lines.map((l) => {
                   const remaining = Math.max(l.qty - l.qtyFulfilled, 0);
-                  const bad = over?.line.id === l.id;
+                  const bad = overs.some((e) => e.line.id === l.id);
                   return (
                     <TR key={l.id}>
                       <TD>
@@ -108,9 +108,9 @@ export function RaiseChallanAction({
                 })}
               </TBody>
             </Table>
-            {over && (
+            {overs.length > 0 && (
               <p className="px-4 pb-3 text-[12px] text-red">
-                {over.line.itemName ?? "—"}: cannot deliver more than its remaining {Math.max(over.line.qty - over.line.qtyFulfilled, 0)}.
+                {overs.map((e) => e.line.itemName ?? "—").join(", ")}: cannot deliver more than their remaining quantity.
               </p>
             )}
           </Panel>

@@ -14,6 +14,10 @@ import { OrderRowActions } from "./OrderRowActions";
 
 const STATUSES = ["draft", "confirmed", "invoiced", "cancelled"] as const;
 
+// Delivery-challan entry point (multi-trip): create_challan accepts these four
+// statuses; after the first challan the order sits in challan_printed.
+const CHALLAN_STATUSES: string[] = ["confirmed", "approved", "challan_printed", "partially_fulfilled"];
+
 export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
@@ -108,14 +112,14 @@ export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
                 <TD>
                   <div className="flex items-center gap-1.5">
                     {(o.status === "confirmed" || o.status === "approved") && (
-                      <>
-                        <Link href={`/orders/${o.id}`}>
-                          <Button variant="primary" size="sm">Fulfill</Button>
-                        </Link>
-                        <Link href={`/orders/${o.id}?action=challan`}>
-                          <Button variant="ghost" size="sm">Challan</Button>
-                        </Link>
-                      </>
+                      <Link href={`/orders/${o.id}`}>
+                        <Button variant="primary" size="sm">Fulfill</Button>
+                      </Link>
+                    )}
+                    {CHALLAN_STATUSES.includes(o.status) && (
+                      <Link href={`/orders/${o.id}?action=challan`}>
+                        <Button variant="ghost" size="sm">Challan</Button>
+                      </Link>
                     )}
                     <OrderRowActions orderId={o.id} orderNo={o.order_no} status={o.status} />
                   </div>
