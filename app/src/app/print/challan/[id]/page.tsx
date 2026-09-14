@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function PrintChallanPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (!can(session.claims, "challan.view")) notFound();
 
   const [challan, company] = await Promise.all([getChallan(params.id), getCompany()]);
   if (!challan) notFound();
