@@ -54,6 +54,9 @@ const RULES: RouteRule[] = [
   { prefix: "/suppliers", perm: "supplier.view" },
   { prefix: "/receipts", perm: "receipt.record" },
   { prefix: "/challans", perm: "challan.view" },
+  // Printable challan sheet — same access as the challan register (the page
+  // lives outside the (app) group, so middleware is its only shell-level gate).
+  { prefix: "/print/challan", perm: "challan.view" },
   { prefix: "/payroll", perm: "hr.view" },
   { prefix: "/expenses", perm: "accounting.manage" },
   { prefix: "/invoices", perm: "invoice.view" },

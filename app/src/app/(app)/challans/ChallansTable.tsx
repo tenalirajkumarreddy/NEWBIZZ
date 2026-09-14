@@ -106,12 +106,22 @@ export function ChallansTable({ challans }: { challans: ChallanListRow[] }) {
                 <TD numeric>{fmtQty(c.totalQty)}</TD>
                 <TD><StatusBadge status={c.status} /></TD>
                 <TD>
-                  <ChallanRowActions
-                    challanId={c.id}
-                    challanNo={c.challan_no}
-                    status={c.status}
-                    orderId={c.orderId}
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      href={`/print/challan/${c.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[12px] text-brand hover:underline"
+                    >
+                      Print
+                    </Link>
+                    <ChallanRowActions
+                      challanId={c.id}
+                      challanNo={c.challan_no}
+                      status={c.status}
+                      orderId={c.orderId}
+                    />
+                  </div>
                 </TD>
               </TR>
             ))}

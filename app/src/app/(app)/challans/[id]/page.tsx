@@ -38,12 +38,22 @@ export default async function ChallanDetailPage({ params }: { params: { id: stri
           </>
         }
         actions={
-          <ChallanRowActions
-            challanId={challan.id}
-            challanNo={challan.challan_no}
-            status={challan.status}
-            orderId={challan.orderId}
-          />
+          <>
+            <Link
+              href={`/print/challan/${challan.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[12px] text-brand hover:underline"
+            >
+              Print
+            </Link>
+            <ChallanRowActions
+              challanId={challan.id}
+              challanNo={challan.challan_no}
+              status={challan.status}
+              orderId={challan.orderId}
+            />
+          </>
         }
         backHref="/challans"
         backLabel="Delivery Challans"
