@@ -8,9 +8,16 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty, percent } from "@/lib/format";
 import { OrderRowActions } from "../OrderRowActions";
 import { FulfilOrderAction } from "./FulfilOrderAction";
+import { RaiseChallanAction } from "./RaiseChallanAction";
 import type { OrderLine } from "@/lib/data/sales";
 
-export default async function OrderDetailPage({ params }: { params: { id: string } }) {
+export default async function OrderDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { action?: string };
+}) {
   const [order, homeStateCode] = await Promise.all([
     getOrder(params.id),
     getHomeStateCode(),
@@ -39,13 +46,21 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         actions={
           <>
             {canFulfil && (
-              <FulfilOrderAction
-                orderId={order.id}
-                orderNo={order.order_no}
-                lines={order.lines}
-                storeStateCode={order.storeStateCode}
-                homeStateCode={homeStateCode}
-              />
+              <>
+                <FulfilOrderAction
+                  orderId={order.id}
+                  orderNo={order.order_no}
+                  lines={order.lines}
+                  storeStateCode={order.storeStateCode}
+                  homeStateCode={homeStateCode}
+                />
+                <RaiseChallanAction
+                  orderId={order.id}
+                  orderNo={order.order_no}
+                  lines={order.lines}
+                  autoOpen={searchParams.action === "challan"}
+                />
+              </>
             )}
             {canCancel && <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />}
             {order.status === "fulfilled" && (

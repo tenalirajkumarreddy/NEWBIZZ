@@ -108,9 +108,14 @@ export function OrdersTable({ orders }: { orders: OrderListRow[] }) {
                 <TD>
                   <div className="flex items-center gap-1.5">
                     {(o.status === "confirmed" || o.status === "approved") && (
-                      <Link href={`/orders/${o.id}`}>
-                        <Button variant="primary" size="sm">Fulfill</Button>
-                      </Link>
+                      <>
+                        <Link href={`/orders/${o.id}`}>
+                          <Button variant="primary" size="sm">Fulfill</Button>
+                        </Link>
+                        <Link href={`/orders/${o.id}?action=challan`}>
+                          <Button variant="ghost" size="sm">Challan</Button>
+                        </Link>
+                      </>
                     )}
                     <OrderRowActions orderId={o.id} orderNo={o.order_no} status={o.status} />
                   </div>
