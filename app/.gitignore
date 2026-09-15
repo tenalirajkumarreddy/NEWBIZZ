@@ -29,3 +29,5 @@ yarn-error.log*
 
 # supabase edge function local env
 supabase/functions/**/.env*
+
+dev-server.log

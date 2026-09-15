@@ -45,7 +45,7 @@ These cannot be done from the repo — they are Supabase Auth settings:
 | Path | Schedule | Purpose |
 |---|---|---|
 | `/api/cron/notifications` | daily 02:15 UTC | license expiry / stale transfers / EMIs due |
-| `/api/cron/whatsapp` | every 10 min | WhatsApp dispatch worker (drains the queue) |
+| `/api/cron/whatsapp` | off (Hobby quota) | WhatsApp dispatch worker — Hobby rejects sub-daily crons; drain via the admin "run worker" action (`actions/whatsapp.ts`) or restore this entry on Pro. |
 | `/api/intangles/poll` | off (Hobby quota) | Intangles telemetry poll — the in-process 60s poller is disabled on Vercel and the */5 cron was removed; GPS/trips/fuel now refresh on demand from the Fleet page (`runIntanglesPoll` via fleet actions). Re-add to `vercel.json` on Pro if unattended detection is needed. |
 
 > Note: Vercel **Hobby** runs each cron job at most once a day (sub-daily schedules are Pro);
