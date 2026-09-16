@@ -109,12 +109,36 @@ export async function postPayrollRun(runId: string): Promise<ActionResult<{ jour
   return { ok: true, journalEntryId: data as string };
 }
 
-export async function payPayrollLine(lineId: string, payFrom: string = "bank"): Promise<ActionResult<{ journalEntryId: string }>> {
+export async function payPayrollLine(lineId: string, payFrom: "cash" | "bank" = "bank"): Promise<ActionResult<{ journalEntryId: string }>> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("pay_payroll_line", { p_line: lineId, p_pay_from: payFrom });
   if (error) return fail("payPayrollLine", error.message);
   revalidatePath("/payroll");
   return { ok: true, journalEntryId: data as string };
+}
+
+export async function payWorker(input: {
+  entityType: "user" | "worker";
+  entityId: string;
+  kind: "payment" | "advance";
+  amount: number;
+  method: "cash" | "bank";
+  note?: string;
+  date?: string;
+}): Promise<ActionResult<{ id: string }>> {
+  const supabase = createClient();
+  const { data, error } = await (supabase.rpc as any)("pay_worker", {
+    p_entity_type: input.entityType,
+    p_entity_id: input.entityId,
+    p_kind: input.kind,
+    p_amount: input.amount,
+    p_method: input.method,
+    p_note: input.note?.trim() ? input.note.trim() : null,
+    p_date: input.date ?? new Date().toISOString().slice(0, 10),
+  });
+  if (error) return fail("payWorker", error.message);
+  revalidatePath("/payroll");
+  return { ok: true, id: data as string };
 }
 
 export async function getPayrollRunDetail(
@@ -183,99 +207,62 @@ export async function getPayrollRunDetail(
   return { ok: true, run, lines };
 }
 
+export interface DailyAttendanceRow {
+  entityType: "user" | "worker";
+  entityId: string;
+  present: boolean;
+  status: string;
+  hours: number;
+  otHours: number;
+  shift: string | null;
+  note: string | null;
+}
+
 export async function saveDailyAttendance(
   date: string,
   shiftTemplateId: string | null,
-  workers: {
-    entityType: "user" | "worker";
-    entityId: string;
-    present: boolean;
-    status: string;
-    hours: number;
-    otHours: number;
-    shift: string | null;
-    note: string | null;
-  }[],
-): Promise<ActionResult> {
+  rows: DailyAttendanceRow[],
+): Promise<
+  ActionResult<{ creditedTotal: number; lines: { entity: string; id: string; amount: number }[] }>
+> {
   const supabase = createClient();
 
-  await supabase.from("calendar_days").upsert(
-    { date, is_working: true },
-    { onConflict: "date" },
-  );
-
-  for (const w of workers) {
-    if (!w.present) continue;
-
-    const isUser = w.entityType === "user";
-
-    if (isUser) {
-      const { error: attErr } = await supabase.from("attendance").upsert(
-        {
-          user_id: w.entityId,
-          work_date: date,
-          shift: w.shift,
-          hours: w.hours,
-          ot_hours: w.otHours,
-          status: w.status as Database["public"]["Enums"]["attendance_status"],
-          note: w.note,
-        },
-        { onConflict: "user_id, work_date" },
-      );
-      if (attErr) return fail("saveDailyAttendance:attendance", attErr.message);
-    } else {
-      const { error: attErr } = await supabase.from("attendance").upsert(
-        {
-          worker_id: w.entityId,
-          work_date: date,
-          shift: w.shift,
-          hours: w.hours,
-          ot_hours: w.otHours,
-          status: w.status as Database["public"]["Enums"]["attendance_status"],
-          note: w.note,
-        },
-        { onConflict: "worker_id, work_date" },
-      );
-      if (attErr) return fail("saveDailyAttendance:attendance", attErr.message);
-    }
-
-    let payAmount = 0;
-    const { data: mappings } = await supabase
-      .from("pay_mappings")
-      .select("hours_min, hours_max, amount")
-      .order("hours_min");
-    if (mappings) {
-      for (const m of mappings) {
-        if (w.hours >= m.hours_min && w.hours < m.hours_max) {
-          payAmount = Number(m.amount);
-          break;
-        }
-      }
-    }
-
-    const { data: att } = await supabase
-      .from("attendance")
-      .select("id")
-      .eq(isUser ? "user_id" : "worker_id", w.entityId)
-      .eq("work_date", date)
+  let shiftName: string | null = null;
+  if (shiftTemplateId) {
+    const { data: tpl } = await supabase
+      .from("shift_templates")
+      .select("name")
+      .eq("id", shiftTemplateId)
       .maybeSingle();
-
-    const txPayload: Record<string, unknown> = {
-      transaction_date: date,
-      type: "attendance_pay",
-      amount: payAmount,
-      reference_id: att?.id ?? null,
-      note: `Attendance ${date} — ${w.hours}h ${w.otHours > 0 ? `(+${w.otHours}h OT)` : ""}`,
-    };
-    txPayload[isUser ? "user_id" : "worker_id"] = w.entityId;
-
-    const { error: txErr } = await (supabase.from("worker_transactions").insert as any)(txPayload);
-    if (txErr) return fail("saveDailyAttendance:transaction", txErr.message);
-    if (txErr) return fail("saveDailyAttendance:transaction", txErr.message);
+    shiftName = (tpl?.name as string) ?? null;
   }
 
+  const pRows = (rows ?? []).filter((r) => r.present).map((r) => ({
+    entity: r.entityType ?? "user",
+    id: r.entityId,
+    status: r.status,
+    hours: Number(r.hours || 0),
+    ot_hours: Number(r.otHours || 0),
+    note: r.note?.trim() ? r.note.trim() : null,
+  }));
+
+  const { data, error } = await (supabase.rpc as any)("save_attendance_day", {
+    p_date: date,
+    p_shift: shiftName,
+    p_rows: pRows,
+  });
+  if (error) return fail("saveDailyAttendance", error.message);
+
   revalidatePath("/payroll");
-  return { ok: true };
+  return {
+    ok: true,
+    creditedTotal: Number(data?.credited_total ?? 0),
+    lines: (data?.lines ?? []).map((l: Record<string, unknown>) => ({
+      entity: l.entity as string,
+      id: l.id as string,
+      amount: Number(l.amount),
+    })),
+  };
 }
 
 export async function recordPayment(

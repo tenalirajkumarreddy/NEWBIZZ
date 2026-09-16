@@ -100,6 +100,15 @@ export interface PayMapping {
   amount: number;
 }
 
+/** First pay_mappings band with hoursMin <= h < hoursMax, else 0. Pure, UI-preview only — the RPC owns money truth. */
+export function payForHours(mappings: PayMapping[], hours: number): number {
+  const h = Number(hours);
+  if (!Number.isFinite(h) || h <= 0) return 0;
+  const sorted = [...mappings].sort((a, b) => a.hoursMin - b.hoursMin);
+  for (const m of sorted) if (h >= m.hoursMin && h < m.hoursMax) return Number(m.amount);
+  return 0;
+}
+
 export interface WorkerBalance {
   userId: string;
   fullName: string;
@@ -146,6 +155,11 @@ export interface DayAttendanceDetail {
   status: string;
   note: string | null;
   payAmount: number | null;
+  /** Worker id when the row belongs to a worker entity (null for users). */
+  workerId?: string | null;
+  /** user_id or worker_id — matches PayrollPerson.entityId for both lanes. */
+  entityId?: string;
+  entityType?: "user" | "worker";
 }
 
 type RawPayConfig = {
@@ -440,12 +454,12 @@ export async function getDayAttendanceDetail(
   const supabase = createClient();
   const res = await supabase
     .from("attendance")
-    .select("id, user_id, shift, hours, ot_hours, status, note, user:users(full_name)")
+    .select("id, user_id, worker_id, shift, hours, ot_hours, status, note, user:users(full_name), w:workers!attendance_worker_id_fkey(full_name)")
     .eq("work_date", date)
     .order("user_id");
   const rows = unwrap(res, [], "getDayAttendanceDetail") as Record<string, unknown>[];
 
-  const userIds = rows.map((r) => r.user_id as string);
+  const userIds = rows.map((r) => r.user_id as string).filter(Boolean);
   let photoMap = new Map<string, string | null>();
   if (userIds.length > 0) {
     const profRes = await supabase
@@ -456,18 +470,28 @@ export async function getDayAttendanceDetail(
     photoMap = new Map(profs.map((p) => [p.user_id, p.photo_url]));
   }
 
-  return rows.map((r) => ({
-    id: r.id as string,
-    userId: r.user_id as string,
-    userName: ((r.user as Record<string, unknown>)?.full_name as string) ?? "—",
-    photoUrl: photoMap.get(r.user_id as string) ?? null,
-    shift: (r.shift as string) ?? null,
-    hours: Number(r.hours),
-    otHours: Number(r.ot_hours),
-    status: r.status as string,
-    note: (r.note as string) ?? null,
-    payAmount: null,
-  }));
+  return rows.map((r) => {
+    const userId = (r.user_id as string) ?? null;
+    const workerId = (r.worker_id as string) ?? null;
+    return {
+      id: r.id as string,
+      userId: r.user_id as string,
+      userName:
+        ((r.user as Record<string, unknown>)?.full_name as string) ??
+        ((r.w as Record<string, unknown>)?.full_name as string) ??
+        "—",
+      photoUrl: userId ? photoMap.get(userId) ?? null : null,
+      shift: (r.shift as string) ?? null,
+      hours: Number(r.hours),
+      otHours: Number(r.ot_hours),
+      status: r.status as string,
+      note: (r.note as string) ?? null,
+      payAmount: null,
+      workerId,
+      entityId: (userId ?? workerId) as string,
+      entityType: workerId ? ("worker" as const) : ("user" as const),
+    };
+  });
 }
 
 export async function getEmployeeProfile(
