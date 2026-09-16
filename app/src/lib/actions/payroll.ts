@@ -126,6 +126,15 @@ export async function payWorker(input: {
   note?: string;
   date?: string;
 }): Promise<ActionResult<{ id: string }>> {
+  if (!Number.isFinite(Number(input.amount)) || Number(input.amount) <= 0) {
+    return { ok: false, error: "Amount must be a positive number" };
+  }
+  if (!input.entityId?.trim()) {
+    return { ok: false, error: "Entity is required" };
+  }
+  if (!["payment", "advance"].includes(input.kind) || !["cash", "bank"].includes(input.method)) {
+    return { ok: false, error: "Invalid payment kind/method" };
+  }
   const supabase = createClient();
   const { data, error } = await (supabase.rpc as any)("pay_worker", {
     p_entity_type: input.entityType,
