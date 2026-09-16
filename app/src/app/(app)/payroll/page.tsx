@@ -3,6 +3,7 @@ import { can } from "@/lib/auth/claims";
 import { Tabs } from "@/components/payroll/Tabs";
 import { DashboardTab } from "./DashboardTab";
 import { WorkersTab } from "./WorkersTab";
+import { PayrollTab } from "./PayrollTab";
 import { SettingsTab } from "./SettingsTab";
 import type { TabId } from "@/components/payroll/Tabs";
 import { PageContainer, PageHeader } from "@/components/ui";
@@ -24,6 +25,7 @@ export default async function PayrollPage({
       <Tabs active={tab} />
       {tab === "dashboard" && <DashboardTab monthParam={monthParam} canManage={canManage} />}
       {tab === "workers" && <WorkersTab canManage={canManage} />}
+      {tab === "payroll" && <PayrollTab canManage={canManage} monthParam={monthParam} />}
       {tab === "settings" && <SettingsTab canManage={canManage} />}
     </PageContainer>
   );
