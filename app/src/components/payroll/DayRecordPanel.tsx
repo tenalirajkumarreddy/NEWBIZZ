@@ -7,18 +7,23 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Input, Select } from "@/components/ui/Field";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { Money } from "@/components/ui/Money";
 import { saveDailyAttendance, markCalendarDay, fetchDayAttendanceDetail } from "@/lib/actions/payroll";
+import { payForHours, type PayMapping } from "@/lib/payroll-bands";
+import { rupeesCompact } from "@/lib/format";
 import type { ShiftTemplate, PayrollPerson, DayAttendanceDetail } from "@/lib/data/payroll";
 
 export function DayRecordPanel({
   date,
   shiftTemplates,
   activeUsers,
+  payMappings,
   canManage,
 }: {
   date: string;
   shiftTemplates: ShiftTemplate[];
   activeUsers: PayrollPerson[];
+  payMappings: PayMapping[];
   canManage: boolean;
 }) {
   const toast = useToast();
@@ -53,10 +58,11 @@ export function DayRecordPanel({
         setLoaded(true);
 
         if (rows.length > 0) {
-          // day already recorded — populate from existing
+          // day already recorded — populate from existing (match on entity id:
+          // worker rows have null userId, so entityId is the shared key)
           setWorkers(
             activeUsers.map((u) => {
-              const match = rows.find((r) => r.userId === u.entityId);
+              const match = rows.find((r) => (r.entityId ?? r.userId) === u.entityId);
               return {
                 entityType: u.entityType,
                 entityId: u.entityId,
@@ -146,13 +152,19 @@ export function DayRecordPanel({
     if (!result.ok) {
       toast.error("Error saving attendance", result.error);
     } else {
-      toast.success("Attendance saved");
+      toast.success("Day saved", `${rupeesCompact(result.creditedTotal)} credited`);
     }
     setSaving(false);
   }
 
   const selectedCount = workers.filter((w) => w.present).length;
   const absentCount = workers.filter((w) => !w.present).length;
+
+  const rowPreview = (w: (typeof workers)[number]) =>
+    w.present && (w.status === "present" || w.status === "half_day")
+      ? payForHours(payMappings, Number(w.hours) || 0)
+      : 0;
+  const creditedPreview = workers.reduce((s, w) => s + rowPreview(w), 0);
 
   return (
     <Panel
@@ -202,6 +214,7 @@ export function DayRecordPanel({
                 <TH className="w-24">Status</TH>
                 <TH numeric className="w-20">Hours</TH>
                 <TH numeric className="w-20">OT</TH>
+                <TH numeric className="w-24">Amount</TH>
                 <TH className="w-28">Note</TH>
               </TR>
             </THead>
@@ -264,6 +277,13 @@ export function DayRecordPanel({
                       <span className="block text-center text-[12px] text-ink-4">—</span>
                     )}
                   </TD>
+                  <TD numeric>
+                    {w.present && (w.status === "present" || w.status === "half_day") ? (
+                      <Money value={payForHours(payMappings, Number(w.hours) || 0)} />
+                    ) : (
+                      <span className="block text-right text-[12px] text-ink-4">—</span>
+                    )}
+                  </TD>
                   <TD>
                     <Input
                       value={w.note}
@@ -278,6 +298,12 @@ export function DayRecordPanel({
             </TBody>
           </Table>
         </div>
+      )}
+
+      {loaded && creditedPreview > 0 && (
+        <p className="text-right text-[11px] text-ink-4">
+          ≈ <Money value={creditedPreview} /> credited on save
+        </p>
       )}
 
       {canManage && (

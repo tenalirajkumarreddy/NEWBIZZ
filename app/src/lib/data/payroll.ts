@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { unwrap } from "./types";
+import type { PayMapping } from "@/lib/payroll-bands";
 
 export interface PayConfigRow {
   userId: string;
@@ -93,21 +94,10 @@ export interface ShiftTemplate {
   totalHours: number;
 }
 
-export interface PayMapping {
-  id: string;
-  hoursMin: number;
-  hoursMax: number;
-  amount: number;
-}
-
-/** First pay_mappings band with hoursMin <= h < hoursMax, else 0. Pure, UI-preview only — the RPC owns money truth. */
-export function payForHours(mappings: PayMapping[], hours: number): number {
-  const h = Number(hours);
-  if (!Number.isFinite(h) || h <= 0) return 0;
-  const sorted = [...mappings].sort((a, b) => a.hoursMin - b.hoursMin);
-  for (const m of sorted) if (h >= m.hoursMin && h < m.hoursMax) return Number(m.amount);
-  return 0;
-}
+// PayMapping + payForHours live in a client-safe module (lib/data/* is server-only,
+// yet DayRecordPanel needs the pure preview lookup). Re-exported here so existing
+// server-side imports keep working.
+export { payForHours, type PayMapping } from "@/lib/payroll-bands";
 
 export interface WorkerBalance {
   userId: string;
@@ -146,7 +136,8 @@ export interface EmployeeProfile {
 
 export interface DayAttendanceDetail {
   id: string | null;
-  userId: string;
+  /** Null for worker-only rows; prefer entityId for identity matching. */
+  userId: string | null;
   userName: string;
   photoUrl: string | null;
   shift: string | null;
@@ -475,7 +466,7 @@ export async function getDayAttendanceDetail(
     const workerId = (r.worker_id as string) ?? null;
     return {
       id: r.id as string,
-      userId: r.user_id as string,
+      userId,
       userName:
         ((r.user as Record<string, unknown>)?.full_name as string) ??
         ((r.w as Record<string, unknown>)?.full_name as string) ??
