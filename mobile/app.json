@@ -3,7 +3,7 @@
     "name": "NEWBIZZ",
     "slug": "newbizz",
     "scheme": "newbizz",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.newbizz.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
