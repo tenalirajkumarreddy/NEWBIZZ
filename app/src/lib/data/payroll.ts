@@ -94,10 +94,10 @@ export interface ShiftTemplate {
   totalHours: number;
 }
 
-// PayMapping + payForHours live in a client-safe module (lib/data/* is server-only,
-// yet DayRecordPanel needs the pure preview lookup). Re-exported here so existing
-// server-side imports keep working.
-export { payForHours, type PayMapping } from "@/lib/payroll-bands";
+// PayMapping + payForHours + previewDailyWage live in a client-safe module
+// (lib/data/* is server-only, yet DayRecordPanel needs the pure preview
+// lookups). Re-exported here so existing server-side imports keep working.
+export { payForHours, previewDailyWage, type PayMapping } from "@/lib/payroll-bands";
 
 export interface WorkerBalance {
   userId: string;
@@ -400,100 +400,151 @@ export interface WagesSummary {
 /**
  * Month-level wages rollup for the Payroll tab summary tiles.
  *
- * Formula (chosen after reading the live schema + SECURITY DEFINER RPCs):
+ * Formula (design pivot: EVERYONE accrues wages daily on the worker_transactions
+ * ledger; the monthly runs flow is retired from the UI):
  * - accrued = Σ worker_transactions.amount where type='attendance_pay' dated in
- *   month (the day-wage/worker lane accruals wages straight onto the ledger)
- *   + Σ total_gross of payroll_runs with status posted|paid whose period_month
- *   = month (the staff lane only accrues on posting; draft/computed runs are
- *   excluded — they are not yet an accounting event).
- * - paidOut = Σ |amount| of ledger rows with type payment|advance dated in month
- *   + Σ payroll_lines.paid_amount whose paid journal (paid_journal_id →
- *   journal_entries.entry_date) falls in month. pay_payroll_line was verified to
- *   write NO worker_transactions row — it only posts a journal and stamps the
- *   line — so the two payment lanes never double-count.
- * - netOwed = Σ signed get_person_balance() over all payroll people (ledger
- *   lane net liability) + Σ (gross − paid_amount) outstanding on posted/paid
- *   runs (staff lane unpaid). Brief said "Σ balances"; that alone would hide the
- *   staff wages-payable, which never touches worker_transactions, so we add it.
+ *   month (all entities — users and workers both credit the ledger per day via
+ *   save_attendance_day).
+ * - paidOut = Σ |amount| of ledger rows with type payment|advance dated in
+ *   month (all entities; both stored negative — pay_worker and recordPayment
+ *   insert -Math.abs).
+ * - netOwed = Σ signed get_person_balance() over all payroll people. The ledger
+ *   is the single source of wage liability now; the signed sum (not max(0,·))
+ *   keeps "NET" honest: advance-heavy people offset outstanding pay, matching
+ *   get_person_balance.
  */
 export async function getWagesSummary(monthFirstDay: string): Promise<WagesSummary> {
   const supabase = createClient();
   const { from, to } = monthRange(monthFirstDay);
 
   type RawLedgerRow = { type: string; amount: number };
-  type RawRunLite = { id: string; status: string; total_gross: number; period_month: string };
-  type RawLineLite = { gross: number; paid_amount: number; paid_journal_id: string | null; run_id: string };
 
-  const [ledgerRes, runsRes, linesRes, balances] = await Promise.all([
+  const [ledgerRes, balances] = await Promise.all([
     supabase
       .from("worker_transactions")
       .select("type, amount")
       .gte("transaction_date", from)
       .lte("transaction_date", to)
       .returns<RawLedgerRow[]>(),
-    supabase
-      .from("payroll_runs")
-      .select("id, status, total_gross, period_month")
-      .in("status", ["posted", "paid"])
-      .returns<RawRunLite[]>(),
-    supabase
-      .from("payroll_lines")
-      .select("gross, paid_amount, paid_journal_id, run_id")
-      .returns<RawLineLite[]>(),
     getWorkersWithBalances(),
   ]);
 
   const ledger = unwrap(ledgerRes, [] as RawLedgerRow[], "getWagesSummary");
-  const runs = unwrap(runsRes, [] as RawRunLite[], "getWagesSummary");
-  const lines = unwrap(linesRes, [] as RawLineLite[], "getWagesSummary");
 
-  const attendanceAccrued = ledger
+  const accrued = ledger
     .filter((r) => r.type === "attendance_pay")
     .reduce((s, r) => s + Number(r.amount), 0);
-  const ledgerPaidOut = ledger
+  const paidOut = ledger
     .filter((r) => r.type === "payment" || r.type === "advance")
     .reduce((s, r) => s + Math.abs(Number(r.amount)), 0);
+  const netOwed = balances.reduce((s, b) => s + b.balance, 0);
 
-  const postedRuns = runs.filter((r) => r.period_month === monthFirstDay);
-  const runsAccrued = postedRuns.reduce((s, r) => s + Number(r.total_gross), 0);
+  return { accrued, paidOut, netOwed };
+}
 
-  // Which line payments landed in the month? payroll_lines has no date column —
-  // the payment date lives on the paid journal entry (journal_entries.entry_date).
-  const journalIds = Array.from(
-    new Set(lines.map((l) => l.paid_journal_id).filter((j): j is string => !!j)),
-  );
-  let runsPaidOut = 0;
-  if (journalIds.length > 0) {
-    const jeRes = await supabase
-      .from("journal_entries")
-      .select("id")
-      .in("id", journalIds)
-      .gte("entry_date", from)
-      .lte("entry_date", to);
-    const inMonth = new Set(
-      unwrap(jeRes, [] as { id: string }[], "getWagesSummary").map((r) => r.id),
-    );
-    runsPaidOut = lines.reduce(
-      (s, l) =>
-        l.paid_journal_id && inMonth.has(l.paid_journal_id)
-          ? s + Number(l.paid_amount)
-          : s,
-      0,
-    );
+export interface PersonMonthStatement {
+  entityType: "user" | "worker";
+  entityId: string;
+  fullName: string;
+  daysPresent: number;
+  daysHalfDay: number;
+  daysLeave: number;
+  daysOff: number;
+  credited: number;
+  paid: number;
+  balance: number;
+}
+
+/**
+ * Per-person monthly statement for the Payroll tab — the runs flow is retired,
+ * so this is the person-level view of the same daily-accrual ledger.
+ *
+ * ONE efficient batch: the roster (list_payroll_people) + the month's
+ * attendance rows + the month's worker_transactions rows, grouped client-side
+ * by entity id, then a get_person_balance rpc per person (batched like
+ * getWorkersWithBalances).
+ * - credited = Σ attendance_pay amounts for the month
+ * - paid     = Σ |payment| + |advance| amounts for the month
+ * - balance  = get_person_balance (signed ledger balance: positive = owed to
+ *   the person, negative = advance-heavy)
+ * - daysOff  = week_off + holiday rows (matches compute_payroll's off-day count)
+ */
+export async function getPersonMonthStatement(
+  monthFirstDay: string,
+): Promise<PersonMonthStatement[]> {
+  const supabase = createClient();
+  const { from, to } = monthRange(monthFirstDay);
+
+  type RawAtt = { user_id: string | null; worker_id: string | null; status: string };
+  type RawLedger = { user_id: string | null; worker_id: string | null; type: string; amount: number };
+
+  const [people, attRes, ledgerRes] = await Promise.all([
+    listPayrollPeople(),
+    supabase
+      .from("attendance")
+      .select("user_id, worker_id, status")
+      .gte("work_date", from)
+      .lte("work_date", to)
+      .returns<RawAtt[]>(),
+    supabase
+      .from("worker_transactions")
+      .select("user_id, worker_id, type, amount")
+      .gte("transaction_date", from)
+      .lte("transaction_date", to)
+      .returns<RawLedger[]>(),
+  ]);
+
+  const att = unwrap(attRes, [] as RawAtt[], "getPersonMonthStatement");
+  const ledger = unwrap(ledgerRes, [] as RawLedger[], "getPersonMonthStatement");
+
+  const dayStats = new Map<string, { present: number; halfDay: number; leave: number; off: number }>();
+  for (const a of att) {
+    const id = a.user_id ?? a.worker_id;
+    if (!id) continue;
+    const s = dayStats.get(id) ?? { present: 0, halfDay: 0, leave: 0, off: 0 };
+    if (a.status === "present") s.present += 1;
+    else if (a.status === "half_day") s.halfDay += 1;
+    else if (a.status === "leave") s.leave += 1;
+    else if (a.status === "week_off" || a.status === "holiday") s.off += 1;
+    dayStats.set(id, s);
   }
 
-  const openRunIds = new Set(runs.map((r) => r.id));
-  const staffUnsettled = lines
-    .filter((l) => openRunIds.has(l.run_id))
-    .reduce((s, l) => s + Math.max(0, Number(l.gross) - Number(l.paid_amount)), 0);
+  const money = new Map<string, { credited: number; paid: number }>();
+  for (const t of ledger) {
+    const id = t.user_id ?? t.worker_id;
+    if (!id) continue;
+    const m = money.get(id) ?? { credited: 0, paid: 0 };
+    if (t.type === "attendance_pay") m.credited += Number(t.amount);
+    else if (t.type === "payment" || t.type === "advance") m.paid += Math.abs(Number(t.amount));
+    money.set(id, m);
+  }
 
-  const ledgerNetOwed = balances.reduce((s, b) => s + b.balance, 0);
-
-  return {
-    accrued: attendanceAccrued + runsAccrued,
-    paidOut: ledgerPaidOut + runsPaidOut,
-    netOwed: ledgerNetOwed + staffUnsettled,
-  };
+  const out: PersonMonthStatement[] = [];
+  const batchSize = 20;
+  for (let i = 0; i < people.length; i += batchSize) {
+    const batch = people.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(async (p) => {
+        const { data } = await (supabase.rpc as any)("get_person_balance", { p_entity_id: p.entityId });
+        const d = dayStats.get(p.entityId);
+        const m = money.get(p.entityId);
+        return {
+          entityType: p.entityType,
+          entityId: p.entityId,
+          fullName: p.fullName,
+          daysPresent: d?.present ?? 0,
+          daysHalfDay: d?.halfDay ?? 0,
+          daysLeave: d?.leave ?? 0,
+          daysOff: d?.off ?? 0,
+          credited: m?.credited ?? 0,
+          paid: m?.paid ?? 0,
+          balance: Number(data ?? 0),
+        };
+      }),
+    );
+    out.push(...results);
+  }
+  return out;
 }
 
 export async function getWorkerLedger(entityId: string): Promise<WorkerLedgerEntry[]> {

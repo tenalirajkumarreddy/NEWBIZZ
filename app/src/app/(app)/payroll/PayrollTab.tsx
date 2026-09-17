@@ -1,4 +1,4 @@
-import { listPayrollRuns, getWagesSummary } from "@/lib/data/payroll";
+import { getPersonMonthStatement, getWagesSummary } from "@/lib/data/payroll";
 import { PayrollClient } from "./PayrollClient";
 
 function currentMonth() {
@@ -14,7 +14,10 @@ export async function PayrollTab({
   canManage: boolean;
 }) {
   const month = monthParam ?? currentMonth();
-  const [runs, summary] = await Promise.all([listPayrollRuns(), getWagesSummary(month)]);
+  const [statement, summary] = await Promise.all([
+    getPersonMonthStatement(month),
+    getWagesSummary(month),
+  ]);
 
-  return <PayrollClient month={month} runs={runs} summary={summary} canManage={canManage} />;
+  return <PayrollClient month={month} statement={statement} summary={summary} canManage={canManage} />;
 }
