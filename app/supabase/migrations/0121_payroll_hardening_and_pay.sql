@@ -5,7 +5,8 @@
 --   1. save_attendance_day — one RPC for the whole day's roster:
 --      permission ladder (hr.manage ⇒ any date; else attendance.mark +
 --      hr.view + today only), payroll-lock guard, calendar flip,
---      per-entity replace, hours-band credit, audit, jsonb summary.
+--      per-entity replace, daily-wage credit (workers: hours-band;
+--      users: salary/30 + OT with paid-leave rule), audit, jsonb summary.
 --   2. compute_payroll / post_payroll_run / pay_payroll_line — re-emitted
 --      from the live bodies (0121-live-refs capture) with only an
 --      hr.manage gate inserted after `begin`.
@@ -16,19 +17,32 @@
 -- REPLACE-PER-LISTED-ENTITY semantics of save_attendance_day:
 --   every row of p_rows deletes that entity's day-attendance + its
 --   attendance_pay txns, then (if a status is present) re-inserts the
---   attendance row; the band credit is written only for status in
---   ('present','half_day'). A row with null/'' status clears the entity's
---   day. Rows not listed are NEVER touched — a full-day wipe requires the
---   client to list every previously-marked entity (the web panel already
---   sends the whole roster).
+--   attendance row; the wage-credit txn is written only when the computed
+--   amount > 0 (worker lane: band lookup, present/half_day only; user
+--   lane: daily-rate accrual, including paid leave inside the allowance).
+--   A row with null/'' status clears the entity's day. Rows not listed are
+--   NEVER touched — a full-day wipe requires the client to list every
+--   previously-marked entity (the web panel already sends the whole roster).
 --
--- LANES: two independent pay lanes coexist —
+-- LANES (design pivot 2026-09-17): EVERYONE accrues wages daily on the
+-- worker_transactions ledger; the monthly runs lane is retired from the UI
+-- (compute/post/pay stay defined here, gated, for history/reconciliation).
 --   • daily lane:   save_attendance_day → worker_transactions (positive
---     attendance_pay credits; users and workers both, no journal).
+--     attendance_pay credits, users and workers both, no journal).
+--     USER rate   = round(monthly_salary/30, 2) per day (present 1.0 /
+--       half_day 0.5) + round(ot_hourly_rate × ot_hours, 2), from
+--       user_pay_config (missing config ⇒ salary 0 ⇒ credit 0, attendance
+--       row still written). Paid-leave rule: a 'leave' day counts against
+--       the user's paid_leaves allowance — (existing leave rows this month
+--       + 1) <= paid_leaves ⇒ the day pays the FULL daily rate as present,
+--       else the daily component is 0. 'holiday'/'week_off' never count
+--       against the allowance. The OT term is unconditional per the
+--       formula (a non-worked status with ot_hours > 0 still accrues OT).
+--     WORKER rate = pay_mappings hours-band lookup, present/half_day only.
 --   • monthly lane: compute_payroll/post_payroll_run/pay_payroll_line →
 --     payroll_runs/payroll_lines + journal via post_journal (users only;
---     party_type stays 'user'). pay_worker bridges to the ledger for
---     capital cash-outs on either entity kind.
+--     party_type stays 'user'). pay_worker bridges payments to the ledger
+--     for either entity kind.
 -- =====================================================================
 
 -- =====================================================================
@@ -50,6 +64,10 @@ declare
   v_ot        numeric := 0;
   v_note      text;
   v_amount    numeric(12,2);
+  v_salary    numeric(14,2) := 0;
+  v_ot_rate   numeric(12,2) := 0;
+  v_paid_leaves int := 2;
+  v_existing_leaves int := 0;
   v_att       uuid;
   v_lines     jsonb := '[]'::jsonb;
   v_credited  numeric(14,2) := 0;
@@ -126,6 +144,38 @@ begin
 
     if v_status is not null then
       if v_entity = 'user' then
+        -- user config via LEFT-JOIN semantics: a missing config row (or NULL
+        -- columns) means salary 0 ⇒ credit 0 — the attendance row still
+        -- writes. Reset first so a previous loop iteration can't leak into
+        -- a config-less user; coalesce after covers NULL assignment.
+        v_salary      := 0;
+        v_ot_rate     := 0;
+        v_paid_leaves := 2;
+        select coalesce(pc.monthly_salary, 0), coalesce(pc.ot_hourly_rate, 0),
+               coalesce(pc.paid_leaves, 2)
+          into v_salary, v_ot_rate, v_paid_leaves
+          from user_pay_config pc
+         where pc.user_id = v_id;
+        v_salary      := coalesce(v_salary, 0);
+        v_ot_rate     := coalesce(v_ot_rate, 0);
+        v_paid_leaves := coalesce(v_paid_leaves, 2);
+
+        -- paid-leave allowance: count this month's EXISTING leave rows for
+        -- the user, evaluated BEFORE inserting this one (the per-entity
+        -- delete above already removed this entity's prior row for p_date).
+        if v_status = 'leave' then
+          select count(*) into v_existing_leaves
+            from attendance
+           where user_id = v_id
+             and status = 'leave'
+             and work_date >= date_trunc('month', p_date)::date
+             and work_date <  (date_trunc('month', p_date) + interval '1 month')::date;
+        else
+          v_existing_leaves := 0;
+        end if;
+      end if;
+
+      if v_entity = 'user' then
         insert into attendance (user_id, work_date, shift, hours, ot_hours, status, note, created_by)
           values (v_id, p_date, p_shift, v_hours, v_ot, v_status::attendance_status, v_note, v_actor)
           returning id into v_att;
@@ -135,28 +185,52 @@ begin
           returning id into v_att;
       end if;
 
-      -- band credit only for worked statuses (mirrors the web save path:
-      -- positive attendance_pay, reference_id = attendance id)
-      if v_status in ('present','half_day') then
-        select amount into v_amount
-          from pay_mappings
-         where v_hours >= hours_min and v_hours < hours_max
-         order by hours_min
-         limit 1;
-        v_amount := coalesce(v_amount, 0);
-
-        if v_amount > 0 then
-          insert into worker_transactions (user_id, worker_id, type, amount,
-                                           transaction_date, reference_id, note, created_by)
-          values (case when v_entity = 'user'   then v_id end,
-                  case when v_entity = 'worker' then v_id end,
-                  'attendance_pay', v_amount, p_date, v_att,
-                  format('Attendance %s - %sh%s', p_date, v_hours,
-                         case when v_ot > 0 then format(' (+%sh OT)', v_ot) else '' end),
-                  v_actor);
-
-          v_credited := v_credited + v_amount;
+      if v_entity = 'worker' then
+        -- worker lane (unchanged): band credit only for worked statuses
+        if v_status in ('present','half_day') then
+          select amount into v_amount
+            from pay_mappings
+           where v_hours >= hours_min and v_hours < hours_max
+           order by hours_min
+           limit 1;
+          v_amount := coalesce(v_amount, 0);
         end if;
+      else
+        -- user lane (pivot: everyone accrues wages daily on the ledger):
+        --   amount = round(monthly_salary/30, 2)
+        --          × (present 1.0 | half_day 0.5 | else 0.0)
+        --          + round(ot_hourly_rate × ot_hours, 2)
+        -- the OT term is unconditional per the formula — a non-worked
+        -- status with ot_hours > 0 still accrues OT (e.g. holiday OT).
+        v_amount := round(v_salary / 30.0, 2)
+                  * (case v_status
+                       when 'present'  then 1.0
+                       when 'half_day' then 0.5
+                       else 0.0 end)
+                  + round(v_ot_rate * v_ot, 2);
+
+        -- paid-leave rule: a 'leave' day inside the allowance ((existing
+        -- month leaves + 1) <= paid_leaves) pays the FULL daily rate as
+        -- present; beyond it only OT accrues. 'holiday'/'week_off' never
+        -- count against the allowance.
+        if v_status = 'leave' and (v_existing_leaves + 1) <= v_paid_leaves then
+          v_amount := round(v_salary / 30.0, 2) * 1.0 + round(v_ot_rate * v_ot, 2);
+        end if;
+      end if;
+
+      -- ledger credit (mirrors the web save path: positive attendance_pay,
+      -- reference_id = attendance id) — written only when amount > 0
+      if v_amount > 0 then
+        insert into worker_transactions (user_id, worker_id, type, amount,
+                                         transaction_date, reference_id, note, created_by)
+        values (case when v_entity = 'user'   then v_id end,
+                case when v_entity = 'worker' then v_id end,
+                'attendance_pay', v_amount, p_date, v_att,
+                format('Attendance %s - %sh%s', p_date, v_hours,
+                       case when v_ot > 0 then format(' (+%sh OT)', v_ot) else '' end),
+                v_actor);
+
+        v_credited := v_credited + v_amount;
       end if;
     end if;
 
