@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { UserPlus, ChevronRight, CalendarDays } from "lucide-react-native";
+import { UserPlus, ChevronRight, CalendarDays, Minus, Plus } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -353,29 +353,34 @@ export default function WorkersScreen() {
         </>
       ) : seg === "attendance" ? (
         <>
-          <View style={s.segRow}>
-            <Pressable
-              onPress={() => {
-                setYm(ymOf(sel));
-                setMonthOpen(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Pick attendance date"
-              style={({ pressed }) => [s.dateBtn, pressed && { opacity: 0.85 }]}
-            >
-              <CalendarDays size={14} color={t.color.brand} />
-              <Text style={s.dateBtnTxt}>{dateIST(sel)}{isToday ? " · Today" : ""}</Text>
-            </Pressable>
-          </View>
-          <View style={s.segRow} pointerEvents={ro ? "none" : "auto"}>
-            <View style={[s.shiftWrap, ro && { opacity: 0.6 }]}>
-              <DropdownSelect
-                value={shift}
-                options={shiftOptions}
-                onChange={onShiftPick}
-                placeholder="Select shift"
-                label="Shift"
-              />
+          <View style={s.attHeadWrap}>
+            <View style={s.attHead}>
+              <Pressable
+                onPress={() => {
+                  setYm(ymOf(sel));
+                  setMonthOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Pick attendance date"
+                style={({ pressed }) => [s.dateBtn, pressed && { opacity: 0.85 }]}
+              >
+                <CalendarDays size={14} color={t.color.brand} />
+                <Text style={s.dateBtnTxt}>{dateIST(sel)}{isToday ? " · Today" : ""}</Text>
+              </Pressable>
+              <View pointerEvents={ro ? "none" : "auto"}>
+                <View style={[s.shiftWrap, ro && { opacity: 0.6 }]}>
+                  <DropdownSelect
+                    value={shift}
+                    options={shiftOptions}
+                    onChange={onShiftPick}
+                    placeholder="Select shift"
+                    label="Shift"
+                  />
+                </View>
+              </View>
+              {ro ? (
+                <Text style={s.infoStrip}>View only — attendance can be changed on the day itself (or by the office).</Text>
+              ) : null}
             </View>
           </View>
           {rosterQ.isLoading || dayQ.isLoading ? <View style={s.pad}><SkeletonRows rows={5} /></View>
@@ -391,7 +396,7 @@ export default function WorkersScreen() {
                     const dr = drOf(key);
                     const pill = pillFor(p, dr);
                     return (
-                      <View key={key} style={s.card}>
+                      <View key={key} style={[s.card, !dr.on && s.attCardOff]}>
                         <View style={s.headLine}>
                           <View style={s.nameWrap}>
                             <View style={[s.dot, { backgroundColor: p.entityType === "user" ? t.color.brand : t.color.ink4 }]} />
@@ -434,31 +439,71 @@ export default function WorkersScreen() {
                             <View style={s.numRow}>
                               <View style={s.numWrap}>
                                 <Text style={s.numLabel}>HRS</Text>
-                                <TextInput
-                                  style={s.numInput}
-                                  value={String(dr.hours)}
-                                  onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
-                                  editable={!ro}
-                                  keyboardType="decimal-pad"
-                                  accessible
-                                  accessibilityLabel={`${p.fullName} hours`}
-                                />
+                                <View style={s.stepRow}>
+                                  <Pressable
+                                    onPress={() => patch(key, { hours: Math.max(0, dr.hours - 1) })}
+                                    disabled={ro}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Decrease ${p.fullName} hours`}
+                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                  >
+                                    <Minus size={16} color={t.color.ink2} />
+                                  </Pressable>
+                                  <TextInput
+                                    style={[s.numInput, ro && { opacity: 0.6 }]}
+                                    value={String(dr.hours)}
+                                    onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
+                                    editable={!ro}
+                                    keyboardType="decimal-pad"
+                                    accessible
+                                    accessibilityLabel={`${p.fullName} hours`}
+                                  />
+                                  <Pressable
+                                    onPress={() => patch(key, { hours: dr.hours + 1 })}
+                                    disabled={ro}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Increase ${p.fullName} hours`}
+                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                  >
+                                    <Plus size={16} color={t.color.ink2} />
+                                  </Pressable>
+                                </View>
                               </View>
                               <View style={s.numWrap}>
                                 <Text style={s.numLabel}>OT</Text>
-                                <TextInput
-                                  style={s.numInput}
-                                  value={String(dr.ot)}
-                                  onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
-                                  editable={!ro}
-                                  keyboardType="decimal-pad"
-                                  accessible
-                                  accessibilityLabel={`${p.fullName} overtime hours`}
-                                />
+                                <View style={s.stepRow}>
+                                  <Pressable
+                                    onPress={() => patch(key, { ot: Math.max(0, dr.ot - 1) })}
+                                    disabled={ro}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Decrease ${p.fullName} overtime`}
+                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                  >
+                                    <Minus size={16} color={t.color.ink2} />
+                                  </Pressable>
+                                  <TextInput
+                                    style={[s.numInput, ro && { opacity: 0.6 }]}
+                                    value={String(dr.ot)}
+                                    onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
+                                    editable={!ro}
+                                    keyboardType="decimal-pad"
+                                    accessible
+                                    accessibilityLabel={`${p.fullName} overtime hours`}
+                                  />
+                                  <Pressable
+                                    onPress={() => patch(key, { ot: dr.ot + 1 })}
+                                    disabled={ro}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Increase ${p.fullName} overtime`}
+                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                  >
+                                    <Plus size={16} color={t.color.ink2} />
+                                  </Pressable>
+                                </View>
                               </View>
                             </View>
                             <TextInput
-                              style={s.noteInput}
+                              style={[s.noteInput, ro && { opacity: 0.6 }]}
                               value={dr.note}
                               onChangeText={(v) => patch(key, { note: v })}
                               editable={!ro}
@@ -473,28 +518,26 @@ export default function WorkersScreen() {
                     );
                   })}
                 </View>
-                {isToday ? (
-                  <View style={s.footer}>
+                <View style={s.footer}>
+                  <View style={s.footCard}>
                     <Text style={s.footTxt}>
-                      Present {presentN} · Half {halfN} · {moneyINR(dayTotal)} today
+                      Present {presentN} · Half {halfN} · <Text style={s.footAmt}>{moneyINR(dayTotal)}</Text> today
                     </Text>
-                    <Pressable
-                      onPress={() => void onSaveDay()}
-                      disabled={!isToday || onN === 0 || busySave}
-                      accessibilityRole="button"
-                      accessibilityLabel="Save attendance day"
-                      style={({ pressed }) => [
-                        s.saveBtn,
-                        (!isToday || onN === 0 || busySave) && { opacity: 0.5 },
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Text style={s.saveTxt}>{busySave ? "Saving…" : "Save day"}</Text>
-                    </Pressable>
                   </View>
-                ) : (
-                  <Text style={s.caption}>View only — attendance can be changed on the day itself (or by the office).</Text>
-                )}
+                  <Pressable
+                    onPress={() => void onSaveDay()}
+                    disabled={!isToday || onN === 0 || busySave}
+                    accessibilityRole="button"
+                    accessibilityLabel="Save attendance day"
+                    style={({ pressed }) => [
+                      s.saveBtn,
+                      (!isToday || onN === 0 || busySave) && { opacity: 0.5 },
+                      pressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    <Text style={s.saveTxt}>{busySave ? "Saving…" : "Save day"}</Text>
+                  </Pressable>
+                </View>
               </>
             )}
         </>
@@ -640,11 +683,22 @@ const useStyles = () => {
     },
     addBtnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, color: t.color.ink },
     dateBtn: {
-      flex: 1, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
+      minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
       backgroundColor: t.color.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
     },
     dateBtnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, color: t.color.ink },
-    shiftWrap: { flex: 1 },
+    shiftWrap: { width: "100%" },
+    attHeadWrap: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md },
+    attHead: {
+      backgroundColor: t.color.surface, borderRadius: tokens.radius.lg, borderWidth: 1,
+      borderColor: t.color.line, padding: tokens.space.md, gap: tokens.space.sm, ...tokens.shadow.card,
+    },
+    infoStrip: {
+      color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
+      backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
+      borderRadius: tokens.radius.md, paddingHorizontal: tokens.space.md,
+      paddingVertical: tokens.space.sm, textAlign: "center",
+    },
     list: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md, gap: tokens.space.sm },
     pad: { padding: tokens.space.lg },
     card: {
@@ -674,30 +728,43 @@ const useStyles = () => {
     docNo: { color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, fontVariant: ["tabular-nums"] },
     pill: {
       color: t.color.grn, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
-      fontVariant: ["tabular-nums"],
+      fontVariant: ["tabular-nums"], paddingHorizontal: tokens.space.sm,
+      paddingVertical: 3, borderRadius: tokens.radius.full, overflow: "hidden",
+      backgroundColor: t.color.grnWash, textAlign: "right",
     },
+    attCardOff: { backgroundColor: t.color.fill },
     attCtlRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
     onOff: {
-      minWidth: 48, minHeight: 32, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
+      minWidth: 48, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
       backgroundColor: t.color.fill, alignItems: "center", justifyContent: "center", paddingHorizontal: tokens.space.sm,
     },
     onOffOn: { backgroundColor: t.color.grnWash, borderColor: t.color.grn },
     onOffTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
     onOffTxtOn: { color: t.color.grn },
-    chipRow: { flex: 1, flexDirection: "row", flexWrap: "wrap", gap: tokens.space.xs },
-    chip: {
-      minWidth: 40, minHeight: 32, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
-      backgroundColor: t.color.fill, alignItems: "center", justifyContent: "center", paddingHorizontal: tokens.space.sm,
+    chipRow: {
+      flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 3,
+      backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
+      borderRadius: tokens.radius.md, padding: 3,
     },
-    chipOn: { backgroundColor: t.color.ink, borderColor: t.color.ink },
+    chip: {
+      flex: 1, minWidth: 44, minHeight: 44, borderRadius: tokens.radius.sm,
+      alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+    },
+    chipOn: { backgroundColor: t.color.surface, ...tokens.shadow.card },
     chipTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-    chipTxtOn: { color: t.color.surface },
+    chipTxtOn: { color: t.color.brand },
     numRow: { flexDirection: "row", gap: tokens.space.sm },
     numWrap: { flex: 1, gap: 2 },
     numLabel: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow, letterSpacing: 0.6 },
+    stepRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
+    stepBtn: {
+      minWidth: 44, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1,
+      borderColor: t.color.line, backgroundColor: t.color.surface,
+      alignItems: "center", justifyContent: "center",
+    },
     numInput: {
-      minHeight: 44, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
-      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.md,
+      flex: 1, minHeight: 44, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
+      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.md, textAlign: "center",
       color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"],
     },
     noteInput: {
@@ -706,19 +773,24 @@ const useStyles = () => {
       color: t.color.ink, fontFamily: tokens.font.sans, fontSize: tokens.size.sm,
     },
     footer: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md, gap: tokens.space.sm },
+    footCard: {
+      backgroundColor: t.color.surface, borderWidth: 1, borderColor: t.color.line,
+      borderRadius: tokens.radius.md, paddingVertical: tokens.space.sm,
+      paddingHorizontal: tokens.space.md,
+    },
     footTxt: {
       color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs,
       fontVariant: ["tabular-nums"], textAlign: "center",
+    },
+    footAmt: {
+      color: t.color.grn, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
+      fontVariant: ["tabular-nums"],
     },
     saveBtn: {
       minHeight: 48, borderRadius: tokens.radius.md, backgroundColor: t.color.brand,
       alignItems: "center", justifyContent: "center",
     },
     saveTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
-    caption: {
-      color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
-      paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.sm,
-    },
     payCard: { padding: tokens.space.md, gap: tokens.space.xs },
     payChevron: { position: "absolute", right: tokens.space.md, bottom: tokens.space.md },
     payLine: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm, minHeight: 40 },
