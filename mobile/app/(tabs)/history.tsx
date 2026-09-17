@@ -3,7 +3,7 @@ import { View, Text, Pressable, Alert, StyleSheet, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import {
-  ArrowDown, ArrowLeftRight, ArrowUp, Ban, Check, FileText, ReceiptText, Wallet, X,
+  ArrowDown, ArrowLeftRight, ArrowUp, Ban, Check, Factory, FileText, History, PackagePlus, ReceiptText, Wallet, X,
 } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
@@ -18,6 +18,8 @@ import { friendlyError } from "@/lib/rpc";
 import { roleLabel } from "@/lib/claims";
 import { respondTransfer, cancelTransfer, useMyCustody, type CustodyRow } from "@/data/transfers";
 import { useMyActivity } from "@/data/activity";
+import { useMyRuns, useStaff } from "@/data/operator";
+import { mergeOperatorActivity, type OpActivityRow } from "@/lib/opHistory";
 import { useMyExpenses, type MyExpenseRow } from "@/data/expenses";
 import { useTransactionImages, imageSignedUrl, deleteTransactionImage } from "@/data/attachments";
 import { PressCard } from "@/components/PressCard";
@@ -27,6 +29,7 @@ import { qk } from "@/data/keys";
 import { moneyINR, dateIST, timeAgoIST } from "@/lib/format";
 import { BalanceOverview } from "@/features/history/BalanceOverview";
 import { HandoverSheet, type HandoverMode } from "@/features/history/HandoverSheet";
+import { StockHandoverSheet } from "@/features/history/StockHandoverSheet";
 import { ExpenseSheet } from "@/features/history/ExpenseSheet";
 import { useTodayKpis } from "@/data/sales";
 import { tokens } from "@/theme/tokens";
@@ -36,33 +39,19 @@ type Segment = "activity" | "handovers" | "expenses";
 
 interface DayGroup {
   day: string;
-  rows: {
-    key: string;
-    kind: "sale" | "payment";
-    docNo: string;
-    name: string | null;
-    amount: number;
-    createdAt: string;
-  }[];
+  rows: OpActivityRow[];
 }
 
-function groupByDay(rows: ReturnType<typeof useMyActivity>["data"]): DayGroup[] {
+function groupByDay(rows: OpActivityRow[]): DayGroup[] {
   const groups = new Map<string, DayGroup>();
-  for (const r of rows ?? []) {
+  for (const r of rows) {
     const day = dateIST(r.createdAt);
     let g = groups.get(day);
     if (!g) {
       g = { day, rows: [] };
       groups.set(day, g);
     }
-    g.rows.push({
-      key: r.id,
-      kind: r.kind,
-      docNo: r.docNo,
-      name: r.name,
-      amount: r.amount,
-      createdAt: r.createdAt,
-    });
+    g.rows.push(r);
   }
   return [...groups.values()];
 }
@@ -234,14 +223,40 @@ function ExpenseRowItem({ e, onOpen }: { e: MyExpenseRow; onOpen: () => void }) 
   );
 }
 
+/**
+ * Compact overview for roles without cash.transfer (operators): no cash
+ * KPIs or handover/deposit actions — just the live stock-handover count.
+ */
+function StockCustodyStat({ count }: { count: number }) {
+  const { palette: t } = useTheme();
+  const s = useStyles();
+  return (
+    <View style={s.custodyCard}>
+      <View style={[s.custodyIcon, { backgroundColor: t.color.brandWash }]}>
+        <PackagePlus size={16} color={t.color.brand} />
+      </View>
+      <View style={s.custodyMain}>
+        <Text style={s.custodyLabel}>My stock custody</Text>
+        <Text style={s.custodySub} numberOfLines={2}>
+          {count === 0
+            ? "No stock handovers in the last 30 days."
+            : `${count} stock handover${count === 1 ? "" : "s"} in the last 30 days.`}
+        </Text>
+      </View>
+      <Text style={s.custodyCount}>{count}</Text>
+    </View>
+  );
+}
+
 export default function HistoryScreen() {
   const { palette: t } = useTheme();
   const s = useStyles();
-  const { user, claims } = useSession();
+  const { user, claims, can } = useSession();
   const qc = useQueryClient();
   const uid = user?.id ?? "";
   const [seg, setSeg] = useState<Segment>("activity");
   const [sheetMode, setSheetMode] = useState<HandoverMode | null>(null);
+  const [stockOpen, setStockOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detail, setDetail] = useState<
@@ -249,27 +264,60 @@ export default function HistoryScreen() {
   >(null);
   const fetching = useIsFetching();
 
+  // Permission-adaptive gates: agents hold cash.transfer + expense.submit;
+  // operators hold production.run + stock.transfer. Every conditional below
+  // is additive — a holder of the agent permission set sees today's page.
+  const canRun = can("production.run");
+  const canCash = can("cash.transfer");
+  const canStock = can("stock.transfer");
+  const canExpense = can("expense.submit");
+
   const kpis = useTodayKpis();
   const activity = useMyActivity();
+  const runs = useMyRuns();
   const custody = useMyCustody();
   const expenses = useMyExpenses();
   const users = useActiveUsers();
+  const staff = useStaff();
 
   const nameMap = useMemo(() => {
     const m = new Map<string, string>();
     for (const u of users.data ?? []) m.set(u.id, u.full_name);
+    for (const w of staff.data ?? []) if (!m.has(w.id)) m.set(w.id, w.name);
     return m;
-  }, [users.data]);
+  }, [users.data, staff.data]);
 
-  const dayGroups = useMemo(() => groupByDay(activity.data), [activity.data]);
+  const dayGroups = useMemo(
+    () =>
+      groupByDay(
+        canRun
+          ? mergeOperatorActivity(activity.data ?? [], runs.data ?? [])
+          : (activity.data ?? []),
+      ),
+    [activity.data, canRun, runs.data],
+  );
+  const actLoading = activity.isLoading || (canRun && runs.isLoading);
+  const actError = activity.isError ? activity.error : canRun && runs.isError ? runs.error : null;
+  const stockCount = useMemo(
+    () => (custody.data ?? []).filter((r) => r.type === "stock").length,
+    [custody.data],
+  );
 
   async function onRespond(id: string, accept: boolean) {
     if (busyId) return;
     setBusyId(id);
     try {
       await respondTransfer(id, accept);
-      await qc.invalidateQueries({ queryKey: qk.custody() });
-      Toast.show({ type: "success", text1: accept ? "Cash received" : "Transfer rejected" });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.custody() }),
+        qc.invalidateQueries({ queryKey: qk.stockLevels() }),
+        qc.invalidateQueries({ queryKey: qk.opTodayProduction() }),
+      ]);
+      const row = custody.data?.find((r) => r.transfer_id === id);
+      Toast.show({
+        type: "success",
+        text1: accept ? (row?.type === "stock" ? "Handover accepted" : "Cash received") : "Transfer rejected",
+      });
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not respond", text2: friendlyError(e) });
     } finally {
@@ -289,7 +337,11 @@ export default function HistoryScreen() {
             setBusyId(id);
             try {
               await cancelTransfer(id);
-              await qc.invalidateQueries({ queryKey: qk.custody() });
+              await Promise.all([
+                qc.invalidateQueries({ queryKey: qk.custody() }),
+                qc.invalidateQueries({ queryKey: qk.stockLevels() }),
+                qc.invalidateQueries({ queryKey: qk.opTodayProduction() }),
+              ]);
               Toast.show({ type: "success", text1: "Transfer cancelled" });
             } catch (e) {
               Toast.show({ type: "error", text1: "Could not cancel", text2: friendlyError(e) });
@@ -306,8 +358,11 @@ export default function HistoryScreen() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: qk.today() }),
       qc.invalidateQueries({ queryKey: qk.activity() }),
+      qc.invalidateQueries({ queryKey: qk.myRuns() }),
       qc.invalidateQueries({ queryKey: qk.custody() }),
       qc.invalidateQueries({ queryKey: qk.expenses() }),
+      qc.invalidateQueries({ queryKey: qk.stockLevels() }),
+      qc.invalidateQueries({ queryKey: qk.opTodayProduction() }),
     ]);
   }
 
@@ -316,30 +371,40 @@ export default function HistoryScreen() {
       <GradientHeader title="History" subtitle={roleLabel(claims)} right={<HeaderRight />} />
 
       <View style={s.body}>
-        <BalanceOverview
-          salesTotal={kpis.data?.salesTotal ?? 0}
-          collectedTotal={kpis.data?.collectedTotal ?? 0}
-          onHandover={() => openSheet("handover")}
-          onDeposit={() => openSheet("deposit")}
-          onExpense={() => setExpenseOpen(true)}
-        />
+        {canCash ? (
+          <BalanceOverview
+            salesTotal={kpis.data?.salesTotal ?? 0}
+            collectedTotal={kpis.data?.collectedTotal ?? 0}
+            onHandover={() => openSheet("handover")}
+            onDeposit={() => openSheet("deposit")}
+            onExpense={() => setExpenseOpen(true)}
+          />
+        ) : (
+          <StockCustodyStat count={stockCount} />
+        )}
 
         <View style={s.segWrap}>
           <SegmentBtn label="Activity" active={seg === "activity"} onPress={() => setSeg("activity")} />
           <SegmentBtn label="Handovers" active={seg === "handovers"} onPress={() => setSeg("handovers")} />
-          <SegmentBtn label="Expenses" active={seg === "expenses"} onPress={() => setSeg("expenses")} />
+          {canExpense ? (
+            <SegmentBtn label="Expenses" active={seg === "expenses"} onPress={() => setSeg("expenses")} />
+          ) : null}
         </View>
 
         {seg === "activity" ? (
-          activity.isLoading ? (
+          actLoading ? (
             <SkeletonRows rows={4} />
-          ) : activity.isError ? (
-            <EmptyState title="Could not load activity" message={friendlyError(activity.error)} />
+          ) : actError ? (
+            <EmptyState title="Could not load activity" message={friendlyError(actError)} />
           ) : dayGroups.length === 0 ? (
             <EmptyState
-              icon={ReceiptText}
+              icon={canRun ? History : ReceiptText}
               title="No recent activity"
-              message="Sales and collections from the last 7 days will appear here."
+              message={
+                canRun
+                  ? "Your runs, sales and collections from recent days will appear here."
+                  : "Sales and collections from the last 7 days will appear here."
+              }
             />
           ) : (
             <View style={s.list}>
@@ -348,14 +413,23 @@ export default function HistoryScreen() {
                   <Text style={s.dayLabel}>{g.day}</Text>
                   <View style={s.dayCard}>
                     {g.rows.map((r) => (
-                      <View key={r.key} style={s.actRow}>
+                      <View key={`${r.kind}-${r.id}`} style={s.actRow}>
                         <View
                           style={[
                             s.actChip,
-                            { backgroundColor: r.kind === "sale" ? t.color.brandWash : t.color.grnWash },
+                            {
+                              backgroundColor:
+                                r.kind === "run"
+                                  ? t.color.ambWash
+                                  : r.kind === "sale"
+                                    ? t.color.brandWash
+                                    : t.color.grnWash,
+                            },
                           ]}
                         >
-                          {r.kind === "sale" ? (
+                          {r.kind === "run" ? (
+                            <Factory size={13} color={t.color.amb} />
+                          ) : r.kind === "sale" ? (
                             <FileText size={13} color={t.color.brand} />
                           ) : (
                             <ReceiptText size={13} color={t.color.grn} />
@@ -363,7 +437,10 @@ export default function HistoryScreen() {
                         </View>
                         <View style={s.actMain}>
                           <View style={s.actDocRow}>
-                            <StatusBadge label={r.kind === "sale" ? "Sale" : "Payment"} tone={r.kind === "sale" ? "brand" : "grn"} />
+                            <StatusBadge
+                              label={r.kind === "run" ? "Run" : r.kind === "sale" ? "Sale" : "Payment"}
+                              tone={r.kind === "run" ? "amb" : r.kind === "sale" ? "brand" : "grn"}
+                            />
                             <Text style={s.actDocNo}>{r.docNo}</Text>
                           </View>
                           <Text style={s.actName} numberOfLines={1}>{r.name ?? "—"}</Text>
@@ -371,11 +448,18 @@ export default function HistoryScreen() {
                         <Text
                           style={[
                             s.actAmount,
-                            { color: r.kind === "sale" ? t.color.brand : t.color.grn },
+                            {
+                              color:
+                                r.kind === "run"
+                                  ? t.color.ink2
+                                  : r.kind === "sale"
+                                    ? t.color.brand
+                                    : t.color.grn,
+                            },
                           ]}
                           numberOfLines={1}
                         >
-                          {moneyINR(r.amount)}
+                          {r.kind === "run" ? `${r.amount.toLocaleString("en-IN")} units` : moneyINR(r.amount)}
                         </Text>
                       </View>
                     ))}
@@ -385,33 +469,52 @@ export default function HistoryScreen() {
             </View>
           )
         ) : seg === "handovers" ? (
-          custody.isLoading ? (
-            <SkeletonRows rows={4} />
-          ) : custody.isError ? (
-            <EmptyState title="Could not load handovers" message={friendlyError(custody.error)} />
-          ) : (custody.data?.length ?? 0) === 0 ? (
-            <EmptyState
-              icon={ArrowLeftRight}
-              title="No handovers yet"
-              message="Cash handovers and bank deposits you send or receive will appear here."
-            />
-          ) : (
-            <View style={s.list}>
-              {(custody.data ?? []).map((tr) => (
-                <TransferRowItem
-                  key={tr.transfer_id}
-                  row={tr}
-                  onOpen={() => setDetail({ type: "transfer", row: tr })}
-                  fromName={nameMap.get(tr.from_user_id) ?? shortId(tr.from_user_id)}
-                  toName={tr.to_user_id ? nameMap.get(tr.to_user_id) ?? shortId(tr.to_user_id) : "Bank"}
-                  uid={uid}
-                  busy={busyId != null}
-                  onRespond={(id, accept) => void onRespond(id, accept)}
-                  onCancel={onCancel}
-                />
-              ))}
-            </View>
-          )
+          <>
+            {canStock ? (
+              <View style={s.handoverBar}>
+                <Pressable
+                  onPress={() => setStockOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create stock handover"
+                  style={({ pressed }) => [s.handoverBtn, pressed && { opacity: 0.8 }]}
+                >
+                  <PackagePlus size={14} color={t.color.brand} />
+                  <Text style={s.handoverBtnTxt}>+ Stock handover</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {custody.isLoading ? (
+              <SkeletonRows rows={4} />
+            ) : custody.isError ? (
+              <EmptyState title="Could not load handovers" message={friendlyError(custody.error)} />
+            ) : (custody.data?.length ?? 0) === 0 ? (
+              <EmptyState
+                icon={ArrowLeftRight}
+                title="No handovers yet"
+                message={
+                  canStock
+                    ? "Stock and cash handovers you send or receive will appear here."
+                    : "Cash handovers and bank deposits you send or receive will appear here."
+                }
+              />
+            ) : (
+              <View style={s.list}>
+                {(custody.data ?? []).map((tr) => (
+                  <TransferRowItem
+                    key={tr.transfer_id}
+                    row={tr}
+                    onOpen={() => setDetail({ type: "transfer", row: tr })}
+                    fromName={tr.from_user_id ? nameMap.get(tr.from_user_id) ?? shortId(tr.from_user_id) : "Warehouse"}
+                    toName={tr.to_user_id ? nameMap.get(tr.to_user_id) ?? shortId(tr.to_user_id) : "Bank"}
+                    uid={uid}
+                    busy={busyId != null}
+                    onRespond={(id, accept) => void onRespond(id, accept)}
+                    onCancel={onCancel}
+                  />
+                ))}
+              </View>
+            )}
+          </>
         ) : expenses.isLoading ? (
           <SkeletonRows rows={4} />
         ) : expenses.isError ? (
@@ -435,8 +538,15 @@ export default function HistoryScreen() {
         )}
       </View>
 
-      <HandoverSheet visible={sheetMode != null} mode={sheetMode ?? "handover"} onClose={() => setSheetMode(null)} />
-      <ExpenseSheet visible={expenseOpen} onClose={() => setExpenseOpen(false)} />
+      {canCash ? (
+        <HandoverSheet visible={sheetMode != null} mode={sheetMode ?? "handover"} onClose={() => setSheetMode(null)} />
+      ) : null}
+      {canStock ? (
+        <StockHandoverSheet visible={stockOpen} onClose={() => setStockOpen(false)} />
+      ) : null}
+      {canExpense ? (
+        <ExpenseSheet visible={expenseOpen} onClose={() => setExpenseOpen(false)} />
+      ) : null}
       <TxnDetailSheet detail={detail} uid={uid} onClose={() => setDetail(null)} />
     </Screen>
   );
@@ -656,6 +766,56 @@ const useStyles = () => {
   segBtnActive: { backgroundColor: t.color.surface, ...t.shadow.card },
   segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   segTxtActive: { color: t.color.brand },
+  custodyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.space.md,
+    backgroundColor: t.color.surface,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: t.color.line,
+    padding: tokens.space.md,
+    ...t.shadow.card,
+  },
+  custodyIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: tokens.radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  custodyMain: { flex: 1, minWidth: 0 },
+  custodyLabel: {
+    color: t.color.ink,
+    fontFamily: tokens.font.sansSemi,
+    fontSize: tokens.size.sm,
+  },
+  custodySub: {
+    color: t.color.ink3,
+    fontFamily: tokens.font.sans,
+    fontSize: tokens.size.xs,
+    marginTop: 1,
+  },
+  custodyCount: {
+    color: t.color.brand,
+    fontFamily: tokens.font.monoBold,
+    fontSize: tokens.size.lg,
+    fontVariant: ["tabular-nums"],
+  },
+  handoverBar: { flexDirection: "row" },
+  handoverBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: t.color.line,
+    backgroundColor: t.color.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  handoverBtnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, color: t.color.ink },
   list: { gap: tokens.space.sm },
   dayGroup: { gap: tokens.space.xs },
   dayLabel: {

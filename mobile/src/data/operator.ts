@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { qk } from "./keys";
-import type { Database } from "@/lib/db-types";
 import { todayIST } from "@/lib/format";
 import { rpc, RpcError } from "@/lib/rpc";
 import { isoDaysAgo } from "./transfers";
@@ -103,35 +102,6 @@ export function useStaff() {
       ];
     },
   });
-}
-
-export interface AttendanceMark {
-  entityType: "user" | "worker";
-  entityId: string;
-  status: "present" | "absent" | "half_day" | "leave" | "holiday" | "week_off";
-  hours: number;
-  otHours: number;
-}
-
-/** Upsert today's attendance rows. Only today is permitted server-side. */
-export async function markAttendance(rows: AttendanceMark[]): Promise<void> {
-  const date = todayIST();
-  for (const r of rows) {
-    const base = {
-      work_date: date,
-      status: r.status,
-      hours: r.hours,
-      ot_hours: r.otHours,
-    };
-    const payload: Database["public"]["Tables"]["attendance"]["Insert"] =
-      r.entityType === "user"
-        ? { ...base, user_id: r.entityId, worker_id: null }
-        : { ...base, worker_id: r.entityId, user_id: null };
-    const { error } = await supabase.from("attendance").upsert(payload, {
-      onConflict: r.entityType === "user" ? "user_id,work_date" : "worker_id,work_date",
-    });
-    if (error) throw error;
-  }
 }
 
 export interface AttendanceTodayRow {

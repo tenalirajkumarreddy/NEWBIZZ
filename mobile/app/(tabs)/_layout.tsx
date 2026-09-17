@@ -19,7 +19,6 @@ import OrdersScreen from "./orders";
 import InventoryScreen from "./inventory";
 import ProductionScreen from "./production";
 import WorkersScreen from "./workers";
-import HistoryOpScreen from "./history-op";
 import { useMyCustody } from "@/data/transfers";
 import { useJobCards } from "@/data/production";
 import { useOrders } from "@/data/sales";
@@ -46,7 +45,7 @@ const OPERATOR_SCREENS: Record<string, ComponentType> = {
   inventory: InventoryScreen,
   production: ProductionScreen,
   workers: WorkersScreen,
-  history: HistoryOpScreen,
+  history: HistoryScreen,
 };
 
 export default function TabsLayout() {
