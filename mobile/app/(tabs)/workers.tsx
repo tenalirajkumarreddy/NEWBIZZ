@@ -13,6 +13,7 @@ import { Sheet } from "@/components/Sheet";
 import { PressCard } from "@/components/PressCard";
 import { DropdownSelect } from "@/components/DropdownSelect";
 import { MonthSheet } from "@/components/MonthSheet";
+import { WorkerSheet, balancePillText } from "@/features/workers/WorkerSheet";
 import { useSession } from "@/lib/session";
 import { roleLabel } from "@/lib/claims";
 import { friendlyError } from "@/lib/rpc";
@@ -25,6 +26,7 @@ import {
 import {
   useShiftTemplates, usePayMappings, usePayrollPeople, useUserDailyRates,
   useAttendanceForDate, useCalendarDays, saveAttendanceDay,
+  useWorkerBalances,
   type PayrollPerson,
 } from "@/data/payroll";
 import { payForHours, previewDailyWage } from "@/lib/opBuilders";
@@ -228,12 +230,20 @@ export default function WorkersScreen() {
   const [payrollRunId, setPayrollRunId] = useState<string | null>(null);
   const lines = usePayrollLines(payrollRunId);
 
+  // Signed ledger balances per entity id (positive = WH owes them). Enabled
+  // only on the Workers segment — cached for instant return visits.
+  const balancesQ = useWorkerBalances(seg === "workers");
+  const [selected, setSelected] = useState<{
+    entityType: "user" | "worker"; entityId: string; entityName: string;
+  } | null>(null);
+
   function invalidateWorkers() {
     void qc.invalidateQueries({ queryKey: qk.opStaff() });
     void qc.invalidateQueries({ queryKey: qk.opAttendanceToday() });
     void qc.invalidateQueries({ queryKey: qk.opPayrollRuns() });
     void qc.invalidateQueries({ queryKey: qk.payrollPeople() });
     void qc.invalidateQueries({ queryKey: qk.attendanceDay(sel) });
+    void qc.invalidateQueries({ queryKey: qk.workerBalances() });
   }
 
   async function onAddWorker() {
@@ -258,6 +268,7 @@ export default function WorkersScreen() {
       setAddOpen(false);
       void qc.invalidateQueries({ queryKey: qk.opStaff() });
       void qc.invalidateQueries({ queryKey: qk.payrollPeople() });
+      void qc.invalidateQueries({ queryKey: qk.workerBalances() });
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not add worker", text2: friendlyError(e) });
     } finally {
@@ -295,24 +306,48 @@ export default function WorkersScreen() {
               <Text style={s.addBtnTxt}>+ Add worker</Text>
             </Pressable>
           </View>
+          <Text style={s.legend}>Red: warehouse owes them · Green: they owe the warehouse</Text>
           {staff.isLoading ? <View style={s.pad}><SkeletonRows rows={5} /></View>
             : staff.isError ? <EmptyState title="Could not load staff" message={friendlyError(staff.error)} />
             : (staff.data ?? []).length === 0 ? (
               <EmptyState title="No staff yet" message="Add a worker to start the roster." actionLabel="+ Add worker" onAction={() => setAddOpen(true)} />
             ) : (
               <View style={s.list}>
-                {(staff.data ?? []).map((r) => (
-                  <View key={`${r.kind}:${r.id}`} style={s.card}>
-                    <View style={s.headLine}>
-                      <View style={s.nameWrap}>
-                        <View style={[s.dot, { backgroundColor: r.kind === "user" ? t.color.brand : t.color.ink4 }]} />
-                        <Text style={s.name} numberOfLines={1}>{r.name}</Text>
+                {(staff.data ?? []).map((r) => {
+                  const bal = balancesQ.data?.[r.id];
+                  return (
+                    <Pressable
+                      key={`${r.kind}:${r.id}`}
+                      onPress={() => setSelected({ entityType: r.kind, entityId: r.id, entityName: r.name })}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${r.name} details`}
+                      style={({ pressed }) => [s.card, pressed && { opacity: 0.9 }]}
+                    >
+                      <View style={s.headLine}>
+                        <View style={s.nameWrap}>
+                          <View style={[s.dot, { backgroundColor: r.kind === "user" ? t.color.brand : t.color.ink4 }]} />
+                          <Text style={s.name} numberOfLines={1}>{r.name}</Text>
+                        </View>
+                        <StatusBadge label={r.status ?? "active"} />
                       </View>
-                      <StatusBadge label={r.status ?? "active"} />
-                    </View>
-                    <Text style={s.sub}>{r.phone ?? "No phone"}</Text>
-                  </View>
-                ))}
+                      <View style={s.subLine}>
+                        <Text style={[s.sub, s.subFlex]} numberOfLines={1}>{r.phone ?? "No phone"}</Text>
+                        {bal === undefined ? (
+                          <Text style={[s.balPill, s.balMuted]} accessibilityLabel="Loading balance">…</Text>
+                        ) : (
+                          <Text
+                            style={[
+                              s.balPill,
+                              bal > 0 ? s.balRed : bal < 0 ? s.balGrn : s.balMuted,
+                            ]}
+                          >
+                            {balancePillText(bal)}
+                          </Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
             )}
         </>
@@ -576,6 +611,14 @@ export default function WorkersScreen() {
         onClose={() => setMonthOpen(false)}
         onMonth={(y, m) => setYm({ year: y, month0: m })}
       />
+
+      <WorkerSheet
+        visible={selected != null}
+        onClose={() => setSelected(null)}
+        entityType={selected?.entityType ?? null}
+        entityId={selected?.entityId ?? null}
+        entityName={selected?.entityName}
+      />
     </Screen>
   );
 }
@@ -613,6 +656,21 @@ const useStyles = () => {
     dot: { width: 8, height: 8, borderRadius: 4 },
     name: { flex: 1, color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     sub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    subFlex: { flex: 1 },
+    subLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space.sm },
+    legend: {
+      color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
+      paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.sm, textAlign: "center",
+    },
+    balPill: {
+      fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
+      fontVariant: ["tabular-nums"], paddingHorizontal: tokens.space.sm,
+      paddingVertical: 3, borderRadius: tokens.radius.full,
+      overflow: "hidden",
+    },
+    balRed: { color: t.color.red, backgroundColor: t.color.redWash },
+    balGrn: { color: t.color.grn, backgroundColor: t.color.grnWash },
+    balMuted: { color: t.color.ink3, backgroundColor: t.color.fill },
     docNo: { color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, fontVariant: ["tabular-nums"] },
     pill: {
       color: t.color.grn, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
