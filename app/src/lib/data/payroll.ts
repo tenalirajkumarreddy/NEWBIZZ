@@ -216,6 +216,34 @@ export async function listPayConfigs(): Promise<PayConfigRow[]> {
   }));
 }
 
+export interface UserDailyRate {
+  monthlySalary: number | null;
+  otRate: number | null;
+}
+
+/**
+ * user_pay_config rates keyed by user_id, for the day panel's user-row ₹
+ * preview (salary/30 + OT). Null when no config row exists — mirrors the
+ * SQL's LEFT-JOIN semantics (missing config ⇒ salary 0 ⇒ credit 0).
+ */
+export async function listUserDailyRates(): Promise<Record<string, UserDailyRate>> {
+  const supabase = createClient();
+  const res = await supabase
+    .from("user_pay_config")
+    .select("user_id, monthly_salary, ot_hourly_rate")
+    .returns<{ user_id: string | null; monthly_salary: number; ot_hourly_rate: number }[]>();
+  const rows = unwrap(res, [], "listUserDailyRates");
+  const map: Record<string, UserDailyRate> = {};
+  for (const r of rows) {
+    if (!r.user_id) continue;
+    map[r.user_id] = {
+      monthlySalary: Number(r.monthly_salary),
+      otRate: Number(r.ot_hourly_rate),
+    };
+  }
+  return map;
+}
+
 export async function getAttendanceForMonth(month: string): Promise<AttendanceRow[]> {
   const supabase = createClient();
   const { from, to } = monthRange(month);

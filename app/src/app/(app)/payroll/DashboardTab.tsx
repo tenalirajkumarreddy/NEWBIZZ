@@ -3,6 +3,7 @@ import {
   listPayrollPeople,
   getCalendarDays,
   listPayMappings,
+  listUserDailyRates,
 } from "@/lib/data/payroll";
 import { DashboardClient } from "./DashboardClient";
 
@@ -22,11 +23,12 @@ export async function DashboardTab({
   const yr = Number(month.slice(0, 4));
   const mo = Number(month.slice(5, 7));
 
-  const [shiftTemplates, activeUsers, calendarDays, payMappings] = await Promise.all([
+  const [shiftTemplates, activeUsers, calendarDays, payMappings, userRates] = await Promise.all([
     listShiftTemplates(),
     listPayrollPeople(),
     getCalendarDays(yr, mo),
     listPayMappings(),
+    listUserDailyRates(),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export async function DashboardTab({
       activeUsers={activeUsers}
       calendarDays={calendarDays}
       payMappings={payMappings}
+      userRates={userRates}
       canManage={canManage}
     />
   );

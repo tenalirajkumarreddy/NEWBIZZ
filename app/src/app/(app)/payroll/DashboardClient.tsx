@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { AttendanceCalendar } from "@/components/payroll/AttendanceCalendar";
 import { DayRecordPanel } from "@/components/payroll/DayRecordPanel";
-import type { ShiftTemplate, PayrollPerson, CalendarDay, PayMapping } from "@/lib/data/payroll";
+import type {
+  ShiftTemplate,
+  PayrollPerson,
+  CalendarDay,
+  PayMapping,
+  UserDailyRate,
+} from "@/lib/data/payroll";
 
 export function DashboardClient({
   year: initialYear,
@@ -12,6 +18,7 @@ export function DashboardClient({
   activeUsers,
   calendarDays,
   payMappings,
+  userRates,
   canManage,
 }: {
   year: number;
@@ -20,6 +27,7 @@ export function DashboardClient({
   activeUsers: PayrollPerson[];
   calendarDays: CalendarDay[];
   payMappings: PayMapping[];
+  userRates: Record<string, UserDailyRate>;
   canManage: boolean;
 }) {
   const [year, setYear] = useState(initialYear);
@@ -66,6 +74,7 @@ export function DashboardClient({
             shiftTemplates={shiftTemplates}
             activeUsers={activeUsers}
             payMappings={payMappings}
+            userRates={userRates}
             canManage={canManage}
           />
         ) : (

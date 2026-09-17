@@ -9,21 +9,23 @@ import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { Money } from "@/components/ui/Money";
 import { saveDailyAttendance, markCalendarDay, fetchDayAttendanceDetail } from "@/lib/actions/payroll";
-import { payForHours, type PayMapping } from "@/lib/payroll-bands";
+import { payForHours, previewDailyWage, type PayMapping } from "@/lib/payroll-bands";
 import { rupeesCompact } from "@/lib/format";
-import type { ShiftTemplate, PayrollPerson, DayAttendanceDetail } from "@/lib/data/payroll";
+import type { ShiftTemplate, PayrollPerson, DayAttendanceDetail, UserDailyRate } from "@/lib/data/payroll";
 
 export function DayRecordPanel({
   date,
   shiftTemplates,
   activeUsers,
   payMappings,
+  userRates,
   canManage,
 }: {
   date: string;
   shiftTemplates: ShiftTemplate[];
   activeUsers: PayrollPerson[];
   payMappings: PayMapping[];
+  userRates: Record<string, UserDailyRate>;
   canManage: boolean;
 }) {
   const toast = useToast();
@@ -160,10 +162,19 @@ export function DayRecordPanel({
   const selectedCount = workers.filter((w) => w.present).length;
   const absentCount = workers.filter((w) => !w.present).length;
 
-  const rowPreview = (w: (typeof workers)[number]) =>
-    w.present && (w.status === "present" || w.status === "half_day")
-      ? payForHours(payMappings, Number(w.hours) || 0)
-      : 0;
+  // per-entity daily-wage preview: workers use pay_mappings bands, users use
+  // their salary/30 + OT daily rate (missing config ⇒ 0, like the SQL)
+  const rowPreview = (w: (typeof workers)[number]) => {
+    if (!w.present || (w.status !== "present" && w.status !== "half_day")) return 0;
+    if (w.entityType === "user") {
+      return previewDailyWage(
+        userRates[w.entityId] ?? { monthlySalary: null, otRate: null },
+        Number(w.hours) || 0,
+        w.status,
+      );
+    }
+    return payForHours(payMappings, Number(w.hours) || 0);
+  };
   const creditedPreview = workers.reduce((s, w) => s + rowPreview(w), 0);
 
   return (
@@ -279,7 +290,7 @@ export function DayRecordPanel({
                   </TD>
                   <TD numeric>
                     {w.present && (w.status === "present" || w.status === "half_day") ? (
-                      <Money value={payForHours(payMappings, Number(w.hours) || 0)} />
+                      <Money value={rowPreview(w)} />
                     ) : (
                       <span className="block text-right text-[12px] text-ink-4">—</span>
                     )}
