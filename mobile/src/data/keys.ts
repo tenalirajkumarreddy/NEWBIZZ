@@ -49,4 +49,8 @@ export const qk = {
   dailyRates: () => ["opDailyRates"] as const,
   attendanceDay: (d: string) => ["opAttendanceDay", d] as const,
   calendarMonth: (y: number, m: number) => ["opCalendar", y, m] as const,
+  workerBalances: () => ["opWorkerBalances"] as const,
+  workerAttendance: (entityType: string, entityId: string, limit: number) =>
+    ["opWorkerAttendance", entityType, entityId, limit] as const,
+  entityLedger: (entityId: string) => ["opEntityLedger", entityId] as const,
 };

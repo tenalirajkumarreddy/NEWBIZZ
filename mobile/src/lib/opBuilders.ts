@@ -126,3 +126,13 @@ export function buildMonthGrid(year: number, month0: number): (string | null)[][
   for (let r = 0; r < 6; r++) rows.push(cells.slice(r * 7, r * 7 + 7));
   return rows;
 }
+
+/** Running balance over ascending ledger amounts (client-side mirror of web's
+ * getWorkerLedger loop). Pure: [100,-40,0] -> [100,60,60]. */
+export function runningBalances(amounts: number[]): number[] {
+  let running = 0;
+  return amounts.map((a) => {
+    running += Number(a ?? 0);
+    return running;
+  });
+}

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session";
 import { qk } from "./keys";
 import { rpc } from "@/lib/rpc";
+import { runningBalances } from "@/lib/opBuilders";
 
 /** Payroll data layer: shifts, bands, roster, day-save RPC. All reads RLS-gated server-side. */
 
@@ -98,6 +99,39 @@ export function usePayrollPeople(enabled = true) {
   });
 }
 
+/** Signed ledger balance per payroll person, keyed by entityId (positive = WH
+ * owes the person). get_person_balance per person in 20-batches — the web
+ * getWorkersWithBalances pattern. Invalidate alongside attendance/payroll keys. */
+export function useWorkerBalances(enabled = true) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.workerBalances(),
+    enabled: !!user?.id && enabled,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const { data: people, error: peopleError } = await supabase.rpc("list_payroll_people");
+      if (peopleError) throw peopleError;
+      const ids = (people ?? [])
+        .map((r) => r.entity_id as string)
+        .filter(Boolean);
+      const out: Record<string, number> = {};
+      for (let i = 0; i < ids.length; i += 20) {
+        const batch = ids.slice(i, i + 20);
+        const results = await Promise.all(
+          batch.map(async (id) => {
+            const { data, error } = await supabase.rpc("get_person_balance", {
+              p_entity_id: id,
+            });
+            if (error) throw error;
+            return { id, balance: Number(data ?? 0) };
+          }),
+        );
+        for (const r of results) out[r.id] = r.balance;
+      }
+      return out;
+    },
+  });
+}
+
 /** Monthly salary + OT rate per user id (typed user_pay_config table). */
 export function useUserDailyRates() {
   const { user } = useSession();
@@ -158,6 +192,91 @@ export function useAttendanceForDate(dateISO: string | null) {
         hours: Number(r.hours ?? 0),
         otHours: Number(r.ot_hours ?? 0),
       }));
+    },
+  });
+}
+
+export interface AttendanceHistoryRow {
+  dateISO: string;
+  status: string;
+  hours: number;
+  otHours: number;
+  shift: string | null;
+  note: string | null;
+}
+
+/** Last N attendance rows for one entity, newest first (WorkerSheet section).
+ * db-types attendance Row: work_date, status, hours, ot_hours, shift, note,
+ * user_id, worker_id. */
+export function useAttendanceHistory(
+  entityType: "user" | "worker",
+  entityId: string | null,
+  limit = 30,
+) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.workerAttendance(entityType, entityId ?? "", limit),
+    enabled: !!user?.id && !!entityId,
+    queryFn: async (): Promise<AttendanceHistoryRow[]> => {
+      const base = supabase
+        .from("attendance")
+        .select("work_date, status, hours, ot_hours, shift, note");
+      const filtered =
+        entityType === "user"
+          ? base.eq("user_id", entityId!)
+          : base.eq("worker_id", entityId!);
+      const { data, error } = await filtered
+        .order("work_date", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        dateISO: r.work_date as string,
+        status: r.status as string,
+        hours: Number(r.hours ?? 0),
+        otHours: Number(r.ot_hours ?? 0),
+        shift: (r.shift as string) ?? null,
+        note: (r.note as string) ?? null,
+      }));
+    },
+  });
+}
+
+export interface WorkerLedgerRow {
+  id: string;
+  dateISO: string;
+  type: string;
+  amount: number;
+  note: string | null;
+  running: number;
+}
+
+/** Ascending worker_transactions for one entity with a client-side running
+ * balance via runningBalances (web getWorkerLedger parity: order by
+ * transaction_date, created_at; running += amount per row).
+ * db-types worker_transactions Row: id, transaction_date, type, amount, note,
+ * user_id, worker_id. */
+export function useWorkerLedger(entityId: string | null) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.entityLedger(entityId ?? ""),
+    enabled: !!user?.id && !!entityId,
+    queryFn: async (): Promise<WorkerLedgerRow[]> => {
+      const { data, error } = await supabase
+        .from("worker_transactions")
+        .select("id, transaction_date, created_at, type, amount, note")
+        .or(`user_id.eq.${entityId!},worker_id.eq.${entityId!}`)
+        .order("transaction_date", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []).map((r: any) => ({
+        id: r.id as string,
+        dateISO: r.transaction_date as string,
+        type: r.type as string,
+        amount: Number(r.amount ?? 0),
+        note: (r.note as string) ?? null,
+      }));
+      const runnings = runningBalances(rows.map((r) => r.amount));
+      return rows.map((r, i) => ({ ...r, running: runnings[i] }));
     },
   });
 }

@@ -1,6 +1,6 @@
 import {
   aggregateTodayProduction, remainingOrderLines, buildStockTransferHeader, checkCountPost,
-  payForHours, previewDailyWage, buildMonthGrid,
+  payForHours, previewDailyWage, buildMonthGrid, runningBalances,
 } from "../opBuilders";
 
 describe("aggregateTodayProduction", () => {
@@ -107,6 +107,15 @@ describe("previewDailyWage", () => {
     expect(previewDailyWage(p, 9, 0, "leave")).toBe(0);
     expect(previewDailyWage(p, 0, 2, "holiday")).toBe(150);
     expect(previewDailyWage({ monthlySalary: null, otRate: null }, 9, 0, "present")).toBe(0);
+  });
+});
+
+describe("runningBalances", () => {
+  it("accumulates a running total over ascending ledger amounts", () => {
+    expect(runningBalances([100, -40, 0])).toEqual([100, 60, 60]);
+  });
+  it("empty stays empty", () => {
+    expect(runningBalances([])).toEqual([]);
   });
 });
 
