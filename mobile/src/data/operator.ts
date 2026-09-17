@@ -238,10 +238,12 @@ export async function addWorker(input: {
   fullName: string;
   phone: string | null;
   aadhar: string | null;
+  /** Optional until Task 3 wires the address field — keeps the existing caller compiling. */
+  address?: string | null;
 }): Promise<string> {
   const { data, error } = await supabase
     .from("workers")
-    .insert({ full_name: input.fullName, phone: input.phone, aadhar_number: input.aadhar })
+    .insert({ full_name: input.fullName, phone: input.phone, aadhar_number: input.aadhar, address: input.address ?? null })
     .select("id")
     .single();
   if (error) throw error;

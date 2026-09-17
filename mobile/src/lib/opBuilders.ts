@@ -81,3 +81,48 @@ export function checkCountPost(
   if (delta > -1e-9) return "zero";
   return "short";
 }
+
+export interface PayMapping { id: string; hoursMin: number; hoursMax: number; amount: number }
+
+/** First band with hoursMin <= h < hoursMax, else 0. Pure display helper — the RPC owns money. */
+export function payForHours(mappings: PayMapping[], hours: number): number {
+  const h = Number(hours);
+  if (!Number.isFinite(h) || h <= 0) return 0;
+  const sorted = [...mappings].sort((a, b) => a.hoursMin - b.hoursMin);
+  for (const m of sorted) if (h >= m.hoursMin && h < m.hoursMax) return Number(m.amount);
+  return 0;
+}
+
+/** User daily wage preview. Mirrors the SQL user branch exactly
+ * (round(salary/30,2)×factor + round(ot×otHours,2)); leave is display-0
+ * (server's paid-leave branch needs month context). */
+export function previewDailyWage(
+  person: { monthlySalary: number | null; otRate: number | null },
+  hours: number, otHours: number, status: string,
+): number {
+  const salary = Number(person.monthlySalary ?? 0) || 0;
+  const otRate = Number(person.otRate ?? 0) || 0;
+  const h = Number.isFinite(Number(hours)) ? Number(hours) : 0;
+  const otH = Number.isFinite(Number(otHours)) ? Number(otHours) : 0;
+  const daily = Math.round((salary / 30.0) * 100) / 100;
+  const factor = status === "present" ? 1.0 : status === "half_day" ? 0.5 : 0.0;
+  return Math.round((daily * factor + Math.round(otRate * otH * 100) / 100) * 100) / 100;
+}
+
+/** 6×7 Monday-first grid of ISO date strings for year/month0, null = pad. */
+export function buildMonthGrid(year: number, month0: number): (string | null)[][] {
+  const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+  const firstDow = (new Date(year, month0, 1).getDay() + 6) % 7; // 0 = Monday
+  const cells: (string | null)[] = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const mm = String(month0 + 1).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    cells.push(`${year}-${mm}-${dd}`);
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+  while (cells.length < 42) cells.push(null);
+  const rows: (string | null)[][] = [];
+  for (let r = 0; r < 6; r++) rows.push(cells.slice(r * 7, r * 7 + 7));
+  return rows;
+}

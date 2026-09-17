@@ -43,4 +43,10 @@ export const qk = {
   myRuns: () => ["myRuns"] as const,
   stockLedger: (itemId: string) => ["stockLedger", itemId] as const,
   branches: () => ["branches"] as const,
+  payrollShifts: () => ["opShifts"] as const,
+  payMappings: () => ["opPayMappings"] as const,
+  payrollPeople: () => ["opPayrollPeople"] as const,
+  dailyRates: () => ["opDailyRates"] as const,
+  attendanceDay: (d: string) => ["opAttendanceDay", d] as const,
+  calendarMonth: (y: number, m: number) => ["opCalendar", y, m] as const,
 };

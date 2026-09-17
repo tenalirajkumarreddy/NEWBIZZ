@@ -1,5 +1,6 @@
 import {
   aggregateTodayProduction, remainingOrderLines, buildStockTransferHeader, checkCountPost,
+  payForHours, previewDailyWage, buildMonthGrid,
 } from "../opBuilders";
 
 describe("aggregateTodayProduction", () => {
@@ -75,5 +76,54 @@ describe("checkCountPost", () => {
     expect(checkCountPost(150, null)).toBe("incomplete");
     expect(checkCountPost(0, 0)).toBe("incomplete");
     expect(checkCountPost(Number.NaN, 50)).toBe("incomplete");
+  });
+});
+
+describe("payForHours", () => {
+  const bands = [
+    { id: "a", hoursMin: 0, hoursMax: 4, amount: 300 },
+    { id: "b", hoursMin: 4, hoursMax: 8, amount: 600 },
+    { id: "c", hoursMin: 8, hoursMax: 10, amount: 750 },
+  ];
+  it("matches min-inclusive/max-exclusive first band", () => {
+    expect(payForHours(bands, 9)).toBe(750);
+    expect(payForHours(bands, 8)).toBe(750);
+    expect(payForHours(bands, 7.99)).toBe(600);
+    expect(payForHours(bands, 0)).toBe(0);
+    expect(payForHours(bands, -1)).toBe(0);
+    expect(payForHours([], 9)).toBe(0);
+  });
+  it("ignores input order", () => {
+    expect(payForHours([...bands].reverse(), 3)).toBe(300);
+  });
+});
+
+describe("previewDailyWage", () => {
+  const p = { monthlySalary: 18000, otRate: 75 };
+  it("salary/30 factor + ot term", () => {
+    expect(previewDailyWage(p, 9, 0, "present")).toBe(600);
+    expect(previewDailyWage(p, 9, 2, "present")).toBe(750);
+    expect(previewDailyWage(p, 9, 0, "half_day")).toBe(300);
+    expect(previewDailyWage(p, 9, 0, "leave")).toBe(0);
+    expect(previewDailyWage(p, 0, 2, "holiday")).toBe(150);
+    expect(previewDailyWage({ monthlySalary: null, otRate: null }, 9, 0, "present")).toBe(0);
+  });
+});
+
+describe("buildMonthGrid", () => {
+  it("pads Monday-first with nulls and covers every day once", () => {
+    const g = buildMonthGrid(2026, 8); // September 2026
+    expect(g).toHaveLength(6);
+    expect(g.every((r) => r.length === 7)).toBe(true);
+    const days = g.flat().filter(Boolean) as string[];
+    expect(days).toHaveLength(30);
+    expect(new Set(days).size).toBe(30);
+    expect(days[0]).toBe("2026-09-01");
+    expect(days[29]).toBe("2026-09-30");
+  });
+  it("starts Monday: 2026-02-01 was a Sunday, so first cell is null", () => {
+    const g = buildMonthGrid(2026, 1);
+    expect(g[0][6]).toBe("2026-02-01");
+    expect(g[0][0]).toBe(null);
   });
 });
