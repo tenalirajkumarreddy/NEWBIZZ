@@ -170,6 +170,7 @@ export function DayRecordPanel({
       return previewDailyWage(
         userRates[w.entityId] ?? { monthlySalary: null, otRate: null },
         Number(w.hours) || 0,
+        Number(w.otHours) || 0,
         w.status,
       );
     }

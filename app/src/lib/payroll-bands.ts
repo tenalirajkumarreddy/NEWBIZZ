@@ -23,9 +23,10 @@ export function payForHours(mappings: PayMapping[], hours: number): number {
 }
 
 /**
- * USER daily-wage preview, mirroring save_attendance_day's user-credit
- * expression exactly: round(monthly_salary/30, 2) × (present 1.0 | half_day
- * 0.5 | else 0.0) + round(ot_rate × ot_hours, 2). The SQL's paid-leave branch
+ * USER daily-wage preview, mirroring 0121 save_attendance_day's user-credit
+ * expression exactly: rounded daily rate (round(monthly_salary/30, 2)) ×
+ * factor (present 1.0 | half_day 0.5 | else 0.0) + OT on OT-HOURS
+ * (round(ot_rate × ot_hours, 2)). The SQL's paid-leave branch
  * for 'leave' (full daily rate within the allowance) needs the month's leave
  * count, which this signature doesn't carry, so 'leave' previews the
  * conservative else-branch (0 daily) — the ledger remains money truth. Pure,
@@ -34,13 +35,14 @@ export function payForHours(mappings: PayMapping[], hours: number): number {
 export function previewDailyWage(
   person: { monthlySalary: number | null; otRate: number | null },
   hours: number,
+  otHours: number,
   status: string,
 ): number {
   const salary = Number(person.monthlySalary ?? 0) || 0;
   const otRate = Number(person.otRate ?? 0) || 0;
-  const h = Number.isFinite(Number(hours)) ? Number(hours) : 0;
+  const otH = Number.isFinite(Number(otHours)) ? Number(otHours) : 0;
   const daily = Math.round((salary / 30.0) * 100) / 100;
   const factor = status === "present" ? 1.0 : status === "half_day" ? 0.5 : 0.0;
-  const ot = Math.round(otRate * h * 100) / 100;
+  const ot = Math.round(otRate * otH * 100) / 100;
   return Math.round((daily * factor + ot) * 100) / 100;
 }
