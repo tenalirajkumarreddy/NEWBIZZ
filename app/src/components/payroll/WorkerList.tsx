@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -10,11 +11,13 @@ import { Money } from "@/components/ui/Money";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { rupeesCompact } from "@/lib/format";
-import { addWorker } from "@/lib/actions/payroll";
+import { addWorker, adjustBalance } from "@/lib/actions/payroll";
 import { WorkerDrawer } from "./WorkerDrawer";
 import { PayModal } from "./PayModal";
 import { EditProfileDrawer } from "./EditProfileDrawer";
 import type { WorkerBalance, WorkerRow } from "@/lib/data/payroll";
+
+type PayTarget = { worker: WorkerBalance; kind: "payment" | "advance" };
 
 export function WorkerList({
   workers,
@@ -26,8 +29,10 @@ export function WorkerList({
   canManage: boolean;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const [selectedWorker, setSelectedWorker] = useState<WorkerBalance | null>(null);
-  const [payWorker, setPayWorker] = useState<WorkerBalance | null>(null);
+  const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<WorkerBalance | null>(null);
   const [editWorker, setEditWorker] = useState<WorkerBalance | null>(null);
   const [showAddWorker, setShowAddWorker] = useState(false);
   const [newName, setNewName] = useState("");
@@ -35,9 +40,13 @@ export function WorkerList({
   const [newAadhar, setNewAadhar] = useState("");
   const [newAddress, setNewAddress] = useState("");
   const [adding, setAdding] = useState(false);
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
+  const [adjusting, setAdjusting] = useState(false);
 
   // Merge balances with manual workers that have no balance yet
   const balanceMap = new Map(workers.map((w) => [w.userId, w]));
+  const manualIds = new Set(manualWorkers.map((mw) => mw.id));
   const allWorkers: WorkerBalance[] = [
     ...workers,
     ...manualWorkers
@@ -47,8 +56,13 @@ export function WorkerList({
         fullName: mw.fullName,
         balance: 0,
         photoUrl: mw.photoUrl,
+        entityType: "worker" as const,
       })),
   ];
+
+  function entityTypeOf(w: WorkerBalance): "user" | "worker" {
+    return w.entityType ?? (manualIds.has(w.userId) ? "worker" : "user");
+  }
 
   const totalOutstanding = allWorkers.reduce((s, w) => s + Math.max(0, w.balance), 0);
   const totalAdvances = allWorkers.reduce((s, w) => s + Math.max(0, -w.balance), 0);
@@ -67,8 +81,45 @@ export function WorkerList({
       setNewPhone("");
       setNewAadhar("");
       setNewAddress("");
+      router.refresh();
     }
     setAdding(false);
+  }
+
+  function openAdjust(w: WorkerBalance) {
+    setAdjustTarget(w);
+    setAdjustAmount("");
+    setAdjustReason("");
+  }
+
+  async function handleAdjust(e: React.FormEvent) {
+    e.preventDefault();
+    if (!adjustTarget) return;
+    const amount = Number(adjustAmount);
+    if (!Number.isFinite(amount) || amount === 0) {
+      toast.error("Amount must be a non-zero number (use − to reduce)");
+      return;
+    }
+    if (!adjustReason.trim()) {
+      toast.error("Reason is required");
+      return;
+    }
+    setAdjusting(true);
+    // Ledger-only correction — adjustBalance posts no journal.
+    const result = await adjustBalance(
+      adjustTarget.userId,
+      amount,
+      adjustReason.trim(),
+      entityTypeOf(adjustTarget),
+    );
+    if (!result.ok) {
+      toast.error("Adjustment failed", result.error);
+    } else {
+      toast.success("Adjustment recorded");
+      setAdjustTarget(null);
+      router.refresh();
+    }
+    setAdjusting(false);
   }
 
   return (
@@ -94,6 +145,9 @@ export function WorkerList({
           </Button>
         )}
       </div>
+      <p className="mt-2 text-[12px] text-ink-3">
+        Green: warehouse owes the worker · Red: worker owes the warehouse (advance)
+      </p>
 
       <Panel flush className="mt-4">
         {allWorkers.length === 0 ? (
@@ -104,7 +158,7 @@ export function WorkerList({
               <TR>
                 <TH>Worker</TH>
                 <TH numeric>Balance</TH>
-                {canManage && <TH className="w-44" />}
+                {canManage && <TH className="w-64" />}
               </TR>
             </THead>
             <TBody>
@@ -137,9 +191,15 @@ export function WorkerList({
                   </TD>
                   {canManage && (
                     <TD>
-                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="primary" size="sm" onClick={() => setPayWorker(w)}>
+                      <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="primary" size="sm" onClick={() => setPayTarget({ worker: w, kind: "payment" })}>
                           Pay
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setPayTarget({ worker: w, kind: "advance" })}>
+                          Advance
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openAdjust(w)}>
+                          Adjust
                         </Button>
                         <Button variant="subtle" size="sm" onClick={() => setEditWorker(w)}>
                           Edit
@@ -162,11 +222,49 @@ export function WorkerList({
         />
       )}
 
-      {payWorker && (
+      {payTarget && (
         <PayModal
-          worker={payWorker}
-          onClose={() => setPayWorker(null)}
+          worker={payTarget.worker}
+          entityType={entityTypeOf(payTarget.worker)}
+          defaultKind={payTarget.kind}
+          onClose={() => setPayTarget(null)}
         />
+      )}
+
+      {adjustTarget && (
+        <Dialog open onClose={() => setAdjustTarget(null)} title={`Adjust — ${adjustTarget.fullName}`}>
+          <form onSubmit={handleAdjust} className="flex flex-col gap-4">
+            <Field label="Amount (₹, signed)" hint="Positive adds to what the warehouse owes · Negative claws back (advance)">
+              <Input
+                type="number"
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
+                step={1}
+                required
+                placeholder="e.g., 500 or -500"
+              />
+            </Field>
+            <Field label="Reason" required>
+              <Input
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                required
+                placeholder="e.g., Missed attendance credit for 12 Sep"
+              />
+            </Field>
+            <p className="text-[11px] text-ink-4">
+              Ledger-only correction — no journal is posted.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="subtle" type="button" onClick={() => setAdjustTarget(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" loading={adjusting}>
+                Record Adjustment
+              </Button>
+            </div>
+          </form>
+        </Dialog>
       )}
 
       {editWorker && (

@@ -104,6 +104,8 @@ export interface WorkerBalance {
   fullName: string;
   balance: number;
   photoUrl: string | null;
+  /** Lane for ledger/RPC writes — user_id vs worker_id. */
+  entityType?: "user" | "worker";
 }
 
 export interface WorkerLedgerEntry {
@@ -411,6 +413,7 @@ export async function getWorkersWithBalances(): Promise<WorkerBalance[]> {
           fullName: p.fullName,
           balance: Number(data ?? 0),
           photoUrl: p.photoUrl,
+          entityType: p.entityType,
         };
       }),
     );

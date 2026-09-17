@@ -315,15 +315,18 @@ export async function adjustBalance(
   userId: string,
   amount: number,
   note: string | null,
+  entityType: "user" | "worker" = "user",
 ): Promise<ActionResult> {
+  // Ledger-only correction — no journal is posted for adjustments.
   const supabase = createClient();
   const { error } = await supabase.from("worker_transactions").insert({
-    user_id: userId,
+    user_id: entityType === "user" ? userId : null,
+    worker_id: entityType === "worker" ? userId : null,
     transaction_date: new Date().toISOString().slice(0, 10),
     type: "adjustment",
     amount,
     note: note ?? "Manual adjustment",
-  });
+  } as never);
   if (error) return fail("adjustBalance", error.message);
   revalidatePath("/payroll");
   return { ok: true };
