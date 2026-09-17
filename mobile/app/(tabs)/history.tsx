@@ -264,13 +264,16 @@ export default function HistoryScreen() {
   >(null);
   const fetching = useIsFetching();
 
-  // Permission-adaptive gates: agents hold cash.transfer + expense.submit;
-  // operators hold production.run + stock.transfer. Every conditional below
-  // is additive — a holder of the agent permission set sees today's page.
+  // Permission gates (History v2, spec §1): agents hold cash.transfer +
+  // expense.submit; operators hold production.run + stock.transfer. Every
+  // conditional below is additive — a holder of the agent permission set
+  // sees today's agent page. canExpense mirrors the submit_my_expense
+  // server gate (0110: expense.manage OR expense.submit) and the
+  // BalanceOverview Submit-expense gate, so no create button is ever dead.
   const canRun = can("production.run");
   const canCash = can("cash.transfer");
   const canStock = can("stock.transfer");
-  const canExpense = can("expense.submit");
+  const canExpense = can("expense.submit") || can("expense.manage");
 
   const kpis = useTodayKpis();
   const activity = useMyActivity();
@@ -386,9 +389,9 @@ export default function HistoryScreen() {
         <View style={s.segWrap}>
           <SegmentBtn label="Activity" active={seg === "activity"} onPress={() => setSeg("activity")} />
           <SegmentBtn label="Handovers" active={seg === "handovers"} onPress={() => setSeg("handovers")} />
-          {canExpense ? (
-            <SegmentBtn label="Expenses" active={seg === "expenses"} onPress={() => setSeg("expenses")} />
-          ) : null}
+          {/* Expenses segment ALWAYS rendered (spec §1) — the list is own
+              expenses for every role; only the create entry is gated. */}
+          <SegmentBtn label="Expenses" active={seg === "expenses"} onPress={() => setSeg("expenses")} />
         </View>
 
         {seg === "activity" ? (
@@ -492,9 +495,13 @@ export default function HistoryScreen() {
                 icon={ArrowLeftRight}
                 title="No handovers yet"
                 message={
-                  canStock
+                  canCash && canStock
                     ? "Stock and cash handovers you send or receive will appear here."
-                    : "Cash handovers and bank deposits you send or receive will appear here."
+                    : canCash
+                      ? "Cash handovers and bank deposits you send or receive will appear here."
+                      : canStock
+                        ? "Stock handovers you send or receive will appear here."
+                        : "Handovers you send or receive will appear here."
                 }
               />
             ) : (
@@ -515,26 +522,46 @@ export default function HistoryScreen() {
               </View>
             )}
           </>
-        ) : expenses.isLoading ? (
-          <SkeletonRows rows={4} />
-        ) : expenses.isError ? (
-          <EmptyState title="Could not load expenses" message={friendlyError(expenses.error)} />
-        ) : (expenses.data?.length ?? 0) === 0 ? (
-          <EmptyState
-            icon={Wallet}
-            title="No expenses yet"
-            message="Fuel, repairs and other field spends you submit will appear here with their approval status."
-          />
         ) : (
-          <View style={s.list}>
-            {(expenses.data ?? []).map((e) => (
-              <ExpenseRowItem
-                key={e.id}
-                e={e}
-                onOpen={() => setDetail({ type: "expense", expense: e })}
+          <>
+            {/* Create entry for roles without the BalanceOverview Submit
+                button (cash holders already have it there — kept as the
+                single entry so the agent page is unchanged). */}
+            {canExpense && !canCash ? (
+              <View style={s.handoverBar}>
+                <Pressable
+                  onPress={() => setExpenseOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Submit expense"
+                  style={({ pressed }) => [s.handoverBtn, pressed && { opacity: 0.8 }]}
+                >
+                  <Wallet size={14} color={t.color.amb} />
+                  <Text style={s.handoverBtnTxt}>+ New expense</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {expenses.isLoading ? (
+              <SkeletonRows rows={4} />
+            ) : expenses.isError ? (
+              <EmptyState title="Could not load expenses" message={friendlyError(expenses.error)} />
+            ) : (expenses.data?.length ?? 0) === 0 ? (
+              <EmptyState
+                icon={Wallet}
+                title="No expenses yet"
+                message="Fuel, repairs and other field spends you submit will appear here with their approval status."
               />
-            ))}
-          </View>
+            ) : (
+              <View style={s.list}>
+                {(expenses.data ?? []).map((e) => (
+                  <ExpenseRowItem
+                    key={e.id}
+                    e={e}
+                    onOpen={() => setDetail({ type: "expense", expense: e })}
+                  />
+                ))}
+              </View>
+            )}
+          </>
         )}
       </View>
 
