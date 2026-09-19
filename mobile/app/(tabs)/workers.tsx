@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
+import { View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { UserPlus, ChevronRight, CalendarDays, Minus, Plus } from "lucide-react-native";
@@ -50,8 +50,12 @@ const ATT_CHIPS: { label: string; value: string }[] = [
   { label: "W", value: "week_off" },
 ];
 
-/** ₹ pill hidden for these statuses (paid-leave needs month context server-side). */
-const NO_PAY = new Set(["leave", "holiday", "week_off"]);
+/** ₹ pill hidden for these statuses (paid-leave needs month context server-side;
+ * absent rows carry no credit by definition). */
+const NO_PAY = new Set(["absent", "leave", "holiday", "week_off"]);
+
+/** Non-present statuses the simple row treats like OFF (hours zeroed, ₹ hidden). */
+const OFF_LIKE = new Set(["absent", "leave", "holiday", "week_off"]);
 
 const RUN_TONE: Record<string, "neutral" | "brand" | "grn" | "amb"> = {
   draft: "neutral", computed: "amb", posted: "brand", paid: "grn",
@@ -63,9 +67,11 @@ interface RowDraft {
   hours: number;
   ot: number;
   note: string;
+  /** true = simple ON/OFF row (present at `hours`); false = chips expanded */
+  simple: boolean;
 }
 
-const ROW_FALLBACK: RowDraft = { on: true, status: "present", hours: 8, ot: 0, note: "" };
+const ROW_FALLBACK: RowDraft = { on: true, status: "present", hours: 8, ot: 0, note: "", simple: true };
 
 function ymOf(iso: string) {
   return { year: Number(iso.slice(0, 4)), month0: Number(iso.slice(5, 7)) - 1 };
@@ -126,9 +132,17 @@ export default function WorkersScreen() {
     const next: Record<string, RowDraft> = {};
     for (const p of rosterQ.data) {
       const sv = saved.get(`${p.entityType}:${p.entityId}`);
+      const offLike = sv ? OFF_LIKE.has(sv.status) : false;
       next[`${p.entityType}:${p.entityId}`] = sv
-        ? { on: true, status: sv.status, hours: sv.hours, ot: sv.otHours, note: "" }
-        : { on: true, status: "present", hours: base, ot: 0, note: "" };
+        ? {
+            on: !offLike,
+            status: sv.status === "present" || sv.status === "half_day" ? sv.status : "present",
+            simple: true,
+            hours: offLike ? base : sv.hours || base,
+            ot: sv.otHours || 0,
+            note: "",
+          }
+        : { on: true, status: "present", simple: true, hours: base, ot: 0, note: "" };
     }
     setDraft(next);
     setPrefilledFor(sel);
@@ -175,6 +189,15 @@ export default function WorkersScreen() {
       const fill = tpl ? tpl.totalHours : 8;
       return { ...d, [key]: { ...cur, status: value, hours: cur.hours > 0 ? cur.hours : fill } };
     });
+  }
+
+  function initials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("");
   }
 
   let presentN = 0;
@@ -379,7 +402,22 @@ export default function WorkersScreen() {
                 </View>
               </View>
               {ro ? (
-                <Text style={s.infoStrip}>View only — attendance can be changed on the day itself (or by the office).</Text>
+                <Text style={s.infoStrip}>View only - attendance can be changed on the day itself (or by the office).</Text>
+              ) : null}
+              {(shiftsQ.isError || mapsQ.isError || ratesQ.isError) ? (
+                <View style={s.cfgErr}>
+                  <Text style={s.cfgErrTxt} numberOfLines={2}>
+                    Pay settings failed to load — amounts may show ₹0. {friendlyError((shiftsQ.error ?? mapsQ.error ?? ratesQ.error) as Error)}
+                  </Text>
+                  <Pressable
+                    onPress={() => { void shiftsQ.refetch(); void mapsQ.refetch(); void ratesQ.refetch(); }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Retry loading pay settings"
+                    style={({ pressed }) => [s.cfgRetry, pressed && { opacity: 0.8 }]}
+                  >
+                    <Text style={s.cfgRetryTxt}>Retry</Text>
+                  </Pressable>
+                </View>
               ) : null}
             </View>
           </View>
@@ -397,121 +435,137 @@ export default function WorkersScreen() {
                     const pill = pillFor(p, dr);
                     return (
                       <View key={key} style={[s.card, !dr.on && s.attCardOff]}>
-                        <View style={s.headLine}>
-                          <View style={s.nameWrap}>
-                            <View style={[s.dot, { backgroundColor: p.entityType === "user" ? t.color.brand : t.color.ink4 }]} />
+                        <View style={s.attRowTop}>
+                          {p.photoUrl ? (
+                            <Image source={{ uri: p.photoUrl }} style={s.avatar} accessibilityLabel={`${p.fullName} photo`} />
+                          ) : (
+                            <View style={[s.avatar, s.avatarFallback]}>
+                              <Text style={s.avatarTxt}>{initials(p.fullName)}</Text>
+                            </View>
+                          )}
+                          <View style={s.nameCol}>
                             <Text style={s.name} numberOfLines={1}>{p.fullName}</Text>
+                            <Text style={s.sub}>{p.entityType === "worker" ? "Worker" : "Staff"}</Text>
                           </View>
-                          {pill !== null ? <Text style={s.pill}>{moneyINR(pill)}</Text> : null}
-                        </View>
-                        <View style={s.attCtlRow}>
                           <Pressable
                             onPress={() => patch(key, { on: !dr.on })}
                             disabled={ro}
                             accessibilityRole="switch"
-                            accessibilityLabel={`${p.fullName} included`}
+                            accessibilityLabel={`${p.fullName} present`}
                             accessibilityState={{ checked: dr.on }}
                             style={[s.onOff, dr.on && s.onOffOn, ro && { opacity: 0.6 }]}
                           >
                             <Text style={[s.onOffTxt, dr.on && s.onOffTxtOn]}>{dr.on ? "ON" : "OFF"}</Text>
                           </Pressable>
-                          <View style={s.chipRow}>
-                            {ATT_CHIPS.map((c) => {
-                              const active = dr.status === c.value;
-                              return (
-                                <Pressable
-                                  key={c.value}
-                                  onPress={() => onStatus(key, c.value)}
-                                  disabled={ro || !dr.on}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`Mark ${p.fullName} ${c.value}`}
-                                  accessibilityState={{ selected: active }}
-                                  style={[s.chip, active && s.chipOn, (ro || !dr.on) && { opacity: 0.5 }]}
-                                >
-                                  <Text style={[s.chipTxt, active && s.chipTxtOn]}>{c.label}</Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
                         </View>
                         {dr.on ? (
                           <>
-                            <View style={s.numRow}>
-                              <View style={s.numWrap}>
+                            <View style={s.attRowMid}>
+                              <View style={s.hrsWrap}>
                                 <Text style={s.numLabel}>HRS</Text>
-                                <View style={s.stepRow}>
-                                  <Pressable
-                                    onPress={() => patch(key, { hours: Math.max(0, dr.hours - 1) })}
-                                    disabled={ro}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Decrease ${p.fullName} hours`}
-                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                  >
-                                    <Minus size={16} color={t.color.ink2} />
-                                  </Pressable>
-                                  <TextInput
-                                    style={[s.numInput, ro && { opacity: 0.6 }]}
-                                    value={String(dr.hours)}
-                                    onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
-                                    editable={!ro}
-                                    keyboardType="decimal-pad"
-                                    accessible
-                                    accessibilityLabel={`${p.fullName} hours`}
-                                  />
-                                  <Pressable
-                                    onPress={() => patch(key, { hours: dr.hours + 1 })}
-                                    disabled={ro}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Increase ${p.fullName} hours`}
-                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                  >
-                                    <Plus size={16} color={t.color.ink2} />
-                                  </Pressable>
-                                </View>
+                                <TextInput
+                                  style={[s.hrsInput, ro && { opacity: 0.6 }]}
+                                  value={String(dr.hours)}
+                                  onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
+                                  editable={!ro}
+                                  keyboardType="decimal-pad"
+                                  accessible
+                                  accessibilityLabel={`${p.fullName} hours worked`}
+                                />
                               </View>
-                              <View style={s.numWrap}>
-                                <Text style={s.numLabel}>OT</Text>
-                                <View style={s.stepRow}>
-                                  <Pressable
-                                    onPress={() => patch(key, { ot: Math.max(0, dr.ot - 1) })}
-                                    disabled={ro}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Decrease ${p.fullName} overtime`}
-                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                  >
-                                    <Minus size={16} color={t.color.ink2} />
-                                  </Pressable>
-                                  <TextInput
-                                    style={[s.numInput, ro && { opacity: 0.6 }]}
-                                    value={String(dr.ot)}
-                                    onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
-                                    editable={!ro}
-                                    keyboardType="decimal-pad"
-                                    accessible
-                                    accessibilityLabel={`${p.fullName} overtime hours`}
-                                  />
-                                  <Pressable
-                                    onPress={() => patch(key, { ot: dr.ot + 1 })}
-                                    disabled={ro}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Increase ${p.fullName} overtime`}
-                                    style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                  >
-                                    <Plus size={16} color={t.color.ink2} />
-                                  </Pressable>
-                                </View>
+                              <View style={s.pillWrap}>
+                                {pill !== null ? (
+                                  <Text style={s.pill}>{moneyINR(pill)}</Text>
+                                ) : (
+                                  <Text style={[s.pill, { color: t.color.ink4, backgroundColor: t.color.fill }]}>{moneyINR(0)}</Text>
+                                )}
                               </View>
                             </View>
-                            <TextInput
-                              style={[s.noteInput, ro && { opacity: 0.6 }]}
-                              value={dr.note}
-                              onChangeText={(v) => patch(key, { note: v })}
-                              editable={!ro}
-                              placeholder="Note (optional)"
-                              placeholderTextColor={t.color.ink4}
-                              accessible
-                              accessibilityLabel={`${p.fullName} note`}
-                            />
+                            {dr.simple ? (
+                              <Pressable
+                                onPress={() => patch(key, { simple: false })}
+                                disabled={ro}
+                                accessibilityRole="button"
+                                accessibilityLabel={`More options for ${p.fullName}`}
+                                style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
+                              >
+                                <Text style={s.advTxt}>Half day / leave / note</Text>
+                              </Pressable>
+                            ) : (
+                              <View style={s.advBlock}>
+                                <View style={s.chipRow}>
+                                  {ATT_CHIPS.filter((c) => c.value !== "present" && c.value !== "absent").map((c) => {
+                                    const active = dr.status === c.value;
+                                    return (
+                                      <Pressable
+                                        key={c.value}
+                                        onPress={() => onStatus(key, c.value)}
+                                        disabled={ro || !dr.on}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Mark ${p.fullName} ${c.value}`}
+                                        accessibilityState={{ selected: active }}
+                                        style={[s.chip, active && s.chipOn, (ro || !dr.on) && { opacity: 0.5 }]}
+                                      >
+                                        <Text style={[s.chipTxt, active && s.chipTxtOn]}>{c.label}</Text>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+                                <View style={s.numRow}>
+                                  <View style={s.numWrap}>
+                                    <Text style={s.numLabel}>OT</Text>
+                                    <View style={s.stepRow}>
+                                      <Pressable
+                                        onPress={() => patch(key, { ot: Math.max(0, dr.ot - 1) })}
+                                        disabled={ro}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Decrease ${p.fullName} overtime`}
+                                        style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                      >
+                                        <Minus size={16} color={t.color.ink2} />
+                                      </Pressable>
+                                      <TextInput
+                                        style={[s.numInput, ro && { opacity: 0.6 }]}
+                                        value={String(dr.ot)}
+                                        onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
+                                        editable={!ro}
+                                        keyboardType="decimal-pad"
+                                        accessible
+                                        accessibilityLabel={`${p.fullName} overtime hours`}
+                                      />
+                                      <Pressable
+                                        onPress={() => patch(key, { ot: dr.ot + 1 })}
+                                        disabled={ro}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Increase ${p.fullName} overtime`}
+                                        style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                      >
+                                        <Plus size={16} color={t.color.ink2} />
+                                      </Pressable>
+                                    </View>
+                                  </View>
+                                </View>
+                                <TextInput
+                                  style={[s.noteInput, ro && { opacity: 0.6 }]}
+                                  value={dr.note}
+                                  onChangeText={(v) => patch(key, { note: v })}
+                                  editable={!ro}
+                                  placeholder="Note (optional)"
+                                  placeholderTextColor={t.color.ink4}
+                                  accessible
+                                  accessibilityLabel={`${p.fullName} note`}
+                                />
+                                <Pressable
+                                  onPress={() => patch(key, { simple: true })}
+                                  disabled={ro}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Hide extra options for ${p.fullName}`}
+                                  style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
+                                >
+                                  <Text style={s.advTxt}>Hide extra options</Text>
+                                </Pressable>
+                              </View>
+                            )}
                           </>
                         ) : null}
                       </View>
@@ -699,6 +753,18 @@ const useStyles = () => {
       borderRadius: tokens.radius.md, paddingHorizontal: tokens.space.md,
       paddingVertical: tokens.space.sm, textAlign: "center",
     },
+    cfgErr: {
+      flexDirection: "row", alignItems: "center", gap: tokens.space.sm,
+      backgroundColor: t.color.redWash, borderWidth: 1, borderColor: t.color.red,
+      borderRadius: tokens.radius.md, paddingHorizontal: tokens.space.md,
+      paddingVertical: tokens.space.sm, marginTop: tokens.space.sm,
+    },
+    cfgErrTxt: { flex: 1, color: t.color.red, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    cfgRetry: {
+      minHeight: 36, paddingHorizontal: tokens.space.md, borderRadius: tokens.radius.md,
+      backgroundColor: t.color.red, alignItems: "center", justifyContent: "center",
+    },
+    cfgRetryTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
     list: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md, gap: tokens.space.sm },
     pad: { padding: tokens.space.lg },
     card: {
@@ -733,6 +799,26 @@ const useStyles = () => {
       backgroundColor: t.color.grnWash, textAlign: "right",
     },
     attCardOff: { backgroundColor: t.color.fill },
+    attRowTop: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
+    avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: t.color.fill },
+    avatarFallback: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: t.color.line },
+    avatarTxt: { color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+    nameCol: { flex: 1, minWidth: 0, gap: 1 },
+    attRowMid: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm, marginTop: tokens.space.xs },
+    hrsWrap: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs, flex: 1 },
+    hrsInput: {
+      width: 84, minHeight: 44, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
+      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.md, textAlign: "center",
+      color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"],
+    },
+    pillWrap: { alignItems: "flex-end" },
+    advToggle: { alignItems: "flex-end", paddingVertical: 6, paddingRight: 2 },
+    advTxt: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    advBlock: {
+      backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
+      borderRadius: tokens.radius.md, padding: tokens.space.sm, gap: tokens.space.sm,
+      marginTop: tokens.space.xs,
+    },
     attCtlRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
     onOff: {
       minWidth: 48, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
