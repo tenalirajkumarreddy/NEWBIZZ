@@ -204,11 +204,11 @@ const useStyles = () => {
     },
     barTrack: {
       height: 8,
-      borderRadius: 4,
+      borderRadius: tokens.radius.full,
       backgroundColor: t.color.fill,
       overflow: "hidden",
     },
-    barFill: { height: "100%", backgroundColor: t.color.brand, borderRadius: 4 },
+    barFill: { height: "100%", backgroundColor: t.color.brand, borderRadius: tokens.radius.full },
     stageSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
     runRow: {
       flexDirection: "row",

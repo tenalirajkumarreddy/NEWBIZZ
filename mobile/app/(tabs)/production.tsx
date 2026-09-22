@@ -122,17 +122,17 @@ export default function ProductionScreen() {
     <Screen refreshing={fetching > 0} onRefresh={() => invalidateOps()}>
       <GradientHeader title="Production" subtitle={roleLabel(claims)} right={<HeaderRight />} />
 
-      <Pressable
-        onPress={() => router.push("/post-run")}
-        style={({ pressed }) => [s.postRun, pressed && { opacity: 0.85 }]}
-        accessibilityRole="button"
-        accessibilityLabel="Post production run"
-      >
-        <FlaskConical size={15} color="#ffffff" />
-        <Text style={s.postRunTxt}>Post run</Text>
-      </Pressable>
-
       <View style={s.body}>
+        <Pressable
+          onPress={() => router.push("/post-run")}
+          style={({ pressed }) => [s.postRun, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Post production run"
+        >
+          <FlaskConical size={15} color="#ffffff" />
+          <Text style={s.postRunTxt}>Post run</Text>
+        </Pressable>
+
         <View style={s.filters}>
           <FilterBtn label={`Pending ${counts.pending || ""}`} active={filter === "pending"} onPress={() => setFilter("pending")} />
           <FilterBtn label={`Running ${counts.in_progress || ""}`} active={filter === "in_progress"} onPress={() => setFilter("in_progress")} />
@@ -409,8 +409,6 @@ const useStyles = () => {
     filterTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     filterTxtOn: { color: t.color.brand },
     postRun: {
-      marginHorizontal: tokens.space.lg,
-      marginTop: tokens.space.sm,
       minHeight: 44,
       borderRadius: tokens.radius.md,
       backgroundColor: t.color.brand,
@@ -425,7 +423,7 @@ const useStyles = () => {
       backgroundColor: t.color.surface,
       borderRadius: tokens.radius.lg,
       borderWidth: 1,
-      borderColor: "rgba(148,163,184,0.25)",
+      borderColor: t.color.line,
       padding: tokens.space.md,
       gap: tokens.space.sm,
       ...tokens.shadow.card,
@@ -443,7 +441,7 @@ const useStyles = () => {
       backgroundColor: t.color.surface,
       borderRadius: tokens.radius.lg,
       borderWidth: 1,
-      borderColor: "rgba(148,163,184,0.25)",
+      borderColor: t.color.line,
       padding: tokens.space.md,
       gap: tokens.space.sm,
       ...tokens.shadow.card,

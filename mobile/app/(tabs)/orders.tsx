@@ -104,7 +104,8 @@ export default function OrdersScreen() {
   return (
     <Screen refreshing={fetching > 0} onRefresh={invalidateOrders}>
       <GradientHeader title="Stores & Orders" subtitle={roleLabel(claims)} right={<HeaderRight />} />
-      <View style={s.segRow}>
+      <View style={s.body}>
+      <View style={s.quickRow}>
         <Pressable onPress={() => router.push("/record?mode=sale" as never)} style={s.quick} accessibilityRole="button" accessibilityLabel="Record sale">
           <IndianRupee size={14} color={t.color.brand} />
           <Text style={s.quickTxt}>+ Sale</Text>
@@ -114,7 +115,7 @@ export default function OrdersScreen() {
           <Text style={s.quickTxt}>+ Collect</Text>
         </Pressable>
       </View>
-      <View style={s.segRow}>
+      <View style={s.segWrap}>
         {(["orders", "challans"] as Seg[]).map((k) => (
           <Pressable
             key={k}
@@ -128,7 +129,7 @@ export default function OrdersScreen() {
         ))}
       </View>
       {seg === "orders" ? (
-        orders.isLoading ? <View style={s.pad}><SkeletonRows rows={5} /></View>
+        orders.isLoading ? <SkeletonRows rows={5} />
         : orders.isError ? <EmptyState title="Could not load orders" message={friendlyError(orders.error)} />
         : (orders.data ?? []).length === 0 ? <EmptyState title="No open orders" message="Approved orders appear here for challan and fulfilment." />
         : (
@@ -173,7 +174,7 @@ export default function OrdersScreen() {
             })}
           </View>
         )
-      ) : challans.isLoading ? <View style={s.pad}><SkeletonRows rows={5} /></View>
+      ) : challans.isLoading ? <SkeletonRows rows={5} />
         : challans.isError ? <EmptyState title="Could not load challans" message={friendlyError(challans.error)} />
         : (challans.data ?? []).length === 0 ? <EmptyState title="No released challans" message="Only office-released challans are visible here." />
         : (
@@ -216,6 +217,7 @@ export default function OrdersScreen() {
             ))}
           </View>
         )}
+      </View>
     </Screen>
   );
 }
@@ -254,21 +256,29 @@ function ActionBtn({ label, icon: Icon, onPress, busy, tone }: {
 const useStyles = () => {
   const { palette: t } = useTheme();
   return StyleSheet.create({
-    segRow: { flexDirection: "row", gap: tokens.space.sm, paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md },
-    segBtn: {
-      flex: 1, minHeight: 36, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
-      backgroundColor: t.color.surface, alignItems: "center", justifyContent: "center",
+    body: {
+      paddingHorizontal: tokens.space.lg,
+      paddingTop: tokens.space.lg,
+      gap: tokens.space.md,
     },
-    segBtnOn: { backgroundColor: t.color.ink, borderColor: t.color.ink },
+    quickRow: { flexDirection: "row", gap: tokens.space.sm },
+    segWrap: {
+      flexDirection: "row", backgroundColor: t.color.fill, borderRadius: tokens.radius.md,
+      borderWidth: 1, borderColor: t.color.line, padding: 3, gap: 3,
+    },
+    segBtn: {
+      flex: 1, minHeight: 40, borderRadius: tokens.radius.sm,
+      alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+    },
+    segBtnOn: { backgroundColor: t.color.surface, ...t.shadow.card },
     segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-    segTxtOn: { color: t.color.surface },
+    segTxtOn: { color: t.color.brand },
     quick: {
       flex: 1, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
       backgroundColor: t.color.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
     },
     quickTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, color: t.color.ink },
-    list: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md, gap: tokens.space.sm },
-    pad: { padding: tokens.space.lg },
+    list: { gap: tokens.space.sm },
     card: {
       backgroundColor: t.color.surface, borderRadius: tokens.radius.lg, borderWidth: 1,
       borderColor: t.color.line, padding: tokens.space.md, gap: tokens.space.xs, ...tokens.shadow.card,
