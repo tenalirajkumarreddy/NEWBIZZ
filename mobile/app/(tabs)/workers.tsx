@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { UserPlus, ChevronRight, CalendarDays, Minus, Plus } from "lucide-react-native";
+import { UserPlus, ChevronRight, CalendarDays, Clock, Minus, Plus } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -50,28 +50,33 @@ const ATT_CHIPS: { label: string; value: string }[] = [
   { label: "W", value: "week_off" },
 ];
 
-/** ₹ pill hidden for these statuses (paid-leave needs month context server-side;
- * absent rows carry no credit by definition). */
-const NO_PAY = new Set(["absent", "leave", "holiday", "week_off"]);
-
-/** Non-present statuses the simple row treats like OFF (hours zeroed, ₹ hidden). */
+/** Non-worked statuses: no band/₹ credit, hours zeroed. */
 const OFF_LIKE = new Set(["absent", "leave", "holiday", "week_off"]);
+
+/** Human labels for non-worked statuses shown on the row toggle. */
+const OFF_LABEL: Record<string, string> = {
+  absent: "Absent", leave: "Leave", holiday: "Holiday", week_off: "Week off",
+};
 
 const RUN_TONE: Record<string, "neutral" | "brand" | "grn" | "amb"> = {
   draft: "neutral", computed: "amb", posted: "brand", paid: "grn",
 };
 
 interface RowDraft {
-  on: boolean;
   status: string;
   hours: number;
   ot: number;
   note: string;
-  /** true = simple ON/OFF row (present at `hours`); false = chips expanded */
+  /** true = collapsed row; false = chips/note expanded */
   simple: boolean;
 }
 
-const ROW_FALLBACK: RowDraft = { on: true, status: "present", hours: 8, ot: 0, note: "", simple: true };
+/** Every row starts ABSENT — the operator marks only who showed up. */
+const ROW_ABSENT: RowDraft = { status: "absent", hours: 0, ot: 0, note: "", simple: true };
+
+function isWorked(status: string): boolean {
+  return status === "present" || status === "half_day";
+}
 
 function ymOf(iso: string) {
   return { year: Number(iso.slice(0, 4)), month0: Number(iso.slice(5, 7)) - 1 };
@@ -97,9 +102,11 @@ export default function WorkersScreen() {
   const [sel, setSel] = useState(todayIST);
   const isToday = sel === todayIST();
   const ro = !isToday;
+  const [shift, setShift] = useState<string | null>(null);
+  /** Marking unlocks only after the warehouse shift timings are picked. */
+  const needShift = !ro && !shift;
   const [ym, setYm] = useState(() => ymOf(sel));
   const [monthOpen, setMonthOpen] = useState(false);
-  const [shift, setShift] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, RowDraft>>({});
   const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
   const [busySave, setBusySave] = useState(false);
@@ -121,8 +128,8 @@ export default function WorkersScreen() {
 
   // Prefill once per selected date: saved rows win (keyed entityType+entityId —
   // the exact fields useAttendanceForDate returns; it has no note/amount, so
-  // note resets to "" and money is recomputed client-side). Unsaved roster
-  // members default to present with the picked shift's hours (else 8h).
+  // note resets to "" and money is recomputed client-side). Everyone else
+  // defaults to ABSENT — the operator marks only who showed up.
   useEffect(() => {
     if (prefilledFor === sel) return;
     if (!rosterQ.data || dayQ.data === undefined) return;
@@ -132,32 +139,34 @@ export default function WorkersScreen() {
     const next: Record<string, RowDraft> = {};
     for (const p of rosterQ.data) {
       const sv = saved.get(`${p.entityType}:${p.entityId}`);
-      const offLike = sv ? OFF_LIKE.has(sv.status) : false;
       next[`${p.entityType}:${p.entityId}`] = sv
         ? {
-            on: !offLike,
-            status: sv.status === "present" || sv.status === "half_day" ? sv.status : "present",
+            status: sv.status,
             simple: true,
-            hours: offLike ? base : sv.hours || base,
+            hours: OFF_LIKE.has(sv.status) ? 0 : sv.hours || base,
             ot: sv.otHours || 0,
             note: "",
           }
-        : { on: true, status: "present", simple: true, hours: base, ot: 0, note: "" };
+        : { ...ROW_ABSENT };
     }
     setDraft(next);
     setPrefilledFor(sel);
   }, [prefilledFor, sel, rosterQ.data, dayQ.data, shiftsQ.data, shift]);
 
   function drOf(key: string): RowDraft {
-    return draft[key] ?? ROW_FALLBACK;
+    return draft[key] ?? ROW_ABSENT;
   }
 
   function patch(key: string, p: Partial<RowDraft>) {
-    setDraft((d) => ({ ...d, [key]: { ...(d[key] ?? ROW_FALLBACK), ...p } }));
+    setDraft((d) => ({ ...d, [key]: { ...(d[key] ?? ROW_ABSENT), ...p } }));
   }
 
+  /** Live ₹ preview, lane-aware: daily workers follow the hours→band table;
+   * monthly staff follow status (present ×1, half-day ×0.5) + OT — hours
+   * don't drive their pay. Leave hides the pill (paid-leave allowance needs
+   * month context the server owns). */
   function pillFor(p: PayrollPerson, dr: RowDraft): number | null {
-    if (!dr.on || NO_PAY.has(dr.status)) return null;
+    if (!isWorked(dr.status)) return null;
     if (p.entityType === "worker") return payForHours(mapsQ.data ?? [], dr.hours);
     const r = ratesQ.data?.[p.entityId];
     return previewDailyWage(
@@ -173,21 +182,38 @@ export default function WorkersScreen() {
     setDraft((d) => {
       const next = { ...d };
       for (const k of Object.keys(next)) {
-        if (next[k].on) next[k] = { ...next[k], hours: tpl.totalHours };
+        if (next[k].status === "present") next[k] = { ...next[k], hours: tpl.totalHours };
+        else if (next[k].status === "half_day") {
+          next[k] = { ...next[k], hours: Math.max(1, Math.round(tpl.totalHours / 2)) };
+        }
       }
       return next;
     });
   }
 
+  /** Row toggle = the present/absent switch (the default, one-tap action). */
+  function onToggle(key: string) {
+    setDraft((d) => {
+      const cur = d[key] ?? ROW_ABSENT;
+      if (isWorked(cur.status)) {
+        return { ...d, [key]: { ...cur, status: "absent", hours: 0, ot: 0, simple: true } };
+      }
+      return { ...d, [key]: { ...cur, status: "present", hours: shiftHours(), ot: 0, simple: true } };
+    });
+  }
+
   function onStatus(key: string, value: string) {
     setDraft((d) => {
-      const cur = d[key] ?? ROW_FALLBACK;
-      if (value === "absent" || NO_PAY.has(value)) {
-        return { ...d, [key]: { ...cur, status: value, hours: 0, ot: 0 } };
+      const cur = d[key] ?? ROW_ABSENT;
+      if (value === "absent") {
+        return { ...d, [key]: { ...cur, status: "absent", hours: 0, ot: 0, simple: true } };
       }
-      const tpl = shiftsQ.data?.find((x) => x.name === shift);
-      const fill = tpl ? tpl.totalHours : 8;
-      return { ...d, [key]: { ...cur, status: value, hours: cur.hours > 0 ? cur.hours : fill } };
+      if (value === "half_day") {
+        const half = Math.max(1, Math.round(shiftHours() / 2));
+        return { ...d, [key]: { ...cur, status: "half_day", hours: half } };
+      }
+      // leave / holiday / week_off: non-worked, hours zeroed, row collapses
+      return { ...d, [key]: { ...cur, status: value, hours: 0, ot: 0, simple: true } };
     });
   }
 
@@ -200,24 +226,35 @@ export default function WorkersScreen() {
       .join("");
   }
 
+  function shiftHours(): number {
+    const tpl = shiftsQ.data?.find((x) => x.name === shift);
+    return tpl ? tpl.totalHours : 8;
+  }
+
   let presentN = 0;
   let halfN = 0;
-  let onN = 0;
+  let absentN = 0;
+  let markedN = 0;
   let dayTotal = 0;
   for (const p of rosterQ.data ?? []) {
     const dr = drOf(`${p.entityType}:${p.entityId}`);
-    if (!dr.on) continue;
-    onN++;
+    if (dr.status === "absent") { absentN++; continue; }
+    markedN++;
     if (dr.status === "present") presentN++;
     if (dr.status === "half_day") halfN++;
     dayTotal += pillFor(p, dr) ?? 0;
   }
+  // Saving with 0 marked rows is still meaningful — it clears previously
+  // saved marks (the RPC replaces per-entity), so allow it whenever the day
+  // already has saved rows. shift is enforced by the roster gate, but the
+  // RPC stores it per row, so never save without it.
+  const canSave = isToday && shift != null && !busySave && (markedN > 0 || (dayQ.data?.length ?? 0) > 0);
 
   async function onSaveDay() {
     if (!isToday || busySave) return;
     const rows = (rosterQ.data ?? [])
       .map((p) => ({ p, dr: drOf(`${p.entityType}:${p.entityId}`) }))
-      .filter(({ dr }) => dr.on)
+      .filter(({ dr }) => dr.status !== "absent")
       .map(({ p, dr }) => ({
         entityType: p.entityType,
         entityId: p.entityId,
@@ -226,8 +263,8 @@ export default function WorkersScreen() {
         otHours: dr.ot,
         note: dr.note.trim() ? dr.note.trim() : null,
       }));
-    if (rows.length === 0) {
-      Toast.show({ type: "error", text1: "Nothing to save", text2: "Turn ON at least one row." });
+    if (rows.length === 0 && (dayQ.data?.length ?? 0) === 0) {
+      Toast.show({ type: "error", text1: "Nothing to save", text2: "Mark at least one person present." });
       return;
     }
     setBusySave(true);
@@ -302,7 +339,8 @@ export default function WorkersScreen() {
   return (
     <Screen refreshing={fetching > 0} onRefresh={invalidateWorkers}>
       <GradientHeader title="Workers" subtitle={roleLabel(claims)} right={<HeaderRight />} />
-      <View style={s.segRow}>
+      <View style={s.body}>
+      <View style={s.segWrap}>
         {(Object.keys(SEG_LABELS) as Seg[]).map((k) => (
           <Pressable
             key={k}
@@ -318,7 +356,7 @@ export default function WorkersScreen() {
 
       {seg === "workers" ? (
         <>
-          <View style={s.segRow}>
+          <View style={s.quickRow}>
             <Pressable
               onPress={() => setAddOpen(true)}
               accessibilityRole="button"
@@ -330,7 +368,7 @@ export default function WorkersScreen() {
             </Pressable>
           </View>
           <Text style={s.legend}>Red: warehouse owes them · Green: they owe the warehouse</Text>
-          {staff.isLoading ? <View style={s.pad}><SkeletonRows rows={5} /></View>
+          {staff.isLoading ? <SkeletonRows rows={5} />
             : staff.isError ? <EmptyState title="Could not load staff" message={friendlyError(staff.error)} />
             : (staff.data ?? []).length === 0 ? (
               <EmptyState title="No staff yet" message="Add a worker to start the roster." actionLabel="+ Add worker" onAction={() => setAddOpen(true)} />
@@ -376,55 +414,57 @@ export default function WorkersScreen() {
         </>
       ) : seg === "attendance" ? (
         <>
-          <View style={s.attHeadWrap}>
-            <View style={s.attHead}>
-              <Pressable
-                onPress={() => {
-                  setYm(ymOf(sel));
-                  setMonthOpen(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Pick attendance date"
-                style={({ pressed }) => [s.dateBtn, pressed && { opacity: 0.85 }]}
-              >
-                <CalendarDays size={14} color={t.color.brand} />
-                <Text style={s.dateBtnTxt}>{dateIST(sel)}{isToday ? " · Today" : ""}</Text>
-              </Pressable>
-              <View pointerEvents={ro ? "none" : "auto"}>
-                <View style={[s.shiftWrap, ro && { opacity: 0.6 }]}>
-                  <DropdownSelect
-                    value={shift}
-                    options={shiftOptions}
-                    onChange={onShiftPick}
-                    placeholder="Select shift"
-                    label="Shift"
-                  />
-                </View>
-              </View>
-              {ro ? (
-                <Text style={s.infoStrip}>View only - attendance can be changed on the day itself (or by the office).</Text>
-              ) : null}
-              {(shiftsQ.isError || mapsQ.isError || ratesQ.isError) ? (
-                <View style={s.cfgErr}>
-                  <Text style={s.cfgErrTxt} numberOfLines={2}>
-                    Pay settings failed to load — amounts may show ₹0. {friendlyError((shiftsQ.error ?? mapsQ.error ?? ratesQ.error) as Error)}
-                  </Text>
-                  <Pressable
-                    onPress={() => { void shiftsQ.refetch(); void mapsQ.refetch(); void ratesQ.refetch(); }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Retry loading pay settings"
-                    style={({ pressed }) => [s.cfgRetry, pressed && { opacity: 0.8 }]}
-                  >
-                    <Text style={s.cfgRetryTxt}>Retry</Text>
-                  </Pressable>
-                </View>
-              ) : null}
+          <View style={s.attControls}>
+            <Pressable
+              onPress={() => {
+                setYm(ymOf(sel));
+                setMonthOpen(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Pick attendance date"
+              style={({ pressed }) => [s.dateBtn, pressed && { opacity: 0.85 }]}
+            >
+              <CalendarDays size={14} color={t.color.brand} />
+              <Text style={s.dateBtnTxt}>{dateIST(sel)}{isToday ? " · Today" : ""}</Text>
+            </Pressable>
+            <View pointerEvents={ro ? "none" : "auto"}>
+              <DropdownSelect
+                value={shift}
+                options={shiftOptions}
+                onChange={onShiftPick}
+                placeholder={ro ? "Shift (view only)" : "Select shift timings"}
+                label="Shift"
+              />
             </View>
+            {ro ? (
+              <Text style={s.infoStrip}>View only — attendance can be changed on the day itself (or by the office).</Text>
+            ) : null}
+            {(shiftsQ.isError || mapsQ.isError || ratesQ.isError) ? (
+              <View style={s.cfgErr}>
+                <Text style={s.cfgErrTxt} numberOfLines={2}>
+                  Pay settings failed to load — amounts may show ₹0. {friendlyError((shiftsQ.error ?? mapsQ.error ?? ratesQ.error) as Error)}
+                </Text>
+                <Pressable
+                  onPress={() => { void shiftsQ.refetch(); void mapsQ.refetch(); void ratesQ.refetch(); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading pay settings"
+                  style={({ pressed }) => [s.cfgRetry, pressed && { opacity: 0.8 }]}
+                >
+                  <Text style={s.cfgRetryTxt}>Retry</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
-          {rosterQ.isLoading || dayQ.isLoading ? <View style={s.pad}><SkeletonRows rows={5} /></View>
+          {rosterQ.isLoading || dayQ.isLoading ? <SkeletonRows rows={5} />
             : rosterQ.isError ? <EmptyState title="Could not load roster" message={friendlyError(rosterQ.error)} />
             : dayQ.isError ? <EmptyState title="Could not load attendance" message={friendlyError(dayQ.error)} />
-            : (rosterQ.data ?? []).length === 0 ? (
+            : needShift ? (
+              <EmptyState
+                icon={Clock}
+                title="Select shift timings"
+                message="Pick the warehouse shift above to unlock attendance marking."
+              />
+            ) : (rosterQ.data ?? []).length === 0 ? (
               <EmptyState title="No staff yet" message="Add workers first, then mark their attendance here." />
             ) : (
               <>
@@ -434,8 +474,15 @@ export default function WorkersScreen() {
                     const dr = drOf(key);
                     const pill = pillFor(p, dr);
                     return (
-                      <View key={key} style={[s.card, !dr.on && s.attCardOff]}>
-                        <View style={s.attRowTop}>
+                      <View key={key} style={[s.card, dr.status === "absent" && s.attCardOff]}>
+                        <Pressable
+                          onPress={() => onToggle(key)}
+                          disabled={ro}
+                          accessibilityRole="switch"
+                          accessibilityLabel={`Toggle ${p.fullName} present`}
+                          accessibilityState={{ checked: dr.status !== "absent" }}
+                          style={({ pressed }) => [s.attRowTop, pressed && { opacity: 0.9 }]}
+                        >
                           {p.photoUrl ? (
                             <Image source={{ uri: p.photoUrl }} style={s.avatar} accessibilityLabel={`${p.fullName} photo`} />
                           ) : (
@@ -445,148 +492,161 @@ export default function WorkersScreen() {
                           )}
                           <View style={s.nameCol}>
                             <Text style={s.name} numberOfLines={1}>{p.fullName}</Text>
-                            <Text style={s.sub}>{p.entityType === "worker" ? "Worker" : "Staff"}</Text>
+                            <Text style={s.sub}>{p.entityType === "worker" ? "Worker · daily" : "Staff · monthly"}</Text>
                           </View>
-                          <Pressable
-                            onPress={() => patch(key, { on: !dr.on })}
-                            disabled={ro}
-                            accessibilityRole="switch"
-                            accessibilityLabel={`${p.fullName} present`}
-                            accessibilityState={{ checked: dr.on }}
-                            style={[s.onOff, dr.on && s.onOffOn, ro && { opacity: 0.6 }]}
-                          >
-                            <Text style={[s.onOffTxt, dr.on && s.onOffTxtOn]}>{dr.on ? "ON" : "OFF"}</Text>
-                          </Pressable>
-                        </View>
-                        {dr.on ? (
-                          <>
-                            <View style={s.attRowMid}>
-                              <View style={s.hrsWrap}>
-                                <Text style={s.numLabel}>HRS</Text>
-                                <TextInput
-                                  style={[s.hrsInput, ro && { opacity: 0.6 }]}
-                                  value={String(dr.hours)}
-                                  onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
-                                  editable={!ro}
-                                  keyboardType="decimal-pad"
-                                  accessible
-                                  accessibilityLabel={`${p.fullName} hours worked`}
-                                />
-                              </View>
-                              <View style={s.pillWrap}>
-                                {pill !== null ? (
-                                  <Text style={s.pill}>{moneyINR(pill)}</Text>
-                                ) : (
-                                  <Text style={[s.pill, { color: t.color.ink4, backgroundColor: t.color.fill }]}>{moneyINR(0)}</Text>
-                                )}
-                              </View>
+                          {pill !== null ? (
+                            <Text style={s.amt}>{moneyINR(pill)}</Text>
+                          ) : null}
+                          <Text style={[s.markTag, isWorked(dr.status) && s.markTagOn]}>
+                            {isWorked(dr.status) ? "Present" : OFF_LABEL[dr.status] ?? "Absent"}
+                          </Text>
+                        </Pressable>
+                        {!dr.simple ? (
+                          <View style={s.advBlock}>
+                            <View style={s.chipRow}>
+                              {ATT_CHIPS.filter((c) => c.value !== "present" && c.value !== "absent").map((c) => {
+                                const active = dr.status === c.value;
+                                const tone = c.value === "half_day" ? "amb" as const : c.value === "leave" ? "red" as const : "ghost" as const;
+                                const colors: Record<string, [string, string]> = {
+                                  amb: [t.color.ambWash, t.color.amb],
+                                  red: [t.color.redWash, t.color.red],
+                                  ghost: [t.color.fill, t.color.ink3],
+                                };
+                                const [bg, fg] = active ? colors[tone] : [t.color.surface, t.color.ink3];
+                                return (
+                                  <Pressable
+                                    key={c.value}
+                                    onPress={() => onStatus(key, c.value)}
+                                    disabled={ro}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Mark ${p.fullName} ${c.value}`}
+                                    accessibilityState={{ selected: active }}
+                                    style={({ pressed }) => [
+                                      s.chip,
+                                      { backgroundColor: bg, borderColor: active ? fg : t.color.line },
+                                      (ro || pressed) && { opacity: 0.5 },
+                                    ]}
+                                  >
+                                    <Text style={[s.chipTxt, { color: active ? fg : t.color.ink3 }]}>{c.label}</Text>
+                                  </Pressable>
+                                );
+                              })}
                             </View>
-                            {dr.simple ? (
-                              <Pressable
-                                onPress={() => patch(key, { simple: false })}
-                                disabled={ro}
-                                accessibilityRole="button"
-                                accessibilityLabel={`More options for ${p.fullName}`}
-                                style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
-                              >
-                                <Text style={s.advTxt}>Half day / leave / note</Text>
-                              </Pressable>
-                            ) : (
-                              <View style={s.advBlock}>
-                                <View style={s.chipRow}>
-                                  {ATT_CHIPS.filter((c) => c.value !== "present" && c.value !== "absent").map((c) => {
-                                    const active = dr.status === c.value;
-                                    return (
-                                      <Pressable
-                                        key={c.value}
-                                        onPress={() => onStatus(key, c.value)}
-                                        disabled={ro || !dr.on}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Mark ${p.fullName} ${c.value}`}
-                                        accessibilityState={{ selected: active }}
-                                        style={[s.chip, active && s.chipOn, (ro || !dr.on) && { opacity: 0.5 }]}
-                                      >
-                                        <Text style={[s.chipTxt, active && s.chipTxtOn]}>{c.label}</Text>
-                                      </Pressable>
-                                    );
-                                  })}
+                            <TextInput
+                              style={[s.noteInput, ro && { opacity: 0.6 }]}
+                              value={dr.note}
+                              onChangeText={(v) => patch(key, { note: v })}
+                              editable={!ro}
+                              placeholder="Note (optional)"
+                              placeholderTextColor={t.color.ink4}
+                              accessible
+                              accessibilityLabel={`${p.fullName} note`}
+                            />
+                            <Pressable
+                              onPress={() => patch(key, { simple: true })}
+                              disabled={ro}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Hide extra options for ${p.fullName}`}
+                              style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
+                            >
+                              <Text style={s.advTxt}>Hide extra options</Text>
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <>
+                            <View style={s.attDetails}>
+                              {p.entityType === "worker" ? (
+                                // Daily lane: the HRS→band table owns pay (OT is
+                                // baked into total hours) — the RPC ignores ot_hours
+                                // for workers, so no OT field here.
+                                <View style={s.hrsField}>
+                                  <Text style={s.fieldLabel}>TOTAL HRS</Text>
+                                  <TextInput
+                                    style={[s.fieldInput, s.hrsInputW, ro && { opacity: 0.6 }]}
+                                    value={String(dr.hours)}
+                                    onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
+                                    editable={!ro}
+                                    keyboardType="decimal-pad"
+                                    accessible
+                                    accessibilityLabel={`${p.fullName} hours worked`}
+                                  />
+                                  <Text style={s.hrsHint}>/ {shiftHours() || 8}h</Text>
                                 </View>
-                                <View style={s.numRow}>
-                                  <View style={s.numWrap}>
-                                    <Text style={s.numLabel}>OT</Text>
-                                    <View style={s.stepRow}>
-                                      <Pressable
-                                        onPress={() => patch(key, { ot: Math.max(0, dr.ot - 1) })}
-                                        disabled={ro}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Decrease ${p.fullName} overtime`}
-                                        style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                      >
-                                        <Minus size={16} color={t.color.ink2} />
-                                      </Pressable>
-                                      <TextInput
-                                        style={[s.numInput, ro && { opacity: 0.6 }]}
-                                        value={String(dr.ot)}
-                                        onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
-                                        editable={!ro}
-                                        keyboardType="decimal-pad"
-                                        accessible
-                                        accessibilityLabel={`${p.fullName} overtime hours`}
-                                      />
-                                      <Pressable
-                                        onPress={() => patch(key, { ot: dr.ot + 1 })}
-                                        disabled={ro}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Increase ${p.fullName} overtime`}
-                                        style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                      >
-                                        <Plus size={16} color={t.color.ink2} />
-                                      </Pressable>
-                                    </View>
+                              ) : (
+                                // Monthly lane: status drives the day rate and OT is
+                                // credited unconditionally (even leave/holiday OT) —
+                                // hours don't affect pay, so no HRS field.
+                                <View style={s.otField}>
+                                  <Text style={s.fieldLabel}>OT HRS</Text>
+                                  <View style={s.stepRow}>
+                                    <Pressable
+                                      onPress={() => patch(key, { ot: Math.max(0, dr.ot - 1) })}
+                                      disabled={ro}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Decrease ${p.fullName} overtime`}
+                                      style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                    >
+                                      <Minus size={14} color={t.color.ink3} />
+                                    </Pressable>
+                                    <TextInput
+                                      style={[s.fieldInput, s.otInputW, ro && { opacity: 0.6 }]}
+                                      value={String(dr.ot)}
+                                      onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
+                                      editable={!ro}
+                                      keyboardType="decimal-pad"
+                                      accessible
+                                      accessibilityLabel={`${p.fullName} overtime hours`}
+                                    />
+                                    <Pressable
+                                      onPress={() => patch(key, { ot: dr.ot + 1 })}
+                                      disabled={ro}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Increase ${p.fullName} overtime`}
+                                      style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
+                                    >
+                                      <Plus size={14} color={t.color.ink3} />
+                                    </Pressable>
                                   </View>
                                 </View>
-                                <TextInput
-                                  style={[s.noteInput, ro && { opacity: 0.6 }]}
-                                  value={dr.note}
-                                  onChangeText={(v) => patch(key, { note: v })}
-                                  editable={!ro}
-                                  placeholder="Note (optional)"
-                                  placeholderTextColor={t.color.ink4}
-                                  accessible
-                                  accessibilityLabel={`${p.fullName} note`}
-                                />
-                                <Pressable
-                                  onPress={() => patch(key, { simple: true })}
-                                  disabled={ro}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`Hide extra options for ${p.fullName}`}
-                                  style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
-                                >
-                                  <Text style={s.advTxt}>Hide extra options</Text>
-                                </Pressable>
-                              </View>
-                            )}
+                              )}
+                            </View>
+                            <Pressable
+                              onPress={() => patch(key, { simple: false })}
+                              disabled={ro}
+                              accessibilityRole="button"
+                              accessibilityLabel={`More options for ${p.fullName}`}
+                              style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
+                            >
+                              <Text style={s.advTxt}>Half day / leave / note</Text>
+                            </Pressable>
                           </>
-                        ) : null}
+                        )}
                       </View>
                     );
                   })}
                 </View>
                 <View style={s.footer}>
-                  <View style={s.footCard}>
-                    <Text style={s.footTxt}>
-                      Present {presentN} · Half {halfN} · <Text style={s.footAmt}>{moneyINR(dayTotal)}</Text> today
-                    </Text>
+                  <View style={s.footSummary}>
+                    <Text style={s.footLabel}>Present</Text>
+                    <Text style={s.footVal}>{presentN}</Text>
+                    <Text style={s.footSep}>·</Text>
+                    <Text style={s.footLabel}>Half</Text>
+                    <Text style={s.footVal}>{halfN}</Text>
+                    <Text style={s.footSep}>·</Text>
+                    <Text style={s.footLabel}>Absent</Text>
+                    <Text style={s.footVal}>{absentN}</Text>
+                    <Text style={s.footSep}>·</Text>
+                    <Text style={s.footLabel}>Total</Text>
+                    <Text style={s.footAmt}>{moneyINR(dayTotal)}</Text>
                   </View>
                   <Pressable
                     onPress={() => void onSaveDay()}
-                    disabled={!isToday || onN === 0 || busySave}
+                    disabled={!canSave}
                     accessibilityRole="button"
                     accessibilityLabel="Save attendance day"
                     style={({ pressed }) => [
                       s.saveBtn,
-                      (!isToday || onN === 0 || busySave) && { opacity: 0.5 },
-                      pressed && { opacity: 0.8 },
+                      (!canSave || pressed) && { opacity: 0.5 },
                     ]}
                   >
                     <Text style={s.saveTxt}>{busySave ? "Saving…" : "Save day"}</Text>
@@ -596,7 +656,7 @@ export default function WorkersScreen() {
             )}
         </>
       ) : (
-        runs.isLoading ? <View style={s.pad}><SkeletonRows rows={4} /></View>
+        runs.isLoading ? <SkeletonRows rows={4} />
           : runs.isError ? <EmptyState title="Could not load payroll" message={friendlyError(runs.error)} />
           : (runs.data ?? []).length === 0 ? <EmptyState title="No payroll runs" message="Payroll runs computed by the office appear here." />
           : (
@@ -614,6 +674,7 @@ export default function WorkersScreen() {
             </View>
           )
       )}
+      </View>
 
       {addOpen ? (
         <Sheet visible onClose={() => setAddOpen(false)} title="Add worker">
@@ -723,14 +784,19 @@ export default function WorkersScreen() {
 const useStyles = () => {
   const { palette: t } = useTheme();
   return StyleSheet.create({
-    segRow: { flexDirection: "row", gap: tokens.space.sm, paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md },
-    segBtn: {
-      flex: 1, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
-      backgroundColor: t.color.surface, alignItems: "center", justifyContent: "center",
+    body: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.lg, gap: tokens.space.md },
+    quickRow: { flexDirection: "row", gap: tokens.space.sm },
+    segWrap: {
+      flexDirection: "row", backgroundColor: t.color.fill, borderRadius: tokens.radius.md,
+      borderWidth: 1, borderColor: t.color.line, padding: 3, gap: 3,
     },
-    segBtnOn: { backgroundColor: t.color.ink, borderColor: t.color.ink },
+    segBtn: {
+      flex: 1, minHeight: 40, borderRadius: tokens.radius.sm,
+      alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+    },
+    segBtnOn: { backgroundColor: t.color.surface, ...t.shadow.card },
     segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-    segTxtOn: { color: t.color.surface },
+    segTxtOn: { color: t.color.brand },
     addBtn: {
       flex: 1, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
       backgroundColor: t.color.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
@@ -741,12 +807,7 @@ const useStyles = () => {
       backgroundColor: t.color.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
     },
     dateBtnTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs, color: t.color.ink },
-    shiftWrap: { width: "100%" },
-    attHeadWrap: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md },
-    attHead: {
-      backgroundColor: t.color.surface, borderRadius: tokens.radius.lg, borderWidth: 1,
-      borderColor: t.color.line, padding: tokens.space.md, gap: tokens.space.sm, ...tokens.shadow.card,
-    },
+    attControls: { gap: tokens.space.sm },
     infoStrip: {
       color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
       backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
@@ -757,30 +818,29 @@ const useStyles = () => {
       flexDirection: "row", alignItems: "center", gap: tokens.space.sm,
       backgroundColor: t.color.redWash, borderWidth: 1, borderColor: t.color.red,
       borderRadius: tokens.radius.md, paddingHorizontal: tokens.space.md,
-      paddingVertical: tokens.space.sm, marginTop: tokens.space.sm,
+      paddingVertical: tokens.space.sm,
     },
     cfgErrTxt: { flex: 1, color: t.color.red, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
     cfgRetry: {
-      minHeight: 36, paddingHorizontal: tokens.space.md, borderRadius: tokens.radius.md,
+      minHeight: 32, paddingHorizontal: tokens.space.md, borderRadius: tokens.radius.md,
       backgroundColor: t.color.red, alignItems: "center", justifyContent: "center",
     },
     cfgRetryTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
-    list: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md, gap: tokens.space.sm },
-    pad: { padding: tokens.space.lg },
+    list: { gap: tokens.space.sm },
     card: {
       backgroundColor: t.color.surface, borderRadius: tokens.radius.lg, borderWidth: 1,
       borderColor: t.color.line, padding: tokens.space.md, gap: tokens.space.xs, ...tokens.shadow.card,
     },
     headLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     nameWrap: { flex: 1, flexDirection: "row", alignItems: "center", gap: tokens.space.sm, minWidth: 0 },
-    dot: { width: 8, height: 8, borderRadius: 4 },
+    dot: { width: 8, height: 8, borderRadius: tokens.radius.full },
     name: { flex: 1, color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
     sub: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
     subFlex: { flex: 1 },
     subLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space.sm },
     legend: {
       color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
-      paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.sm, textAlign: "center",
+      textAlign: "center",
     },
     balPill: {
       fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
@@ -792,86 +852,67 @@ const useStyles = () => {
     balGrn: { color: t.color.grn, backgroundColor: t.color.grnWash },
     balMuted: { color: t.color.ink3, backgroundColor: t.color.fill },
     docNo: { color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, fontVariant: ["tabular-nums"] },
-    pill: {
-      color: t.color.grn, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
-      fontVariant: ["tabular-nums"], paddingHorizontal: tokens.space.sm,
-      paddingVertical: 3, borderRadius: tokens.radius.full, overflow: "hidden",
-      backgroundColor: t.color.grnWash, textAlign: "right",
-    },
-    attCardOff: { backgroundColor: t.color.fill },
+    attCardOff: { opacity: 0.55 },
     attRowTop: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
-    avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: t.color.fill },
+    avatar: { width: 36, height: 36, borderRadius: tokens.radius.full, backgroundColor: t.color.fill },
     avatarFallback: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: t.color.line },
-    avatarTxt: { color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-    nameCol: { flex: 1, minWidth: 0, gap: 1 },
-    attRowMid: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm, marginTop: tokens.space.xs },
-    hrsWrap: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs, flex: 1 },
-    hrsInput: {
-      width: 84, minHeight: 44, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
-      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.md, textAlign: "center",
+    avatarTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+    nameCol: { flex: 1, minWidth: 0, gap: 2 },
+    amt: { color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"] },
+    markTag: {
+      minWidth: 76, paddingHorizontal: tokens.space.md, paddingVertical: 6,
+      borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
+      backgroundColor: t.color.surface, textAlign: "center",
+      color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow,
+    },
+    markTagOn: { backgroundColor: t.color.grnWash, borderColor: t.color.grn, color: t.color.grn },
+    attDetails: {
+      flexDirection: "row", gap: tokens.space.md, marginTop: tokens.space.sm,
+      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.color.line, paddingTop: tokens.space.sm,
+    },
+    hrsField: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
+    otField: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
+    fieldLabel: { color: t.color.ink4, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow, letterSpacing: 0.6, minWidth: 24 },
+    fieldInput: {
+      minHeight: 36, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
+      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.sm, textAlign: "center",
       color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"],
     },
-    pillWrap: { alignItems: "flex-end" },
-    advToggle: { alignItems: "flex-end", paddingVertical: 6, paddingRight: 2 },
-    advTxt: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    hrsInputW: { width: 64 },
+    otInputW: { width: 52 },
+    hrsHint: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    advToggle: { alignItems: "flex-start", paddingVertical: tokens.space.xs },
+    advTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
     advBlock: {
-      backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
-      borderRadius: tokens.radius.md, padding: tokens.space.sm, gap: tokens.space.sm,
-      marginTop: tokens.space.xs,
+      gap: tokens.space.sm, marginTop: tokens.space.sm,
+      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.color.line, paddingTop: tokens.space.sm,
     },
-    attCtlRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
-    onOff: {
-      minWidth: 48, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1, borderColor: t.color.line,
-      backgroundColor: t.color.fill, alignItems: "center", justifyContent: "center", paddingHorizontal: tokens.space.sm,
-    },
-    onOffOn: { backgroundColor: t.color.grnWash, borderColor: t.color.grn },
-    onOffTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
-    onOffTxtOn: { color: t.color.grn },
-    chipRow: {
-      flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 3,
-      backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
-      borderRadius: tokens.radius.md, padding: 3,
-    },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.xs },
     chip: {
-      flex: 1, minWidth: 44, minHeight: 44, borderRadius: tokens.radius.sm,
-      alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+      minHeight: 32, paddingHorizontal: tokens.space.md, borderRadius: tokens.radius.md,
+      borderWidth: 1, alignItems: "center", justifyContent: "center",
     },
-    chipOn: { backgroundColor: t.color.surface, ...tokens.shadow.card },
-    chipTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
-    chipTxtOn: { color: t.color.brand },
-    numRow: { flexDirection: "row", gap: tokens.space.sm },
-    numWrap: { flex: 1, gap: 2 },
-    numLabel: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow, letterSpacing: 0.6 },
+    chipTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
     stepRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
     stepBtn: {
-      minWidth: 44, minHeight: 44, borderRadius: tokens.radius.md, borderWidth: 1,
+      width: 32, height: 32, borderRadius: tokens.radius.md, borderWidth: 1,
       borderColor: t.color.line, backgroundColor: t.color.surface,
       alignItems: "center", justifyContent: "center",
     },
-    numInput: {
-      flex: 1, minHeight: 44, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
-      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.md, textAlign: "center",
-      color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"],
-    },
     noteInput: {
-      minHeight: 44, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
+      minHeight: 40, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
       backgroundColor: t.color.surface, paddingHorizontal: tokens.space.md,
       color: t.color.ink, fontFamily: tokens.font.sans, fontSize: tokens.size.sm,
     },
-    footer: { paddingHorizontal: tokens.space.lg, paddingTop: tokens.space.md, gap: tokens.space.sm },
-    footCard: {
-      backgroundColor: t.color.surface, borderWidth: 1, borderColor: t.color.line,
-      borderRadius: tokens.radius.md, paddingVertical: tokens.space.sm,
-      paddingHorizontal: tokens.space.md,
+    footer: { gap: tokens.space.sm },
+    footSummary: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center",
+      flexWrap: "wrap", gap: tokens.space.xs, paddingVertical: tokens.space.sm,
     },
-    footTxt: {
-      color: t.color.ink2, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs,
-      fontVariant: ["tabular-nums"], textAlign: "center",
-    },
-    footAmt: {
-      color: t.color.grn, fontFamily: tokens.font.mono, fontSize: tokens.size.xs,
-      fontVariant: ["tabular-nums"],
-    },
+    footLabel: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    footVal: { color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow, fontVariant: ["tabular-nums"] },
+    footSep: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
+    footAmt: { color: t.color.grn, fontFamily: tokens.font.monoBold, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"] },
     saveBtn: {
       minHeight: 48, borderRadius: tokens.radius.md, backgroundColor: t.color.brand,
       alignItems: "center", justifyContent: "center",
