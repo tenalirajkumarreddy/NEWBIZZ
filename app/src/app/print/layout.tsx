@@ -43,13 +43,15 @@ const PAPER_TOKENS = {
 export default function PrintLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#f1f5f9] print:bg-white">
-      {/* Print-only sheet metrics: the browser ignores Tailwind's screen
-          padding when paging, so give the A4 page real physical margins.
-          .print-sheet opts a sheet out of its own screen mm geometry — paper
-          uses the @page margins and the sheet's block borders instead. */}
+      {/* Print-only sheet metrics: @page carries zero margin (the sheet owns
+          its full A4 geometry incl. inner padding, so the printed page is
+          byte-for-byte the sheet rendered on screen) and the screen-only
+          auto-centre is dropped. NOTE: the embedded PrintPreviewPanel flow
+          brings its own @page rule — the two never coexist in one document
+          because this block governs the standalone /print route only. */}
       <style>{`@media print {
-        @page { size: A4; margin: 10mm 11mm; }
-        .print-sheet { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }
+        @page { size: A4; margin: 0; }
+        .print-sheet { margin: 0 !important; }
       }`}</style>
 
       {/* stage: toolbar renders on screen only; the sheet sits as an elevated
