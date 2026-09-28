@@ -1,11 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import Toast from "react-native-toast-message";
 import { FileText, Truck, ClipboardList, Undo2, ExternalLink, RefreshCw } from "lucide-react-native";
 import { StatusBadge } from "@/components/StatusBadge";
 import { moneyINR, dateIST } from "@/lib/format";
-import { documentWebUrl, type ResolvedDoc } from "@/data/docs";
+import { documentWebUrl, printShareApiUrl, webOrigin, type ResolvedDoc } from "@/data/docs";
+import { supabase } from "@/lib/supabase";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -17,13 +18,48 @@ const KIND_META: Record<string, { label: string; icon: typeof FileText }> = {
 };
 
 /** Scan result for a newbizz://d/… document QR: identity strip + metadata,
- * with the web print/app view one tap away (PDF/share lives on web). */
+ * with the web print/app view one tap away (PDF/share lives on web).
+ *
+ * "Open full document" first asks the web to mint a TOKENIZED share URL
+ * (/api/print-share — signed, bound to this document, 7-day expiry). The
+ * in-app browser has no web session, so a plain print URL would hit the
+ * login wall; the tokenized one prints for anyone holding the link until it
+ * expires. Falls back to the plain URL when the mint endpoint isn't
+ * available (older web deploy) or the session has expired. */
 export function DocumentCard({ doc, onRescan }: { doc: ResolvedDoc; onRescan: () => void }) {
   const { palette: t } = useTheme();
   const s = useStyles();
+  const [opening, setOpening] = useState(false);
 
   const kindMeta = KIND_META[doc.kind] ?? KIND_META.invoice;
   const Icon = kindMeta.icon;
+
+  async function openFull() {
+    setOpening(true);
+    try {
+      // Ask the web to mint a tokenized share URL (permission-checked there
+      // by /api/print-share). Plain-URL fallback when minting fails.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const authToken = sessionData.session?.access_token;
+      const res = await fetch(printShareApiUrl(doc.kind, doc.id), {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      });
+      let url = documentWebUrl(doc.kind, doc.id);
+      if (res.ok) {
+        const j = (await res.json()) as { url?: string };
+        if (j.url) url = j.url.startsWith("http") ? j.url : webOrigin() + j.url;
+      }
+      await WebBrowser.openBrowserAsync(url);
+    } catch {
+      try {
+        await WebBrowser.openBrowserAsync(documentWebUrl(doc.kind, doc.id));
+      } catch {
+        Toast.show({ type: "error", text1: "Could not open document view" });
+      }
+    } finally {
+      setOpening(false);
+    }
+  }
 
   const rows = useMemo(() => {
     if (!doc.meta) return null;
@@ -85,17 +121,15 @@ export function DocumentCard({ doc, onRescan }: { doc: ResolvedDoc; onRescan: ()
       ) : null}
 
       <Pressable
-        onPress={() => {
-          WebBrowser.openBrowserAsync(documentWebUrl(doc.kind, doc.id)).catch(() =>
-            Toast.show({ type: "error", text1: "Could not open document view" }),
-          );
-        }}
+        onPress={() => void openFull()}
+        disabled={opening}
         accessibilityRole="link"
         accessibilityLabel={`Open ${kindMeta.label} full view`}
-        style={({ pressed }) => [s.openBtn, pressed && { opacity: 0.85 }]}
+        accessibilityState={{ busy: opening }}
+        style={({ pressed }) => [s.openBtn, pressed && { opacity: 0.85 }, opening && { opacity: 0.6 }]}
       >
         <ExternalLink size={14} color={t.color.brand} />
-        <Text style={s.openTxt}>Open full document</Text>
+        <Text style={s.openTxt}>{opening ? "Preparing link…" : "Open full document"}</Text>
       </Pressable>
     </View>
   );

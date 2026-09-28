@@ -49,6 +49,18 @@ export function documentWebUrl(kind: DocKind, id: string): string {
   return `${base}/orders/${id}`;
 }
 
+/** Web origin (for resolving relative share URLs the mint endpoint returns). */
+export function webOrigin(): string {
+  return process.env.EXPO_PUBLIC_WEB_URL ?? "https://newbizz-kappa.vercel.app";
+}
+
+/** The web's mint endpoint for a tokenized share URL of this document.
+ * The route handler maps API kind names (challan, credit-note) itself. */
+export function printShareApiUrl(kind: DocKind, id: string): string {
+  const seg = kind === "creditnote" ? "credit-note" : kind;
+  return `${webOrigin()}/api/print-share?kind=${seg}&id=${encodeURIComponent(id)}`;
+}
+
 function mapMeta(
   r: RawRow | null,
   noKey: "invoice_no" | "challan_no" | "order_no" | "credit_note_no",
