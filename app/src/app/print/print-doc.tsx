@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { docQrSvg } from "@/lib/qr";
 import { dateIST, dateTimeIST, rupees, titleCase } from "@/lib/format";
 
@@ -63,6 +62,8 @@ export interface PrintDocProps {
     address: string | null;
     fssaiNo: string | null;
     bisNo: string | null;
+    /** uploaded brand logo — null falls back to the bundled /brand/logo.png */
+    logoUrl: string | null;
   } | null;
   docNo: string;
   docDate: string;
@@ -77,6 +78,9 @@ export interface PrintDocProps {
   legalLines?: React.ReactNode;
   /** named sign blocks */
   signs?: { label: string; hint?: string }[];
+  /** stored signature image (company_settings.signature_url) — omitted when the
+   *  caller renders an unsigned copy (?sign=0) for a wet-ink signature. */
+  signatureUrl?: string | null;
   children: React.ReactNode;
 }
 
@@ -93,6 +97,7 @@ export async function PrintDoc({
   amountInWordsText,
   legalLines,
   signs = [{ label: "Authorised Signatory" }],
+  signatureUrl,
   children,
 }: PrintDocProps) {
   const qr = await docQrSvg(kind, id, 96);
@@ -130,8 +135,9 @@ export async function PrintDoc({
       >
         {/* identity */}
         <div style={{ display: "flex", gap: 12, minWidth: 0 }}>
-          <Image
-            src="/brand/logo.png"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={company?.logoUrl ?? "/brand/logo.png"}
             alt=""
             width={56}
             height={56}
@@ -221,7 +227,22 @@ export async function PrintDoc({
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 28, marginTop: 16 }}>
         {signs.map((sg) => (
           <div key={sg.label} style={{ width: 190 }}>
-            <div style={{ height: 38, borderBottom: `1px solid ${INK}` }} />
+            {signatureUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={signatureUrl}
+                alt={sg.label}
+                style={{
+                  display: "block",
+                  margin: "0 auto",
+                  height: 34,
+                  maxWidth: 180,
+                  objectFit: "contain",
+                  transform: "rotate(-4deg)",
+                }}
+              />
+            ) : null}
+            <div style={{ height: signatureUrl ? 4 : 38, borderBottom: `1px solid ${INK}` }} />
             <div style={{ marginTop: 4, fontSize: 10, fontWeight: 600, color: INK2 }}>{sg.label}</div>
             {sg.hint ? <div style={{ fontSize: 9, color: INK4 }}>{sg.hint}</div> : null}
             <div style={{ fontSize: 9, color: INK4 }}>Date: ______________</div>

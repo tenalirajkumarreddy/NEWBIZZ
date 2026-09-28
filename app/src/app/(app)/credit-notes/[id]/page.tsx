@@ -8,6 +8,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty as fmtQty } from "@/lib/format";
 import { PageContainer, PageHeader } from "@/components/ui";
 import { REASON_LABEL } from "../CreditNotesTable";
+import { PrintPreviewPanel } from "@/app/print/PrintPreviewPanel";
 
 // Credit-note detail — the AR-reducing document. Header facts, the value split
 // (base + reversed tax), the reference invoice, and — for a sales return — the
@@ -34,16 +35,21 @@ export default async function CreditNoteDetailPage({ params }: { params: { id: s
         mono
         subtitle={`${dateIST(cn.createdAt)} · ${cn.storeName ?? "—"}${cn.customerName ? ` · ${cn.customerName}` : ""}`}
         actions={
-          cn.referenceSaleId && cn.referenceInvoiceNo && (
-            <Link
-              href={`/invoices/${cn.referenceSaleId}`}
-              className="text-[12px] font-medium text-brand hover:underline"
-            >
-              Against {cn.referenceInvoiceNo} →
-            </Link>
-          )
+          <span className="flex items-center gap-4">
+            {cn.referenceSaleId && cn.referenceInvoiceNo && (
+              <Link
+                href={`/invoices/${cn.referenceSaleId}`}
+                className="text-[12px] font-medium text-brand hover:underline"
+              >
+                Against {cn.referenceInvoiceNo} →
+              </Link>
+            )}
+          </span>
         }
       />
+
+      {/* The A4 document itself, embedded — Print opens the native dialog. */}
+      <PrintPreviewPanel kind="credit-note" id={cn.id} />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

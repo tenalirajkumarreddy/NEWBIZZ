@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/claims";
+import { verifyPrintToken } from "@/lib/print-token";
 import { getChallan, type ChallanLine } from "@/lib/data/challans";
 import { getCompany } from "@/lib/data/settings";
 import { qty as fmtQty } from "@/lib/format";
@@ -12,10 +13,19 @@ export const dynamic = "force-dynamic";
 // physical-fulfilment note handed to the carrier. Quantities only — never
 // prices (no money moves on a challan). Sheet carries the standard document
 // QR footer (newbizz://d/chl/{id}) so scanning the paper opens it in the APK.
-export default async function PrintChallanPage({ params }: { params: { id: string } }) {
+export default async function PrintChallanPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { sign?: string; t?: string };
+}) {
+  // Session + challan.view, or a valid share token for THIS challan (APK
+  // "Open full document" — no web session in the in-app browser).
   const session = await getSession();
-  if (!session) redirect("/login");
-  if (!can(session.claims, "challan.view")) notFound();
+  const token = verifyPrintToken(searchParams.t, "challan", params.id);
+  if (!session && !token) redirect("/login");
+  if (session && !token && !can(session.claims, "challan.view")) notFound();
 
   const [challan, company] = await Promise.all([getChallan(params.id), getCompany()]);
   if (!challan) notFound();
@@ -41,6 +51,7 @@ export default async function PrintChallanPage({ params }: { params: { id: strin
         { label: "Dispatched by", hint: "Name / signature" },
         { label: "Received by", hint: "Name / signature" },
       ]}
+      signatureUrl={searchParams.sign === "0" ? null : (company?.signatureUrl ?? null)}
     >
       {/* Parties + transport meta */}
       <PrintMetaGrid

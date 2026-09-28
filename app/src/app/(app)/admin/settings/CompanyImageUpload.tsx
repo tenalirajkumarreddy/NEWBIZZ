@@ -7,16 +7,16 @@ import { useToast } from "@/components/ui/Toast";
 import { setCompanyImage } from "@/lib/actions/settings";
 
 // CompanyImageUpload — click-to-upload for the invoice-print branding images
-// (signature, payment QR). Uploads the picked file to the public `party-images`
-// bucket under company/, then records its public URL on company_settings via
-// setCompanyImage. Follows the ImageUpload avatar pattern.
+// (logo, signature, payment QR). Uploads the picked file to the public
+// `party-images` bucket under company/, then records its public URL on
+// company_settings via setCompanyImage. Follows the ImageUpload avatar pattern.
 export function CompanyImageUpload({
   target,
   imageUrl,
   label,
   hint,
 }: {
-  target: "signature" | "qr";
+  target: "logo" | "signature" | "qr";
   imageUrl: string | null;
   label: string;
   hint?: string;

@@ -130,6 +130,57 @@ export function titleCase(s: string | null | undefined): string {
   return s.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// ---- amount in words (Indian numbering: crore / lakh / thousand) ----
+
+const WORD_ONES = [
+  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+  "Seventeen", "Eighteen", "Nineteen",
+];
+const WORD_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+function wordTwo(n: number): string {
+  if (n < 20) return WORD_ONES[n];
+  const t = WORD_TENS[Math.floor(n / 10)];
+  const o = WORD_ONES[n % 10];
+  return o ? `${t} ${o}` : t;
+}
+
+function wordThree(n: number): string {
+  const h = Math.floor(n / 100);
+  const rest = n % 100;
+  if (!h) return wordTwo(rest);
+  return rest ? `${WORD_ONES[h]} Hundred ${wordTwo(rest)}` : `${WORD_ONES[h]} Hundred`;
+}
+
+/** "Rupees One Lakh Eighty Four Thousand Two Hundred Only" — Indian numbering
+ *  (crore/lakh/thousand), paise included when nonzero. Used on GST invoices;
+ *  returns "" for null/negative/zero amounts so the row can be hidden. */
+export function amountInWords(value: number | string | null | undefined): string {
+  const n = toNum(value);
+  if (n === null || n < 0) return "";
+  let whole = Math.floor(n);
+  let paise = Math.round((n - whole) * 100);
+  if (paise === 100) {
+    whole += 1;
+    paise = 0;
+  }
+  if (whole === 0 && paise === 0) return "";
+  const crore = Math.floor(whole / 1e7);
+  const lakh = Math.floor((whole % 1e7) / 1e5);
+  const thousand = Math.floor((whole % 1e5) / 1e3);
+  const hundreds = whole % 1e3;
+  const parts: string[] = [];
+  if (crore) parts.push(`${wordThree(crore)} Crore`);
+  if (lakh) parts.push(`${wordTwo(lakh)} Lakh`);
+  if (thousand) parts.push(`${wordTwo(thousand)} Thousand`);
+  if (hundreds) parts.push(wordThree(hundreds));
+  let out = "Rupees";
+  if (parts.length) out += ` ${parts.join(" ")}`;
+  if (paise) out += `${parts.length ? " and" : ""} ${wordTwo(paise)} Paise`;
+  return `${out} Only`;
+}
+
 // ---- internals ----
 
 function toNum(value: number | string | null | undefined): number | null {

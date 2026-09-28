@@ -7,6 +7,7 @@ import { PageContainer, PageHeader } from "@/components/ui";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, qty as fmtQty } from "@/lib/format";
 import { ChallanRowActions } from "../ChallanRowActions";
+import { PrintPreviewPanel } from "@/app/print/PrintPreviewPanel";
 
 // Challan detail — the delivery note. Header facts, the delivered lines, and
 // the transit actions (dispatch / deliver / cancel). Delivering here rolls the
@@ -39,14 +40,6 @@ export default async function ChallanDetailPage({ params }: { params: { id: stri
         }
         actions={
           <>
-            <Link
-              href={`/print/challan/${challan.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[12px] text-brand hover:underline"
-            >
-              Print
-            </Link>
             <ChallanRowActions
               challanId={challan.id}
               challanNo={challan.challan_no}
@@ -58,6 +51,9 @@ export default async function ChallanDetailPage({ params }: { params: { id: stri
         backHref="/challans"
         backLabel="Delivery Challans"
       />
+
+      {/* The A4 document itself, embedded — Print opens the native dialog. */}
+      <PrintPreviewPanel kind="challan" id={challan.id} />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

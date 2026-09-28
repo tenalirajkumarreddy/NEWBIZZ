@@ -94,16 +94,16 @@ export async function updateCompany(data: {
 // Company image uploads (signature / payment QR) — migration 0124
 // =====================================================================
 
-/** Sets or clears company_settings.signature_url / qr_image_url. The file
- *  itself is uploaded client-side to the public `party-images` bucket under
+/** Sets or clears company_settings.logo_url / signature_url / qr_image_url. The
+ *  file itself is uploaded client-side to the public `party-images` bucket under
  *  company/ (same policy family as avatars); this records the public URL. */
 export async function setCompanyImage(
-  target: "signature" | "qr",
+  target: "logo" | "signature" | "qr",
   url: string | null,
 ): Promise<ActionResult> {
   const supabase = createClient();
   const patch: Record<string, any> =
-    target === "signature" ? { signature_url: url } : { qr_image_url: url };
+    target === "logo" ? { logo_url: url } : target === "signature" ? { signature_url: url } : { qr_image_url: url };
   const { data: existing } = await (supabase as any)
     .from("company_settings")
     .select("id")

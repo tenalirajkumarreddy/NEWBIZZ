@@ -1,24 +1,24 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
+import { detailHref, type PrintKind } from "./print-href";
 
-// PrintLink — the canonical "open print preview" affordance for document
-// headers and table rows: the app's cyan link-chip with a printer glyph.
-// Routes to /print/{kind}/{id}, where the sticky preview toolbar's Print
-// button opens the browser's print window over the exact A4 sheet.
+// PrintLink — the "print this document" affordance in table rows (e.g. the
+// challans register). The A4 sheet is embedded on the document's own detail
+// page (PrintPreviewPanel), so "Print" simply takes you there, scrolled to the
+// sheet, where the native print dialog is one button away. From a detail page
+// header the chip is unnecessary — the sheet is already on the page.
 export function PrintLink({
   kind,
   id,
   className,
 }: {
-  kind: "invoice" | "challan" | "credit-note";
+  kind: PrintKind;
   id: string;
   className?: string;
 }) {
   return (
     <Link
-      href={`/print/${kind}/${id}`}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={detailHref(kind, id)}
       className={
         "inline-flex items-center gap-1.5 text-[12px] font-medium text-brand hover:underline " +
         (className ?? "")

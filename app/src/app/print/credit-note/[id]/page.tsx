@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/claims";
+import { verifyPrintToken } from "@/lib/print-token";
 import { getCreditNote } from "@/lib/data/creditnotes";
 import { getCompany } from "@/lib/data/settings";
 import { amountInWords, dateIST, money, titleCase } from "@/lib/format";
@@ -11,10 +12,19 @@ export const dynamic = "force-dynamic";
 // Printable credit note on the shared A4 design system (print-doc): the sales
 // return document that reverses value against a referenced invoice. Carries
 // the standard document QR footer (newbizz://d/cn/{id}).
-export default async function PrintCreditNotePage({ params }: { params: { id: string } }) {
+export default async function PrintCreditNotePage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { sign?: string; t?: string };
+}) {
+  // Session + creditnote.view, or a valid share token for THIS credit note
+  // (APK "Open full document" — no web session in the in-app browser).
   const session = await getSession();
-  if (!session) redirect("/login");
-  if (!can(session.claims, "creditnote.view")) notFound();
+  const token = verifyPrintToken(searchParams.t, "credit-note", params.id);
+  if (!session && !token) redirect("/login");
+  if (session && !token && !can(session.claims, "creditnote.view")) notFound();
 
   const [cn, company] = await Promise.all([getCreditNote(params.id), getCompany()]);
   if (!cn) notFound();
@@ -35,6 +45,7 @@ export default async function PrintCreditNotePage({ params }: { params: { id: st
       footer={company?.invoiceFooter}
       total={cn.amount}
       amountInWordsText={amountInWords(cn.amount) || undefined}
+      signatureUrl={searchParams.sign === "0" ? null : (company?.signatureUrl ?? null)}
       legalLines={
         <>
           This credit note adjusts value against invoice{" "}

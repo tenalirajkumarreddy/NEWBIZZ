@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { unwrap } from "@/lib/data/types";
 import { getInvoice } from "@/lib/data/sales";
 import { getCompany } from "@/lib/data/settings";
+import { docQrSvg } from "@/lib/qr";
 import { ReceiptSheet, type ReceiptCompany } from "../../ReceiptSheet";
 import { PageContainer, PageHeader } from "@/components/ui";
 
@@ -37,6 +38,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
   const [detail, company] = await Promise.all([getInvoice(id), getCompany()]);
   if (!detail) notFound();
+  const qrSvg = await docQrSvg("inv", detail.id, 72);
 
   const companySheet: ReceiptCompany | null = company
     ? {
@@ -57,6 +59,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
       <ReceiptSheet
         invoice={detail}
         company={companySheet}
+        docQrSvg={qrSvg}
         userName={session.user.user_metadata?.full_name ?? "Cash Memo"}
       />
     </PageContainer>

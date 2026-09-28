@@ -319,6 +319,8 @@ export interface InvoiceLine {
   line_total: number;
   line_no: number;
   unitCogs: number;
+  hsnCode: string | null;
+  uom: string | null;
 }
 
 export interface InvoiceDetail {
@@ -331,6 +333,12 @@ export interface InvoiceDetail {
   storeState: string | null;
   customerName: string | null;
   customerGstin: string | null;
+  customerPhone: string | null;
+  customerState: string | null;
+  /** customers.credit_days — drives the printed Due Date (date + N days). */
+  creditDays: number;
+  storeAddress: string | null;
+  storePhone: string | null;
   orderId: string | null;
   orderNo: string | null;
   placeOfSupply: string;
@@ -354,10 +362,11 @@ const INVOICE_SELECT =
   "id, invoice_no, invoice_date, status, order_id, place_of_supply, is_interstate, is_official, " +
   "taxable_amount, cgst_amount, sgst_amount, igst_amount, cess_amount, round_off, " +
   "grand_total, amount_paid, cogs_entry_id, " +
-  "customer:customers(name, gstin), store:customer_stores(name, code, state_code), " +
+  "customer:customers(name, gstin, phone, state_code, credit_days), store:customer_stores(name, code, state_code, address_line, city, pincode, phone), " +
   "order:sales_orders(order_no), " +
   "lines:invoice_lines(id, item_id, qty, unit_price, taxable_amount, gst_rate, " +
-  "cgst_amount, sgst_amount, igst_amount, cess_amount, line_total, line_no, unit_cogs, item:items(name, sku))";
+  "cgst_amount, sgst_amount, igst_amount, cess_amount, line_total, line_no, unit_cogs, " +
+  "item:items(name, sku, hsn_code, base_unit:units!base_unit_id(code)))";
 
 type RawInvoiceLine = {
   id: string;
@@ -373,7 +382,8 @@ type RawInvoiceLine = {
   line_total: number;
   line_no: number;
   unit_cogs: number;
-  item: { name: string; sku: string } | null;
+  item: { name: string; sku: string; hsn_code: string | null } | null;
+  base_unit: { code: string } | null;
 };
 
 type RawInvoice = Pick<
@@ -396,8 +406,16 @@ type RawInvoice = Pick<
   | "amount_paid"
   | "cogs_entry_id"
 > & {
-  customer: { name: string; gstin: string | null } | null;
-  store: { name: string; code: string; state_code: string } | null;
+  customer: { name: string; gstin: string | null; phone: string | null; state_code: string; credit_days: number } | null;
+  store: {
+    name: string;
+    code: string;
+    state_code: string;
+    address_line: string | null;
+    city: string | null;
+    pincode: string | null;
+    phone: string | null;
+  } | null;
   order: { order_no: string } | null;
   lines: RawInvoiceLine[] | null;
 };
@@ -582,6 +600,8 @@ export async function getInvoice(id: string): Promise<InvoiceDetail | null> {
       line_total: Number(l.line_total),
       line_no: l.line_no,
       unitCogs: Number(l.unit_cogs),
+      hsnCode: l.item?.hsn_code ?? null,
+      uom: l.base_unit?.code ?? null,
     }));
 
   return {
@@ -594,6 +614,11 @@ export async function getInvoice(id: string): Promise<InvoiceDetail | null> {
     storeState: r.store?.state_code ?? null,
     customerName: r.customer?.name ?? null,
     customerGstin: r.customer?.gstin ?? null,
+    customerPhone: r.customer?.phone ?? null,
+    customerState: r.customer?.state_code ?? null,
+    creditDays: r.customer?.credit_days ?? 0,
+    storeAddress: [r.store?.address_line, [r.store?.city, r.store?.pincode].filter(Boolean).join(" - ")].filter(Boolean).join(", ") || null,
+    storePhone: r.store?.phone ?? null,
     orderId: r.order_id,
     orderNo: r.order?.order_no ?? null,
     placeOfSupply: r.place_of_supply,

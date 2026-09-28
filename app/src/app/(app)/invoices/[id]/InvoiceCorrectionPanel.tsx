@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -20,15 +20,36 @@ export function InvoiceCorrectionPanel({
   invoiceNo,
   isOfficial,
   amountPaid,
+  autoOpen,
+  onCloseHref,
 }: {
   invoiceId: string;
   invoiceNo: string;
   isOfficial: boolean;
   amountPaid: number;
+  /** Controlled mode: which flow is open, owned by the parent's top action bar
+   *  via ?action=void|convert; closing navigates to onCloseHref (clearing it). */
+  autoOpen?: "void" | "convert";
+  onCloseHref?: string;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [mode, setMode] = useState<null | "void" | "convert">(null);
+  const [modeState, setMode] = useState<null | "void" | "convert">(null);
+  const controlled = autoOpen !== undefined;
+  const mode = controlled ? autoOpen : modeState;
+
+  // The opener button lives in the page header, far above the sheet — bring
+  // the opened panel into view (it renders below the A4 paper).
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (mode && !wasOpen.current) {
+      requestAnimationFrame(() =>
+        panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      );
+    }
+    wasOpen.current = Boolean(mode);
+  }, [mode]);
   const [reason, setReason] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -38,6 +59,7 @@ export function InvoiceCorrectionPanel({
   function reset() {
     setMode(null);
     setReason("");
+    if (controlled) router.push(onCloseHref ?? ".", { scroll: false });
   }
 
   function onVoid() {
@@ -102,7 +124,8 @@ export function InvoiceCorrectionPanel({
   const isVoid = mode === "void";
 
   return (
-    <Panel title={isVoid ? "Void this document" : `Re-issue as a ${oppositeLabel}`} flush>
+    <div ref={panelRef}>
+      <Panel title={isVoid ? "Void this document" : `Re-issue as a ${oppositeLabel}`} flush>
       <div className="flex flex-col gap-3 p-4">
         <p className="text-[13px] text-ink-2">
           {isVoid ? (
@@ -147,6 +170,7 @@ export function InvoiceCorrectionPanel({
           )}
         </div>
       </div>
-    </Panel>
+      </Panel>
+    </div>
   );
 }

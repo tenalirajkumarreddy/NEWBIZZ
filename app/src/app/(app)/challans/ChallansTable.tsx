@@ -9,6 +9,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, count as fmtCount, qty as fmtQty } from "@/lib/format";
 import type { ChallanListRow } from "@/lib/data/challans";
 import { ChallanRowActions } from "./ChallanRowActions";
+import { PrintLink } from "@/app/print/PrintLink";
 
 const STATUSES = ["printed", "in_transit", "delivered", "cancelled"] as const;
 
@@ -107,14 +108,7 @@ export function ChallansTable({ challans }: { challans: ChallanListRow[] }) {
                 <TD><StatusBadge status={c.status} /></TD>
                 <TD>
                   <div className="flex items-center gap-1.5">
-                    <Link
-                      href={`/print/challan/${c.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[12px] text-brand hover:underline"
-                    >
-                      Print
-                    </Link>
+                    <PrintLink kind="challan" id={c.id} />
                     <ChallanRowActions
                       challanId={c.id}
                       challanNo={c.challan_no}

@@ -20,10 +20,13 @@ export function ReceiptSheet({
   invoice,
   company,
   userName,
+  docQrSvg,
 }: {
   invoice: InvoiceDetail;
   company: ReceiptCompany | null;
   userName: string;
+  /** Server-rendered document QR (newbizz://d/inv/{id}) for the APK scanner. */
+  docQrSvg: string;
 }) {
   return (
     <>
@@ -114,10 +117,18 @@ export function ReceiptSheet({
               </div>
             </div>
 
-            <p className="border-t border-line pt-3 text-[11px] text-ink-4">
-              This is a computer-generated acknowledgment receipt and does not carry a tax
-              invoice. Amount received in full.
-            </p>
+            {/* Document QR — scanning the printed memo opens it in the APK */}
+            <div className="flex items-center gap-3 border-t border-line pt-3">
+              <div
+                style={{ width: 72, height: 72 }}
+                dangerouslySetInnerHTML={{ __html: docQrSvg }}
+                aria-label="Document QR code"
+              />
+              <p className="text-[11px] text-ink-4">
+                This is a computer-generated acknowledgment receipt and does not carry a tax
+                invoice. Amount received in full. Scan the QR with the NEWBIZZ app to reopen this memo.
+              </p>
+            </div>
           </div>
         </Panel>
       </div>

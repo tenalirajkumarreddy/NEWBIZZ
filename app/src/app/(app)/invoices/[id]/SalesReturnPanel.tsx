@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Panel, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +23,7 @@ export function SalesReturnPanel({
   returnedByLine,
   interstate,
   autoOpen,
+  onCloseHref,
   onClose,
 }: {
   invoiceId: string;
@@ -30,12 +31,36 @@ export function SalesReturnPanel({
   lines: InvoiceLine[];
   returnedByLine: Record<string, number>;
   interstate: boolean;
+  /** Controlled mode: the parent's top action bar owns open/close via
+   *  ?action=return; closing navigates to onCloseHref (clearing the param). */
   autoOpen?: boolean;
+  onCloseHref?: string;
   onClose?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [open, setOpen] = useState(autoOpen ?? false);
+  const [openState, setOpen] = useState(autoOpen ?? false);
+  const controlled = autoOpen !== undefined;
+  const open = controlled ? Boolean(autoOpen) : openState;
+
+  // The opener button lives in the page header, far above the sheet — bring
+  // the opened panel into view (it renders below the A4 paper).
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      requestAnimationFrame(() =>
+        panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      );
+    }
+    wasOpen.current = open;
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    if (controlled) router.push(onCloseHref ?? ".", { scroll: false });
+    onClose?.();
+  }
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [narration, setNarration] = useState("");
@@ -112,7 +137,6 @@ export function SalesReturnPanel({
         setNarration("");
         setOpen(false);
         router.push(`/credit-notes/${res.creditNoteId}`);
-        router.refresh();
       } else {
         toast.error("Could not record return", res.error);
       }
@@ -122,8 +146,8 @@ export function SalesReturnPanel({
   if (!anyReturnable) return null;
 
   if (!open) {
-    // Don't render anything in controlled mode — the parent shows the button
-    if (autoOpen !== undefined) return null;
+    // Don't render anything in controlled mode — the parent bar shows the button
+    if (controlled) return null;
     return (
       <div className="flex justify-end">
         <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
@@ -134,7 +158,8 @@ export function SalesReturnPanel({
   }
 
   return (
-    <Panel title="Record a sales return" flush>
+    <div ref={panelRef}>
+      <Panel title="Record a sales return" flush>
       <Table>
         <THead>
           <TR>
@@ -209,7 +234,7 @@ export function SalesReturnPanel({
           <Button variant="ghost" size="sm" onClick={fillAll} disabled={pending}>
             Return all
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => { setDraft({}); setNarration(""); setOpen(false); onClose?.(); }} disabled={pending}>
+          <Button variant="ghost" size="sm" onClick={() => { setDraft({}); setNarration(""); close(); }} disabled={pending}>
             Cancel
           </Button>
           <Button variant="primary" size="sm" onClick={onSubmit} loading={pending} disabled={previewTotal <= 0}>
@@ -217,6 +242,7 @@ export function SalesReturnPanel({
           </Button>
         </div>
       </div>
-    </Panel>
+      </Panel>
+    </div>
   );
 }

@@ -173,14 +173,21 @@ function CompanyTab({ company }: { company: CompanyRow | null }) {
           <input name="contactEmail" defaultValue={company?.contactEmail ?? ""} type="email" className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink font-mono" />
         </Field>
 
-        {/* Invoice branding uploads — signature + payment QR */}
+        {/* Invoice branding uploads — logo + signature + payment QR */}
         <div className="col-span-2 mt-2 border-t border-line pt-4">
           <div className="eyebrow text-ink-4">Printed invoice — branding</div>
           <p className="mt-1 text-[11px] text-ink-4">
-            Optional images: a signature stamp above the signatory line, and a payment QR that overrides the generated UPI code.
+            Optional images: your logo replaces the NEWBIZZ logo on every printed document, a signature stamp sits above
+            the signatory line, and a payment QR overrides the generated UPI code.
           </p>
         </div>
-        <div className="col-span-2 grid grid-cols-2 gap-4">
+        <div className="col-span-2 grid grid-cols-3 gap-4">
+          <CompanyImageUpload
+            target="logo"
+            imageUrl={company?.logoUrl ?? null}
+            label="Brand logo"
+            hint="Printed top-left of the invoice, challan and credit-note letterheads."
+          />
           <CompanyImageUpload
             target="signature"
             imageUrl={company?.signatureUrl ?? null}

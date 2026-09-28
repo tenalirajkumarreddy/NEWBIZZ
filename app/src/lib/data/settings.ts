@@ -73,6 +73,8 @@ export interface CompanyRow {
   bankBranch: string | null;
   /** UPI VPA — when set, documents print a UPI payment QR (upi:// intent). */
   upiId: string | null;
+  /** Uploaded brand logo — overrides the bundled /brand/logo.png in print letterheads. */
+  logoUrl: string | null;
   /** Uploaded signature image — rendered above the signatory line. */
   signatureUrl: string | null;
   /** Uploaded payment-QR image — overrides the generated upi:// QR. */
@@ -113,6 +115,7 @@ export async function getCompany(): Promise<CompanyRow | null> {
     bankIfsc: row.bank_ifsc ?? null,
     bankBranch: row.bank_branch ?? null,
     upiId: row.upi_id ?? null,
+    logoUrl: row.logo_url ?? null,
     signatureUrl: row.signature_url ?? null,
     qrImageUrl: row.qr_image_url ?? null,
     contactPhone: row.contact_phone ?? null,

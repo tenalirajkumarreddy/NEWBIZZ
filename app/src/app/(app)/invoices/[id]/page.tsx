@@ -11,13 +11,26 @@ import { SalesReturnPanel } from "./SalesReturnPanel";
 import { InvoiceCorrectionPanel } from "./InvoiceCorrectionPanel";
 import { PageContainer, PageHeader } from "@/components/ui";
 import { DocumentAttachPanel } from "@/components/documents/DocumentAttachPanel";
+import { PrintPreviewPanel } from "@/app/print/PrintPreviewPanel";
 
 // Invoice detail — the value document. Header facts, GST-broken-out lines, and
 // the tax summary (CGST/SGST or IGST by place of supply, plus round-off). Money
 // and stock already posted when the invoice was raised; corrections are made
 // via a sales return (§4.5), which issues a credit note — the invoice itself
 // stays immutable.
-export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
+//
+// Page actions (Record sales return · Re-issue as … · Void) sit in the header
+// row beside the document number, with the source-order link on the right; the
+// signature choice and Print stay with the paper. The flows open below the
+// sheet via ?action= in the URL (shareable, survives reload) and close by
+// clearing it.
+export default async function InvoiceDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { action?: string };
+}) {
   const inv = await getInvoice(params.id);
   if (!inv) notFound();
 
@@ -25,6 +38,30 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
   const totalCogs = inv.lines.reduce((s, l) => s + l.unitCogs * l.qty, 0);
   // A non-void invoice can be returned; fetch prior returns to show remainders.
   const returnedByLine = inv.status !== "void" ? await getReturnedByLine(inv.id) : {};
+
+  // Top-bar action visibility mirrors the panels' own guards: returns need a
+  // returnable balance; void/convert are refused once receipts are allocated.
+  const canReturn =
+    inv.status !== "void" && inv.lines.some((l) => l.qty - (returnedByLine[l.id] ?? 0) > 1e-6);
+  const locked = inv.amountPaid > 0.005;
+  const oppositeLabel = inv.isOfficial ? "cash memo" : "tax invoice";
+
+  // Which flow is open (?action=return|void|convert) — drives the panel below.
+  const action = ["return", "void", "convert"].includes(searchParams.action ?? "")
+    ? (searchParams.action as "return" | "void" | "convert")
+    : null;
+  const openParam = (a: "return" | "void" | "convert") => `?action=${a}`;
+
+  // Top-bar link-buttons — secondary by default, brand-filled when their flow
+  // is the one open below the sheet. bg-surface (not literal bg-white) so the
+  // buttons follow the theme: white in light, surface navy in dark.
+  const barLink = (a: "return" | "void" | "convert", danger = false) =>
+    "inline-flex h-9 select-none items-center gap-2 rounded-lg border px-3.5 text-[13px] font-semibold transition-colors " +
+    (action === a
+      ? "border-brand bg-brand text-white"
+      : danger
+        ? "border-red bg-red text-white hover:bg-red/90"
+        : "border-line bg-surface text-ink-2 hover:border-line-strong hover:bg-fill hover:text-ink");
 
   return (
     <PageContainer width="report">
@@ -43,18 +80,39 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           </>
         }
         actions={
-          inv.orderId && inv.orderNo ? (
-            <Link
-              href={`/orders/${inv.orderId}`}
-              className="text-[12px] font-medium text-brand hover:underline"
-            >
-              From order {inv.orderNo} →
-            </Link>
-          ) : null
+          <span className="flex flex-wrap items-center justify-end gap-2 sm:self-center">
+            {inv.orderId && inv.orderNo && (
+              <Link
+                href={`/orders/${inv.orderId}`}
+                className="mr-2 text-[12px] font-medium text-brand hover:underline"
+              >
+                From order {inv.orderNo} →
+              </Link>
+            )}
+            {canReturn && (
+              <Link href={openParam("return")} scroll={false} className={barLink("return")}>
+                Record sales return
+              </Link>
+            )}
+            {!locked && (
+              <>
+                <Link href={openParam("convert")} scroll={false} className={barLink("convert")}>
+                  Re-issue as {oppositeLabel}
+                </Link>
+                <Link href={openParam("void")} scroll={false} className={barLink("void", true)}>
+                  Void
+                </Link>
+              </>
+            )}
+          </span>
         }
         backHref="/invoices"
         backLabel="Invoicing"
       />
+
+      {/* The A4 document itself, embedded — signature choice and Print sit in
+          the slim bar above the paper. Print opens the native dialog. */}
+      <PrintPreviewPanel kind="invoice" id={inv.id} />
 
       {/* Facts */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -136,22 +194,27 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         </Card>
       </div>
 
-      {inv.status !== "void" && (
+      {/* Action flows open below the paper, driven by ?action= in the URL. */}
+      {canReturn && (
         <SalesReturnPanel
           invoiceId={inv.id}
           invoiceNo={inv.invoice_no}
           lines={inv.lines}
           returnedByLine={returnedByLine}
           interstate={inv.isInterstate}
+          autoOpen={action === "return"}
+          onCloseHref={`/invoices/${inv.id}`}
         />
       )}
 
-      {inv.status !== "void" && (
+      {!locked && (action === "void" || action === "convert") && (
         <InvoiceCorrectionPanel
           invoiceId={inv.id}
           invoiceNo={inv.invoice_no}
           isOfficial={inv.isOfficial}
           amountPaid={inv.amountPaid}
+          autoOpen={action}
+          onCloseHref={`/invoices/${inv.id}`}
         />
       )}
 
