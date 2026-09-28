@@ -42,7 +42,7 @@ interface RawRow {
 
 /** Web print/app view for a document (same env base as challanPdfUrl). */
 export function documentWebUrl(kind: DocKind, id: string): string {
-  const base = process.env.EXPO_PUBLIC_WEB_URL ?? "https://newbizz-kappa.vercel.app";
+  const base = webOrigin();
   if (kind === "challan") return `${base}/print/challan/${id}`;
   if (kind === "invoice") return `${base}/invoices/${id}`;
   if (kind === "creditnote") return `${base}/print/credit-note/${id}`;
@@ -51,7 +51,7 @@ export function documentWebUrl(kind: DocKind, id: string): string {
 
 /** Web origin (for resolving relative share URLs the mint endpoint returns). */
 export function webOrigin(): string {
-  return process.env.EXPO_PUBLIC_WEB_URL ?? "https://newbizz-kappa.vercel.app";
+  return process.env.EXPO_PUBLIC_WEB_URL ?? "https://aquaprime-app.vercel.app";
 }
 
 /** The web's mint endpoint for a tokenized share URL of this document.

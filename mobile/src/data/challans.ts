@@ -62,6 +62,6 @@ export async function postDelivery(orderId: string): Promise<string> {
 
 /** Challan PDF: opens the web print view. */
 export function challanPdfUrl(challanId: string): string {
-  const base = process.env.EXPO_PUBLIC_WEB_URL ?? "https://newbizz-kappa.vercel.app";
+  const base = process.env.EXPO_PUBLIC_WEB_URL ?? "https://aquaprime-app.vercel.app";
   return `${base}/print/challan/${challanId}`;
 }
