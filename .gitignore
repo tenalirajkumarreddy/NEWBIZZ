@@ -2,3 +2,7 @@
 # brainstorm visual companion sessions
 /.superpowers/
 
+
+# local agent/dev artifacts
+/.freebuff/
+/.next-dev.log
