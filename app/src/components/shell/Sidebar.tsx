@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV } from "./nav";
@@ -20,6 +21,11 @@ export function Sidebar({
   badges?: Record<string, number | undefined>;
 }) {
   const pathname = usePathname();
+  // The row the user just clicked, cleared when the route lands (or on a
+  // same-route no-op). Gives instant "I heard you" feedback — the row shows a
+  // spinner and lights up in its pending colour before the new page paints.
+  const [clicked, setClicked] = useState<string | null>(null);
+  useEffect(() => setClicked(null), [pathname]);
 
   const groups = NAV.map((group) => ({
     ...group,
@@ -48,25 +54,42 @@ export function Sidebar({
                   : pathname === it.href || pathname.startsWith(it.href + "/");
               const badge = it.badgeKey ? badges[it.badgeKey] : undefined;
 
+              const pending = clicked === it.href && !active;
+
               return (
                 <li key={it.id}>
                   <Link
                     href={it.href}
+                    onClick={() => setClicked(it.href)}
                     className={
                       "flex items-center gap-2.5 border-l-2 px-5 py-[7px] text-[13px] font-medium transition-colors " +
                       (active
                         ? "border-brand bg-brand-wash text-brand"
-                        : "border-transparent text-ink-2 hover:bg-fill hover:text-brand")
+                        : pending
+                          ? "border-brand bg-fill text-brand"
+                          : "border-transparent text-ink-2 hover:bg-fill hover:text-brand")
                     }
                   >
-                    <span
-                      className={
-                        "text-[10px] leading-none " + (active ? "text-brand" : "text-ink-4")
-                      }
-                      aria-hidden
-                    >
-                      ■
-                    </span>
+                    {pending ? (
+                      <svg
+                        className="h-2.5 w-2.5 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden
+                      >
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="4" opacity="0.25" />
+                        <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <span
+                        className={
+                          "text-[10px] leading-none " + (active ? "text-brand" : "text-ink-4")
+                        }
+                        aria-hidden
+                      >
+                        ■
+                      </span>
+                    )}
                     <span className="flex-1 truncate">{it.label}</span>
                     {typeof badge === "number" && badge > 0 && (
                       <span

@@ -6,6 +6,7 @@ import type { FyRow } from "@/lib/data/settings";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { StatusBar } from "./StatusBar";
+import { RouteProgressBar } from "./RouteProgressBar";
 import { TokenVersionWatcher } from "@/components/auth/TokenVersionWatcher";
 import { ToastProvider } from "@/components/ui";
 import { QuickAttachProvider } from "./QuickAttachProvider";
@@ -46,6 +47,9 @@ export function AppShell({
   return (
     <ToastProvider>
       <QuickAttachProvider claims={claims}>
+        {/* Global navigation feedback: thin top bar + click-capture detection.
+            Fixed-position, so it can live outside the grid rows. */}
+        <RouteProgressBar />
         <div
           className="grid h-[100dvh] overflow-hidden bg-bg"
           style={{
