@@ -50,6 +50,14 @@ const PORTAL_PREFIX = "/portal";
 // gate below would otherwise redirect them to /login and they'd never run.
 const API_PREFIX = "/api";
 
+// Print sheets are self-guarded at the page: a valid ?t= share token (bound
+// to one document, HMAC-signed, short-lived) authorizes a no-session view so
+// the APK's "Open full document" and shared WhatsApp links work without a
+// web login. The page still accepts session+permission as before. The
+// middleware's session gate would redirect those requests to /login before
+// the page ever saw the token — so they bypass it here, like /api.
+const PRINT_SHARE_PREFIX = "/print";
+
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
@@ -60,6 +68,10 @@ function isPortal(pathname: string): boolean {
 
 function isSelfGuardedApi(pathname: string): boolean {
   return pathname === API_PREFIX || pathname.startsWith(API_PREFIX + "/");
+}
+
+function isPrintShare(pathname: string): boolean {
+  return pathname.startsWith(PRINT_SHARE_PREFIX + "/");
 }
 
 function isAuthHandler(pathname: string): boolean {
@@ -113,10 +125,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const { pathname } = request.nextUrl;
   const claims = readClaimsFromAccessToken(session?.access_token);
 
-  // Self-guarded API routes (CRON_SECRET / Meta webhook signature) always pass
-  // through to their handler — they are invoked without a browser session and
-  // authenticate in-handler. Skip the whole session gate for them.
+  // Self-guarded API routes (CRON_SECRET / Meta webhook signature) and print
+  // sheets with a share token always pass through to their handler/page —
+  // they are invoked without a browser session and authenticate in-handler
+  // (token verify + document RLS on the page). Skip the session gate.
   if (isSelfGuardedApi(pathname)) return response;
+  if (isPrintShare(pathname) && request.nextUrl.searchParams.has("t")) return response;
 
   // Sign-out / OAuth-callback handlers pass through regardless of session state
   // (signed in, suspended, or a portal principal), so the buttons that clear
