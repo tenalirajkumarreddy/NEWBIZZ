@@ -48,6 +48,13 @@ remove that override, and do not downgrade the SDK cmake package below
 `mobile/.env.local` holds `EXPO_PUBLIC_SUPABASE_URL` +
 `EXPO_PUBLIC_SUPABASE_ANON_KEY` (same project as `app/.env.local`).
 
+`EXPO_PUBLIC_WEB_URL` (optional) is the deployed web app base used by the
+scanner's "Open full document" action and challan PDF links
+(`/print/...`, `/invoices/...`). Defaults to `https://newbizz-kappa.vercel.app`.
+The browser opened from the APK has no web session — print routes redirect to
+login, so the office prints from a signed-in browser (tokenized URLs are a
+recorded follow-up).
+
 ## Verify
 
 ```

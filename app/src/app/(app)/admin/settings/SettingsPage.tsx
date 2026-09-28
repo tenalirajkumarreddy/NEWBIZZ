@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/settings";
 import type { CompanyRow, FyRow, NumberSeriesRow, PaymentMethodRow, EntitySerialRow, FleetThresholds } from "@/lib/data/settings";
 import type { BranchRow } from "@/lib/data/branches";
+import { CompanyImageUpload } from "./CompanyImageUpload";
 
 interface Props {
   company: CompanyRow | null;
@@ -89,6 +90,13 @@ function CompanyTab({ company }: { company: CompanyRow | null }) {
         bisNo: d.get("bisNo") as string || undefined,
         invoiceFooter: d.get("invoiceFooter") as string || undefined,
         baseCurrency: d.get("baseCurrency") as string || undefined,
+        bankName: d.get("bankName") as string || undefined,
+        bankAccountNo: d.get("bankAccountNo") as string || undefined,
+        bankIfsc: d.get("bankIfsc") as string || undefined,
+        bankBranch: d.get("bankBranch") as string || undefined,
+        upiId: d.get("upiId") as string || undefined,
+        contactPhone: d.get("contactPhone") as string || undefined,
+        contactEmail: d.get("contactEmail") as string || undefined,
       });
       if (result.ok) toast.success("Company profile saved");
       else toast.error(result.error);
@@ -135,6 +143,58 @@ function CompanyTab({ company }: { company: CompanyRow | null }) {
         <Field label="Invoice Footer" className="col-span-2">
           <textarea name="invoiceFooter" defaultValue={company?.invoiceFooter ?? ""} rows={2} className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink" />
         </Field>
+
+        {/* Banking — fills the Bank Details band on printed invoices */}
+        <div className="col-span-2 mt-2 border-t border-line pt-4">
+          <div className="eyebrow text-ink-4">Printed invoice — bank &amp; payments</div>
+          <p className="mt-1 text-[11px] text-ink-4">
+            These fields render in the Bank Details / UPI band of the invoice print sheet.
+          </p>
+        </div>
+        <Field label="Bank Name">
+          <input name="bankName" defaultValue={company?.bankName ?? ""} className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink" />
+        </Field>
+        <Field label="Account #">
+          <input name="bankAccountNo" defaultValue={company?.bankAccountNo ?? ""} className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink font-mono" />
+        </Field>
+        <Field label="IFSC">
+          <input name="bankIfsc" defaultValue={company?.bankIfsc ?? ""} className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink font-mono" />
+        </Field>
+        <Field label="Branch">
+          <input name="bankBranch" defaultValue={company?.bankBranch ?? ""} className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink" />
+        </Field>
+        <Field label="UPI ID" hint="Generates the scannable payment QR on invoices">
+          <input name="upiId" defaultValue={company?.upiId ?? ""} placeholder="business@upi" className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink font-mono" />
+        </Field>
+        <Field label="Contact Phone" hint="Printed as “Mobile:” in the invoice seller block">
+          <input name="contactPhone" defaultValue={company?.contactPhone ?? ""} className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink font-mono" />
+        </Field>
+        <Field label="Contact Email" hint="Printed as “Email:” in the invoice seller block">
+          <input name="contactEmail" defaultValue={company?.contactEmail ?? ""} type="email" className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] text-ink font-mono" />
+        </Field>
+
+        {/* Invoice branding uploads — signature + payment QR */}
+        <div className="col-span-2 mt-2 border-t border-line pt-4">
+          <div className="eyebrow text-ink-4">Printed invoice — branding</div>
+          <p className="mt-1 text-[11px] text-ink-4">
+            Optional images: a signature stamp above the signatory line, and a payment QR that overrides the generated UPI code.
+          </p>
+        </div>
+        <div className="col-span-2 grid grid-cols-2 gap-4">
+          <CompanyImageUpload
+            target="signature"
+            imageUrl={company?.signatureUrl ?? null}
+            label="Signature image"
+            hint="PNG with transparency works best — printed above the Authorised Signatory line."
+          />
+          <CompanyImageUpload
+            target="qr"
+            imageUrl={company?.qrImageUrl ?? null}
+            label="Payment QR image"
+            hint="Your bank/GPay/PhonePe QR — shown in the “Pay using UPI” box instead of the generated code."
+          />
+        </div>
+
         <div className="col-span-2 flex gap-2 pt-2">
           <Button type="submit" variant="primary" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
         </div>

@@ -66,6 +66,20 @@ export interface CompanyRow {
   fssaiNo: string | null;
   bisNo: string | null;
   invoiceFooter: string | null;
+  /** Remittance block for printed documents (migration 0123). */
+  bankName: string | null;
+  bankAccountNo: string | null;
+  bankIfsc: string | null;
+  bankBranch: string | null;
+  /** UPI VPA — when set, documents print a UPI payment QR (upi:// intent). */
+  upiId: string | null;
+  /** Uploaded signature image — rendered above the signatory line. */
+  signatureUrl: string | null;
+  /** Uploaded payment-QR image — overrides the generated upi:// QR. */
+  qrImageUrl: string | null;
+  /** Contact lines in the printed seller block (migration 0125). */
+  contactPhone: string | null;
+  contactEmail: string | null;
   fyStartMonth: number;
   baseCurrency: string;
   featureFlags: Record<string, any>;
@@ -94,6 +108,15 @@ export async function getCompany(): Promise<CompanyRow | null> {
     fssaiNo: row.fssai_no,
     bisNo: row.bis_no,
     invoiceFooter: row.invoice_footer,
+    bankName: row.bank_name ?? null,
+    bankAccountNo: row.bank_account_no ?? null,
+    bankIfsc: row.bank_ifsc ?? null,
+    bankBranch: row.bank_branch ?? null,
+    upiId: row.upi_id ?? null,
+    signatureUrl: row.signature_url ?? null,
+    qrImageUrl: row.qr_image_url ?? null,
+    contactPhone: row.contact_phone ?? null,
+    contactEmail: row.contact_email ?? null,
     fyStartMonth: row.fy_start_month,
     baseCurrency: row.base_currency,
     featureFlags: row.feature_flags ?? {},

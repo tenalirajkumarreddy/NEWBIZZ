@@ -23,11 +23,32 @@ export interface ParsedQr {
 
 const SCHEME_RE = /^newbizz:\/\/s\/([^/?#\s]+)$/i;
 const HTTPS_RE = /^https:\/\/[^/]+\/s\/([^/?#\s]+)(?:[?#].*)?$/i;
+const DOC_SCHEME_RE = /^newbizz:\/\/d\/(inv|chl|ord|cn)\/([0-9a-fA-F-]{8,64})$/i;
 const ANY_URL_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
 const UPI_VPA_RE = /[?&]pa=([^&\s]+)/i;
 const MIN_CODE_LEN = 3;
 const MAX_CODE_LEN = 120;
 const CODE_SHAPE_RE = /^[A-Za-z0-9._@-]+$/;
+
+export type DocKind = "invoice" | "challan" | "order" | "creditnote";
+
+export interface ParsedDocQr {
+  kind: DocKind;
+  id: string;
+}
+
+/** Parse a NEWBIZZ document QR: "newbizz://d/{inv|chl|ord}/{uuid}". The web
+ * print views embed these so a scan of a printed document opens it in the
+ * app. Strict on purpose — UUID only — so payment QRs and bare codes can
+ * never be misread as documents. Returns null for non-document payloads. */
+export function parseDocQr(raw: string): ParsedDocQr | null {
+  const m = DOC_SCHEME_RE.exec(raw.trim());
+  if (!m) return null;
+  const k = m[1].toLowerCase();
+  const kind: DocKind =
+    k === "inv" ? "invoice" : k === "chl" ? "challan" : k === "cn" ? "creditnote" : "order";
+  return { kind, id: m[2].toLowerCase() };
+}
 
 export function parseQrPayload(raw: string): ParsedQr | null {
   const input = raw.trim();

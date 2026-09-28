@@ -3,17 +3,15 @@ import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/claims";
 import { getChallan, type ChallanLine } from "@/lib/data/challans";
 import { getCompany } from "@/lib/data/settings";
-import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
-import { dateIST, dateTimeIST, qty as fmtQty, titleCase } from "@/lib/format";
-import { PrintButton } from "../../PrintButton";
+import { qty as fmtQty } from "@/lib/format";
+import { PrintDoc, PrintPanel, PrintMetaGrid, INK, INK2, INK3, INK4, LINE, WASH, MONO } from "../../print-doc";
 
 export const dynamic = "force-dynamic";
 
-// Printable delivery challan (§4.4): the physical-fulfilment note handed to
-// the carrier. Quantities only — never prices (no money moves on a challan).
-// Lives outside the (app) group so the shell chrome can't leak onto paper;
-// middleware still login-gates it and getChallan is RLS-scoped (null → 404).
-// Belt over middleware: redirect signed-out sessions to /login here too.
+// Printable delivery challan on the shared A4 design system (print-doc): the
+// physical-fulfilment note handed to the carrier. Quantities only — never
+// prices (no money moves on a challan). Sheet carries the standard document
+// QR footer (newbizz://d/chl/{id}) so scanning the paper opens it in the APK.
 export default async function PrintChallanPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -22,132 +20,136 @@ export default async function PrintChallanPage({ params }: { params: { id: strin
   const [challan, company] = await Promise.all([getChallan(params.id), getCompany()]);
   if (!challan) notFound();
 
-  const generatedAt = new Date().toISOString();
-
   return (
-    <div className="challan-print mx-auto flex w-full max-w-[794px] flex-col gap-5 px-6 py-8">
-      {/* Screen-only toolbar */}
-      <div className="sticky top-0 z-10 -mx-6 flex justify-end bg-white/95 px-6 py-2 backdrop-blur print:hidden">
-        <PrintButton />
-      </div>
-
-      {/* Business identity — mirrors ReceiptSheet's letterhead block */}
-      <div className="flex items-start justify-between gap-4 border-b-2 border-ink pb-4">
-        <div className="min-w-0">
-          <h1 className="text-[20px] font-bold tracking-tight text-ink">
-            {company?.legalName ?? "NEWBIZZ"}
-          </h1>
-          {company?.address && (
-            <p className="mt-0.5 text-[12px] text-ink-3">{company.address}</p>
-          )}
-          {company?.primaryGstin && (
-            <p className="mt-0.5 font-mono text-[11px] text-ink-3">
-              GSTIN {company.primaryGstin}
-              {company.stateCode ? ` · State ${company.stateCode}` : ""}
-            </p>
-          )}
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-4">
-            Delivery Challan
-          </p>
-          <p className="mt-0.5 font-mono text-[15px] font-semibold text-ink">
-            {challan.challan_no}
-          </p>
-          <p className="mt-0.5 text-[12px] text-ink-3">Printed {dateIST(challan.printedAt)}</p>
-        </div>
-      </div>
-
-      {/* Meta grid */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-        <Meta label="Order" value={challan.orderNo ?? "—"} mono />
-        <Meta label="Customer" value={challan.customerName ?? "—"} />
-        <Meta
-          label="Store"
-          value={challan.storeName ?? "—"}
-          sub={challan.storeCode ?? undefined}
-        />
-        <Meta label="Carried by" value={challan.agentName ?? "—"} />
-        <Meta label="E-way bill" value={challan.ewayBillNo ?? "—"} mono />
-        <Meta label="Status" value={titleCase(challan.status)} />
-      </div>
+    <PrintDoc
+      kind="chl"
+      id={challan.id}
+      title="Delivery Challan"
+      company={company}
+      docNo={challan.challan_no}
+      docDate={challan.printedAt}
+      status={challan.status}
+      footer={company?.invoiceFooter}
+      legalLines={
+        <>
+          Goods on the attached list are moved for/with an approved sales order and remain the
+          property of the company until delivered and invoiced. E-way bill, where applicable,
+          accompanies the consignment.
+        </>
+      }
+      signs={[
+        { label: "Dispatched by", hint: "Name / signature" },
+        { label: "Received by", hint: "Name / signature" },
+      ]}
+    >
+      {/* Parties + transport meta */}
+      <PrintMetaGrid
+        items={[
+          { label: "Order", value: challan.orderNo ?? "—", mono: true },
+          { label: "Customer", value: challan.customerName ?? "—" },
+          { label: "Store", value: challan.storeName ?? "—", mono: false },
+          { label: "Store code", value: challan.storeCode ?? "—", mono: true },
+          { label: "Carried by", value: challan.agentName ?? "—" },
+          { label: "E-way bill", value: challan.ewayBillNo ?? "—", mono: true },
+        ]}
+      />
 
       {/* Lines: quantities only — no money on a challan */}
-      <Table className="border-collapse">
-        <THead>
-          <TR>
-            <TH className="w-10">Sr</TH>
-            <TH>Item</TH>
-            <TH className="w-32">SKU</TH>
-            <TH numeric className="w-24">Qty</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {challan.lines.map((l) => (
-            <LineRow key={l.id} line={l} />
-          ))}
-          <TR>
-            <TD colSpan={3} className="border-t-2 border-ink px-3 py-2.5 text-right text-[13px] font-semibold text-ink">
-              Total units
-            </TD>
-            <TD numeric className="border-t-2 border-ink text-[13px] font-bold text-ink">
-              {fmtQty(challan.totalQty)}
-            </TD>
-          </TR>
-        </TBody>
-      </Table>
+      <PrintPanel title="Consignment items">
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <thead>
+            <tr style={{ background: WASH }}>
+              <Th style={{ width: 28 }}>Sr</Th>
+              <Th>Item</Th>
+              <Th style={{ width: 78 }}>SKU</Th>
+              <Th style={{ width: 70 }} numeric>Qty</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {challan.lines.map((l) => (
+              <LineRow key={l.id} line={l} />
+            ))}
+            <tr>
+              <Td colSpan={3} style={{ textAlign: "right", fontWeight: 700, borderTop: `2px solid ${INK}` }}>
+                Total units
+              </Td>
+              <Td numeric style={{ fontWeight: 700, borderTop: `2px solid ${INK}` }}>
+                {fmtQty(challan.totalQty)}
+              </Td>
+            </tr>
+          </tbody>
+        </table>
+      </PrintPanel>
 
-      {challan.notes && (
-        <div>
-          <div className="eyebrow text-ink-4">Notes</div>
-          <p className="mt-1 whitespace-pre-line text-[12px] text-ink-2">{challan.notes}</p>
-        </div>
-      )}
-
-      {/* Signature blocks */}
-      <div className="mt-8 grid grid-cols-2 gap-8">
-        <Sign label="Dispatched by" />
-        <Sign label="Received by" />
-      </div>
-
-      <p className="mt-6 border-t border-line pt-3 text-[10px] text-ink-4">
-        This is a computer-generated document. Generated {dateTimeIST(generatedAt)} (IST).
-      </p>
-    </div>
+      {challan.notes ? (
+        <PrintPanel title="Notes">
+          <div style={{ padding: "8px 10px", fontSize: 11, color: INK2, whiteSpace: "pre-line" }}>
+            {challan.notes}
+          </div>
+        </PrintPanel>
+      ) : null}
+    </PrintDoc>
   );
 }
 
-function Meta({ label, value, sub, mono }: { label: string; value: string; sub?: string; mono?: boolean }) {
+function Th({ children, style, numeric }: { children: React.ReactNode; style?: React.CSSProperties; numeric?: boolean }) {
   return (
-    <div>
-      <div className="eyebrow text-ink-4">{label}</div>
-      <div className={"mt-0.5 text-[13px] font-semibold text-ink " + (mono ? "font-mono tnum" : "")}>
-        {value}
-      </div>
-      {sub && <div className="font-mono text-[11px] text-ink-4">{sub}</div>}
-    </div>
+    <th
+      style={{
+        padding: "5px 10px",
+        fontSize: 9.5,
+        fontWeight: 700,
+        letterSpacing: "0.8px",
+        textTransform: "uppercase",
+        color: INK3,
+        borderBottom: `1px solid ${LINE}`,
+        textAlign: numeric ? "right" : "left",
+        ...style,
+      }}
+    >
+      {children}
+    </th>
+  );
+}
+
+function Td({
+  children,
+  style,
+  numeric,
+  colSpan,
+}: {
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+  numeric?: boolean;
+  colSpan?: number;
+}) {
+  return (
+    <td
+      colSpan={colSpan}
+      style={{
+        padding: "5px 10px",
+        borderBottom: `1px solid ${LINE}`,
+        color: INK2,
+        textAlign: numeric ? "right" : "left",
+        fontFamily: numeric ? MONO : undefined,
+        fontVariantNumeric: numeric ? "tabular-nums" : undefined,
+        ...style,
+      }}
+    >
+      {children}
+    </td>
   );
 }
 
 function LineRow({ line }: { line: ChallanLine }) {
   return (
-    <TR>
-      <TD className="text-ink-4">{line.line_no}</TD>
-      <TD>
-        <span className="font-medium text-ink">{line.itemName ?? "—"}</span>
-      </TD>
-      <TD className="font-mono text-[11px] text-ink-3">{line.sku ?? "—"}</TD>
-      <TD numeric>{fmtQty(line.qty)}</TD>
-    </TR>
-  );
-}
-
-function Sign({ label }: { label: string }) {
-  return (
-    <div className="flex h-24 flex-col justify-end">
-      <div className="border-b border-ink" />
-      <div className="mt-1 text-[11px] font-semibold text-ink-2">{label}</div>
-      <div className="mt-0.5 text-[10px] text-ink-4">Date: __________________</div>
-    </div>
+    <tr>
+      <Td>{line.line_no}</Td>
+      <Td>
+        <span style={{ fontWeight: 600, color: INK }}>{line.itemName ?? "—"}</span>
+      </Td>
+      <Td>{line.sku ?? "—"}</Td>
+      <Td numeric>{fmtQty(line.qty)}</Td>
+    </tr>
   );
 }

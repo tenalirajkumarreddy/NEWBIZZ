@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
+import { PrintPreviewBar } from "./PrintPreviewBar";
 
-export const metadata: Metadata = { title: "NEWBIZZ — Delivery Challan" };
+export const metadata: Metadata = { title: "NEWBIZZ — Print preview" };
 
 // The print surface lives OUTSIDE the (app) group so no AppShell chrome
 // (sidebar/topbar) leaks into the sheet, but it still renders inside the ROOT
 // layout's <html>/<body> — a nested <html> from a segment layout is a Next
 // error, so this layout is a plain paper wrapper, not a document.
 //
+// Screen: a light gallery surround (screen-shell tokens, NOT paper greys —
+// re-pinning paper values here would grey the sheet itself) with the sticky
+// print-preview toolbar and the A4 sheet as an elevated paper card. The sheet
+// on screen is the exact component the printer receives.
+//
+// Print: @page A4 + 12mm margins take over, toolbar drops out (print:hidden),
+// the surround and card dressing whiten/flatten, and the sheet's mm geometry
+// carries the page.
+//
 // The root theme script can put the `dark` class on <html> for a dark-theme
-// user, which would flip the text-ink / bg-fill tokens to the navy palette and
-// print light-on-white paper. Re-declaring the light :root token values on
-// this wrapper pins the whole print subtree to paper colours regardless of the
-// stored theme, so `text-ink`, `border-line`, etc. keep the ReceiptSheet look.
+// user, which would flip text-ink / bg-fill to the navy palette and print
+// light-on-white paper. PAPER_TOKENS re-declares the light :root values on the
+// sheet wrapper, pinning the document subtree to paper colours regardless of
+// the stored theme.
 const PAPER_TOKENS = {
   "--nb-bg": "255 255 255",
   "--nb-surface": "255 255 255",
@@ -32,11 +42,29 @@ const PAPER_TOKENS = {
 
 export default function PrintLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white text-ink" style={PAPER_TOKENS}>
+    <div className="min-h-screen bg-[#f1f5f9] print:bg-white">
       {/* Print-only sheet metrics: the browser ignores Tailwind's screen
-          padding when paging, so give the A4 page real physical margins. */}
-      <style>{`@media print { @page { size: A4; margin: 12mm; } }`}</style>
-      {children}
+          padding when paging, so give the A4 page real physical margins.
+          .print-sheet opts a sheet out of its own screen mm geometry — paper
+          uses the @page margins and the sheet's block borders instead. */}
+      <style>{`@media print {
+        @page { size: A4; margin: 10mm 11mm; }
+        .print-sheet { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }
+      }`}</style>
+
+      {/* stage: toolbar renders on screen only; the sheet sits as an elevated
+          A4 card whose shadow/rounding are screen-only dressing. */}
+      <div className="px-4 py-6 print:p-0 md:px-8">
+        <div className="print:hidden">
+          <PrintPreviewBar />
+        </div>
+        <div
+          className="mx-auto mt-5 w-full max-w-[210mm] rounded-[4px] shadow-[0_1px_2px_rgba(15,23,42,0.08),0_16px_40px_-12px_rgba(15,23,42,0.25)] print:mt-0 print:rounded-none print:shadow-none"
+          style={PAPER_TOKENS}
+        >
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

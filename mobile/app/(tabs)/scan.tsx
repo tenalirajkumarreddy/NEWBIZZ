@@ -10,11 +10,13 @@ import { HeaderRight } from "@/components/HeaderRight";
 import { Sheet } from "@/components/Sheet";
 import { QrViewport } from "@/features/scan/QrViewport";
 import { IdentifiedStoreCard, UnlinkedCodeCard } from "@/features/scan/IdentifiedStoreCard";
+import { DocumentCard } from "@/features/scan/DocumentCard";
 import { NearbyStores } from "@/features/scan/NearbyStores";
 import { LinkQrSheet } from "@/features/scan/LinkQrSheet";
 import { useSession } from "@/lib/session";
-import { parseQrPayload } from "@/lib/qrparse";
+import { parseQrPayload, parseDocQr } from "@/lib/qrparse";
 import { resolveStoreQr } from "@/data/qr";
+import { resolveDocument, type ResolvedDoc } from "@/data/docs";
 import { friendlyError } from "@/lib/rpc";
 import { qk } from "@/data/keys";
 import { tokens } from "@/theme/tokens";
@@ -64,6 +66,8 @@ export default function ScanScreen() {
   const [sheetCode, setSheetCode] = useState<string | null>(null);
   const [notFoundCode, setNotFoundCode] = useState<string | null>(null);
   const [notFoundPayee, setNotFoundPayee] = useState<string | null>(null);
+  /** Set when the last scan resolved a document QR (newbizz://d/…). */
+  const [doc, setDoc] = useState<ResolvedDoc | null>(null);
   const [resetKey, setResetKey] = useState(0);
 
   function bumpReset() {
@@ -75,11 +79,30 @@ export default function ScanScreen() {
     setSheetCode(null);
     setNotFoundCode(null);
     setNotFoundPayee(null);
+    setDoc(null);
     bumpReset();
   }
 
   async function handleScan(raw: string) {
-    if (resolving || sheetCode || notFoundCode) return;
+    if (resolving || sheetCode || notFoundCode || doc) return;
+
+    // Document QRs first — strict newbizz://d/{kind}/{uuid} payloads, so
+    // payment QRs and bare codes can never be misread as documents.
+    const parsedDoc = parseDocQr(raw);
+    if (parsedDoc) {
+      setResolving(true);
+      setDoc(null);
+      try {
+        setDoc(await resolveDocument(parsedDoc.kind, parsedDoc.id));
+      } catch (e) {
+        Toast.show({ type: "error", text1: "Could not open document", text2: friendlyError(e) });
+        bumpReset();
+      } finally {
+        setResolving(false);
+      }
+      return;
+    }
+
     const parsed = parseQrPayload(raw);
     if (!parsed) {
       Toast.show({ type: "error", text1: "Not a valid store code" });
@@ -110,7 +133,14 @@ export default function ScanScreen() {
   }
 
   const showIdentified = resolved != null && resolved.found && !!resolved.store_id;
-  const resultOpen = showIdentified || notFoundCode != null;
+  const resultOpen = showIdentified || notFoundCode != null || doc != null;
+  const sheetTitle = doc
+    ? doc.meta
+      ? "Document"
+      : "Not found"
+    : showIdentified
+      ? "Store details"
+      : "No store found";
 
   return (
     <Screen onRefresh={onRefresh}>
@@ -145,9 +175,14 @@ export default function ScanScreen() {
       <Sheet
         visible={resultOpen}
         onClose={resetScan}
-        title={showIdentified ? "Store details" : "No store found"}
+        title={sheetTitle}
       >
-        {showIdentified ? (
+        {doc ? (
+          <View style={s.sheetBody}>
+            <DocumentCard doc={doc} onRescan={resetScan} />
+            <ScanAnotherButton label="Scan another code" onPress={resetScan} />
+          </View>
+        ) : showIdentified ? (
           <View style={s.sheetBody}>
             <IdentifiedStoreCard store={resolved!} onAfterVisit={resetScan} />
             <ScanAnotherButton label="Scan another code" onPress={resetScan} />

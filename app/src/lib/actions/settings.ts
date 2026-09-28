@@ -45,6 +45,13 @@ export async function updateCompany(data: {
   bisNo?: string;
   invoiceFooter?: string;
   baseCurrency?: string;
+  bankName?: string;
+  bankAccountNo?: string;
+  bankIfsc?: string;
+  bankBranch?: string;
+  upiId?: string;
+  contactPhone?: string;
+  contactEmail?: string;
 }): Promise<ActionResult> {
   const supabase = createClient();
   const patch: Record<string, any> = {
@@ -58,6 +65,13 @@ export async function updateCompany(data: {
     bis_no: data.bisNo ?? null,
     invoice_footer: data.invoiceFooter ?? null,
     base_currency: data.baseCurrency ?? "INR",
+    bank_name: data.bankName ?? null,
+    bank_account_no: data.bankAccountNo ?? null,
+    bank_ifsc: data.bankIfsc ?? null,
+    bank_branch: data.bankBranch ?? null,
+    upi_id: data.upiId ?? null,
+    contact_phone: data.contactPhone ?? null,
+    contact_email: data.contactEmail ?? null,
   };
   const { data: existing } = await (supabase as any)
     .from("company_settings")
@@ -71,6 +85,35 @@ export async function updateCompany(data: {
   } else {
     ({ error } = await (supabase as any).from("company_settings").insert(patch));
   }
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/settings");
+  return { ok: true };
+}
+
+// =====================================================================
+// Company image uploads (signature / payment QR) — migration 0124
+// =====================================================================
+
+/** Sets or clears company_settings.signature_url / qr_image_url. The file
+ *  itself is uploaded client-side to the public `party-images` bucket under
+ *  company/ (same policy family as avatars); this records the public URL. */
+export async function setCompanyImage(
+  target: "signature" | "qr",
+  url: string | null,
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const patch: Record<string, any> =
+    target === "signature" ? { signature_url: url } : { qr_image_url: url };
+  const { data: existing } = await (supabase as any)
+    .from("company_settings")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+  if (!existing) return { ok: false, error: "Company settings not found." };
+  const { error } = await (supabase as any)
+    .from("company_settings")
+    .update(patch)
+    .eq("id", existing.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/settings");
   return { ok: true };

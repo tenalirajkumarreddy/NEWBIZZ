@@ -1,4 +1,44 @@
-import { parseQrPayload } from "../qrparse";
+import { parseQrPayload, parseDocQr } from "../qrparse";
+
+const nonDocPayloads = [
+  "newbizz://s/NB-0142",
+  "upi://pay?pa=shop@ybl&pn=Store",
+  "NB-0142",
+  "newbizz://d/inv/short",
+  "newbizz://d/xyz/123e4567-e89b-12d3-a456-426614174000",
+  '{"v":"1","pa":"shop@paytm"}',
+  "",
+];
+
+describe("parseDocQr - NEWBIZZ document QRs", () => {
+  it("parses each document kind", () => {
+    expect(parseDocQr("newbizz://d/inv/123e4567-e89b-12d3-a456-426614174000")).toEqual({
+      kind: "invoice",
+      id: "123e4567-e89b-12d3-a456-426614174000",
+    });
+    expect(parseDocQr("newbizz://d/chl/123E4567-E89B-12D3-A456-426614174000")?.kind).toBe("challan");
+    expect(parseDocQr("newbizz://d/ord/123e4567-e89b-12d3-a456-426614174000")?.kind).toBe("order");
+    expect(parseDocQr("newbizz://d/cn/123e4567-e89b-12d3-a456-426614174000")?.kind).toBe("creditnote");
+  });
+
+  it("accepts the https form and trims whitespace", () => {
+    const r = parseDocQr("  newbizz://d/chl/123e4567-e89b-12d3-a456-426614174000\n");
+    expect(r?.kind).toBe("challan");
+    expect(r?.id).toBe("123e4567-e89b-12d3-a456-426614174000");
+  });
+
+  it("normalizes the id to lowercase uuid", () => {
+    expect(parseDocQr("newbizz://d/inv/ABCDEF01-2345-6789-ABCD-EF0123456789")?.id).toBe(
+      "abcdef01-2345-6789-abcd-ef0123456789",
+    );
+  });
+
+  nonDocPayloads.forEach((payload) => {
+    it(`rejects: ${payload.slice(0, 40)}`, () => {
+      expect(parseDocQr(payload)).toBeNull();
+    });
+  });
+});
 
 describe("parseQrPayload - NEWBIZZ native codes", () => {
   it("parses scheme url", () => {
