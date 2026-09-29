@@ -77,7 +77,15 @@ export function DocumentCard({ doc, onRescan }: { doc: ResolvedDoc; onRescan: ()
     return out;
   }, [doc]);
 
-  if (!doc.meta) {
+  // The quick preview reads through RLS, which intentionally hides rows the
+  // signed-in role can't SELECT — but "Open full document" is NOT gated by
+  // RLS: /api/print-share authorizes with the account's claims and mints a
+  // token, so the full view works even when the preview is hidden. Orders
+  // have no tokenized route (their web view needs a web login), so they keep
+  // the hard dead-end.
+  const tokenizable = doc.kind !== "order";
+
+  if (!doc.meta && !tokenizable) {
     return (
       <View style={[s.card, s.muted]}>
         <View style={s.headRow}>
@@ -96,6 +104,33 @@ export function DocumentCard({ doc, onRescan }: { doc: ResolvedDoc; onRescan: ()
         >
           <RefreshCw size={13} color={t.color.brand} />
           <Text style={s.retryTxt}>Scan again</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!doc.meta) {
+    // Preview hidden by RLS but the kind has a tokenized full view — offer it.
+    return (
+      <View style={[s.card, s.muted]}>
+        <View style={s.headRow}>
+          <Icon size={16} color={t.color.ink3} />
+          <Text style={[s.kindTxt, { color: t.color.ink3 }]}>{kindMeta.label}</Text>
+        </View>
+        <Text style={s.nfTitle}>Preview unavailable</Text>
+        <Text style={s.nfMsg}>
+          Quick details aren't visible for your role, but you can still open the full document.
+        </Text>
+        <Pressable
+          onPress={() => void openFull()}
+          disabled={opening}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${kindMeta.label} full view`}
+          accessibilityState={{ busy: opening }}
+          style={({ pressed }) => [s.openBtn, pressed && { opacity: 0.85 }, opening && { opacity: 0.6 }]}
+        >
+          <ExternalLink size={14} color={t.color.brand} />
+          <Text style={s.openTxt}>{opening ? "Preparing link…" : "Open full document"}</Text>
         </Pressable>
       </View>
     );
