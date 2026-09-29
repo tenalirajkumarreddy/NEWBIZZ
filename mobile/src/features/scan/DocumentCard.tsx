@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { moneyINR, dateIST } from "@/lib/format";
 import { documentWebUrl, printShareApiUrl, webOrigin, type ResolvedDoc } from "@/data/docs";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "@/lib/session";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -15,6 +16,14 @@ const KIND_META: Record<string, { label: string; icon: typeof FileText }> = {
   challan: { label: "Delivery Challan", icon: Truck },
   order: { label: "Sales Order", icon: ClipboardList },
   creditnote: { label: "Credit Note", icon: Undo2 },
+};
+
+/** The web permission that gates each kind's tokenized full view — mirrors
+ *  KINDS in app/api/print-share/route.ts. Orders have no tokenized route. */
+const PERM_BY_KIND: Record<string, string> = {
+  invoice: "invoice.view",
+  challan: "challan.view",
+  creditnote: "creditnote.view",
 };
 
 /** Scan result for a newbizz://d/… document QR: identity strip + metadata,
@@ -29,6 +38,7 @@ const KIND_META: Record<string, { label: string; icon: typeof FileText }> = {
 export function DocumentCard({ doc, onRescan }: { doc: ResolvedDoc; onRescan: () => void }) {
   const { palette: t } = useTheme();
   const s = useStyles();
+  const { can } = useSession();
   const [opening, setOpening] = useState(false);
 
   const kindMeta = KIND_META[doc.kind] ?? KIND_META.invoice;
@@ -110,6 +120,33 @@ export function DocumentCard({ doc, onRescan }: { doc: ResolvedDoc; onRescan: ()
   }
 
   if (!doc.meta) {
+    const perm = PERM_BY_KIND[doc.kind];
+    if (perm && !can(perm)) {
+      // The account's claims say this kind is off-limits — the mint would 403
+      // and fall back to a login wall. Say so instead of offering the button.
+      return (
+        <View style={[s.card, s.muted]}>
+          <View style={s.headRow}>
+            <Icon size={16} color={t.color.ink4} />
+            <Text style={[s.kindTxt, { color: t.color.ink3 }]}>{kindMeta.label}</Text>
+          </View>
+          <Text style={s.nfTitle}>No access</Text>
+          <Text style={s.nfMsg}>
+            Your account doesn't have access to {kindMeta.label.toLowerCase()} documents. An
+            admin can grant you {perm}.
+          </Text>
+          <Pressable
+            onPress={onRescan}
+            accessibilityRole="button"
+            accessibilityLabel="Scan again"
+            style={({ pressed }) => [s.retryBtn, pressed && { opacity: 0.7 }]}
+          >
+            <RefreshCw size={13} color={t.color.brand} />
+            <Text style={s.retryTxt}>Scan again</Text>
+          </Pressable>
+        </View>
+      );
+    }
     // Preview hidden by RLS but the kind has a tokenized full view — offer it.
     return (
       <View style={[s.card, s.muted]}>
