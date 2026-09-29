@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 // system. lucide-react is not a web dependency, so the handful of glyphs the
 // toolbar needs are inlined here with lucide paths.
 
-type IconName = "back" | "close" | "doc" | "open" | "print";
+type IconName = "back" | "close" | "doc" | "link" | "open" | "print";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   // ArrowLeft
@@ -21,6 +21,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
       <path d="M14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8M10 9H8" />
+    </>
+  ),
+  // Link
+  link: (
+    <>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </>
   ),
   // ExternalLink

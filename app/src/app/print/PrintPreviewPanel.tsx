@@ -22,6 +22,10 @@ import { printHref, type PrintKind } from "./print-href";
 //     Void…), rendered in the same line as Print.
 //   • Print (and Ctrl/Cmd+P while the page is open) opens the browser's native
 //     print dialog.
+//   • Copy share link mints a tokenized URL via /api/print-share — a link that
+//     opens THIS sheet in any browser for a week with no login (the same
+//     mechanism the APK's "Open full document" uses). Absolute URL, on the
+//     clipboard; toast-free, the label confirms.
 //
 // How it works: the sheet HTML is fetched from the canonical /print/{kind}/{id}
 // route — the single source of truth for the document design. The fetched DOM
@@ -80,6 +84,8 @@ export function PrintPreviewPanel({
   const prevTitle = useRef<string | null>(null);
   const homeRef = useRef<{ parent: HTMLElement; next: ChildNode | null } | null>(null);
   const printingRef = useRef(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareDone, setShareDone] = useState(false);
 
   const href = printHref(kind, id) + (signed ? "" : `?${SIGN_PARAM}=0`);
 
@@ -91,6 +97,42 @@ export function PrintPreviewPanel({
     else p.set(SIGN_PARAM, "0");
     const qs = p.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  // The share link must be absolute to survive WhatsApp/SMS — the clipboard
+  // never carries the origin, so build it here.
+  function absoluteShareHref(): string {
+    return `${window.location.origin}${href}`;
+  }
+
+  // Mint + copy a tokenized share URL. Same-origin cookies authenticate the
+  // mint (the endpoint checks the document view permission, same as this page
+  // did server-side); a 401/403 means the session died mid-page — send the
+  // user through login like the expired-preview path does.
+  async function copyShareLink() {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const res = await fetch(`/api/print-share?kind=${kind}&id=${id}`, {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) throw new Error(`Share link failed (${res.status})`);
+      const { url } = (await res.json()) as { url: string };
+      await navigator.clipboard.writeText(window.location.origin + url);
+      setShareDone(true);
+      window.setTimeout(() => setShareDone(false), 2000);
+    } catch {
+      // Endpoint or clipboard unavailable — the signed-in sheet URL is still
+      // worth having (it works for any colleague already logged in).
+      await navigator.clipboard.writeText(absoluteShareHref()).catch(() => {});
+    } finally {
+      setSharing(false);
+    }
   }
 
   // Restore the page title on unmount (the doc title becomes the print job name).
@@ -233,6 +275,15 @@ export function PrintPreviewPanel({
               </button>
             </div>
           )}
+          <Button
+            variant="secondary"
+            size="md"
+            leading={<Icon name="link" size={15} />}
+            onClick={copyShareLink}
+            loading={sharing}
+          >
+            {shareDone ? "Copied!" : "Copy share link"}
+          </Button>
           <Button
             variant="primary"
             size="md"
