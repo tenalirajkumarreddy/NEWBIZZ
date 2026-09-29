@@ -132,9 +132,12 @@ export async function listChallans(opts: {
   }));
 }
 
-/** One challan with its lines, or null if not found / not visible. */
-export async function getChallan(id: string): Promise<ChallanDetail | null> {
-  const supabase = createClient();
+/** One challan with its lines, or null if not found / not visible. Pass the
+ *  service client for token-authed contexts (print share). */
+export async function getChallan(
+  id: string,
+  supabase: ReturnType<typeof createClient> = createClient(),
+): Promise<ChallanDetail | null> {
   const res = await supabase
     .from("delivery_challans")
     .select(CHALLAN_SELECT)

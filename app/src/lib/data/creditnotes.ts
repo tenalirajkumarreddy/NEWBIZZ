@@ -105,8 +105,11 @@ export async function listCreditNotes(opts: {
 }
 
 /** One credit note with its sales-return lines (if any), or null. */
-export async function getCreditNote(id: string): Promise<CreditNoteDetail | null> {
-  const supabase = createClient();
+export async function getCreditNote(
+  id: string,
+  /** Pass the service client for token-authed contexts (print share). */
+  supabase: ReturnType<typeof createClient> = createClient(),
+): Promise<CreditNoteDetail | null> {
   const res = await supabase
     .from("credit_notes")
     .select(

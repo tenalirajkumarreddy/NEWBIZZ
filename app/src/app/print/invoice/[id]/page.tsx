@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/claims";
 import { verifyPrintToken } from "@/lib/print-token";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getInvoice, type InvoiceLine } from "@/lib/data/sales";
 import { getCompany } from "@/lib/data/settings";
 import { dateIST, money, qty as fmtQty } from "@/lib/format";
@@ -62,7 +63,12 @@ export default async function PrintInvoicePage({
   const signParam = searchParams.sign ?? token?.sign;
   const showSignature = signParam !== "0";
 
-  const [inv, company] = await Promise.all([getInvoice(params.id), getCompany()]);
+  // Token-authed reads bypass RLS deliberately: the share token IS the
+  // authorization (HMAC-bound to this exact document, expiry-checked) — RLS
+  // has no session to evaluate and would null the fetch. Session paths keep
+  // the RLS-scoped cookie client.
+  const db = token ? createServiceClient() : undefined;
+  const [inv, company] = await Promise.all([getInvoice(params.id, db), getCompany()]);
   if (!inv) notFound();
 
   const docQr = await docQrSvg("inv", inv.id, 44);

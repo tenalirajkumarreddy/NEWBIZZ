@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/claims";
 import { verifyPrintToken } from "@/lib/print-token";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getCreditNote } from "@/lib/data/creditnotes";
 import { getCompany } from "@/lib/data/settings";
 import { amountInWords, dateIST, money, titleCase } from "@/lib/format";
@@ -26,7 +27,10 @@ export default async function PrintCreditNotePage({
   if (!session && !token) redirect("/login");
   if (session && !token && !can(session.claims, "creditnote.view")) notFound();
 
-  const [cn, company] = await Promise.all([getCreditNote(params.id), getCompany()]);
+  // Token-authed reads bypass RLS deliberately — the share token IS the
+  // authorization (HMAC-bound to this document, expiry-checked).
+  const db = token ? createServiceClient() : undefined;
+  const [cn, company] = await Promise.all([getCreditNote(params.id, db), getCompany()]);
   if (!cn) notFound();
 
   // A credit note with returned lines is a sales return; other reasons are

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { can } from "@/lib/auth/claims";
 import { verifyPrintToken } from "@/lib/print-token";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getChallan, type ChallanLine } from "@/lib/data/challans";
 import { getCompany } from "@/lib/data/settings";
 import { qty as fmtQty } from "@/lib/format";
@@ -27,7 +28,10 @@ export default async function PrintChallanPage({
   if (!session && !token) redirect("/login");
   if (session && !token && !can(session.claims, "challan.view")) notFound();
 
-  const [challan, company] = await Promise.all([getChallan(params.id), getCompany()]);
+  // Token-authed reads bypass RLS deliberately — the share token IS the
+  // authorization (HMAC-bound to this document, expiry-checked).
+  const db = token ? createServiceClient() : undefined;
+  const [challan, company] = await Promise.all([getChallan(params.id, db), getCompany()]);
   if (!challan) notFound();
 
   return (

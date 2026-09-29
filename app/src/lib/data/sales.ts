@@ -570,8 +570,12 @@ export async function getCustomerLedger(
   };
 }
 
-export async function getInvoice(id: string): Promise<InvoiceDetail | null> {
-  const supabase = createClient();
+export async function getInvoice(
+  id: string,
+  /** Pass the service client for token-authed contexts (print share):
+   *  the share token is the authorization; RLS can't see it. */
+  supabase: ReturnType<typeof createClient> = createClient(),
+): Promise<InvoiceDetail | null> {
   const res = await supabase
     .from("invoices")
     .select(INVOICE_SELECT)
