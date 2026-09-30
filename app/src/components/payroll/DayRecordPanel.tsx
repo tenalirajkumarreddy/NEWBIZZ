@@ -242,18 +242,26 @@ export function DayRecordPanel({
   const selectedCount = workers.filter((w) => w.status === "present").length;
   const absentCount = workers.length - selectedCount;
 
-  // Latest attendance.created_at across the day's rows — "recorded at HH:MM"
-  // reassures everyone the marks they see are the saved ones.
-  const recordedAtLabel = useMemo(() => {
-    const times = existingRecords.map((r) => r.recordedAt).filter(Boolean) as string[];
-    if (times.length === 0) return null;
-    const latest = times.reduce((a, b) => (a > b ? a : b));
-    return new Intl.DateTimeFormat("en-IN", {
+  // Latest attendance.created_at across the day's rows + who saved it —
+  // "Recorded HH:MM · NAME updated" tells everyone the marks they see are
+  // the saved ones and which device/account last wrote them.
+  const recordedStamp = useMemo(() => {
+    let latest: string | null = null;
+    let by: string | null = null;
+    for (const r of existingRecords) {
+      if (r.recordedAt && (!latest || r.recordedAt > latest)) {
+        latest = r.recordedAt;
+        by = r.recordedBy;
+      }
+    }
+    if (!latest) return null;
+    const time = new Intl.DateTimeFormat("en-IN", {
       timeZone: "Asia/Kolkata",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(new Date(latest));
+    return { time, by };
   }, [existingRecords]);
 
   // Days in the panel's month — the monthly day-rate denominator.
@@ -297,8 +305,11 @@ export function DayRecordPanel({
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-ink">{date}</span>
           {existingRecords.length > 0 && <Badge tone="brand" size="sm">Recorded</Badge>}
-          {recordedAtLabel && (
-            <span className="text-[11px] font-normal text-ink-3">at {recordedAtLabel} · auto-refreshes</span>
+          {recordedStamp && (
+            <span className="text-[11px] font-normal text-ink-3">
+              Recorded {recordedStamp.time}
+              {recordedStamp.by ? ` · ${recordedStamp.by} updated` : ""}
+            </span>
           )}
         </span>
       }

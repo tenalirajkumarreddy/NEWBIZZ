@@ -149,6 +149,8 @@ export interface DayAttendanceDetail {
   payAmount: number | null;
   /** attendance.created_at — "recorded at" stamp for the day panel. */
   recordedAt: string | null;
+  /** full_name of the account that saved the row (attendance.created_by). */
+  recordedBy: string | null;
   /** Worker id when the row belongs to a worker entity (null for users). */
   workerId?: string | null;
   /** user_id or worker_id — matches PayrollPerson.entityId for both lanes. */
@@ -296,7 +298,7 @@ export async function getAttendanceForMonth(month: string): Promise<AttendanceRo
   const { from, to } = monthRange(month);
   const res = await supabase
     .from("attendance")
-    .select("id, user_id, work_date, shift, check_in, hours, ot_hours, status, note, user:users(full_name)")
+    .select("id, user_id, work_date, shift, check_in, hours, ot_hours, status, note, user:users!attendance_user_id_fkey(full_name)")
     .gte("work_date", from)
     .lte("work_date", to)
     .order("work_date")
@@ -718,7 +720,7 @@ export async function getDayAttendanceDetail(
   const supabase = createClient();
   const res = await supabase
     .from("attendance")
-    .select("id, user_id, worker_id, shift, hours, ot_hours, status, note, created_at, user:users(full_name), w:workers!attendance_worker_id_fkey(full_name)")
+    .select("id, user_id, worker_id, shift, hours, ot_hours, status, note, created_at, user:users!attendance_user_id_fkey(full_name), cu:users!attendance_created_by_fkey(full_name), w:workers!attendance_worker_id_fkey(full_name)")
     .eq("work_date", date)
     .order("user_id");
   const rows = unwrap(res, [], "getDayAttendanceDetail") as Record<string, unknown>[];
@@ -752,6 +754,7 @@ export async function getDayAttendanceDetail(
       note: (r.note as string) ?? null,
       payAmount: null,
       recordedAt: (r.created_at as string) ?? null,
+      recordedBy: ((r.cu as Record<string, unknown> | null)?.full_name as string) ?? null,
       workerId,
       entityId: (userId ?? workerId) as string,
       entityType: workerId ? ("worker" as const) : ("user" as const),

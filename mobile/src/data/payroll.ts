@@ -213,6 +213,8 @@ export interface AttendanceDayRow {
   otHours: number;
   /** attendance.created_at — "recorded at" stamp. */
   recordedAt: string | null;
+  /** full_name of the account that saved the row (attendance.created_by). */
+  recordedBy: string | null;
 }
 
 /** Attendance rows for one work_date, joined with names via the same FK
@@ -230,6 +232,7 @@ export function useAttendanceForDate(dateISO: string | null) {
         .select(
           "id, user_id, worker_id, status, hours, ot_hours, created_at, " +
             "u:users!attendance_user_id_fkey(full_name), " +
+            "cu:users!attendance_created_by_fkey(full_name), " +
             "w:workers!attendance_worker_id_fkey(full_name)",
         )
         .eq("work_date", dateISO!);
@@ -243,6 +246,7 @@ export function useAttendanceForDate(dateISO: string | null) {
         hours: Number(r.hours ?? 0),
         otHours: Number(r.ot_hours ?? 0),
         recordedAt: (r.created_at as string) ?? null,
+        recordedBy: (r.cu?.full_name as string) ?? null,
       }));
     },
   });

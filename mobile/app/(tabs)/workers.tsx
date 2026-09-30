@@ -204,17 +204,26 @@ export default function WorkersScreen() {
     return () => sub.remove();
   }, [qc, sel]);
 
-  // Latest saved-row timestamp for the day — the "recorded at" stamp.
-  const recordedAtLabel = useMemo(() => {
-    const times = (dayQ.data ?? []).map((r) => r.recordedAt).filter(Boolean) as string[];
-    if (times.length === 0) return null;
-    const latest = times.reduce((a, b) => (a > b ? a : b));
-    return new Intl.DateTimeFormat("en-IN", {
+  // Latest saved-row timestamp for the day + who saved it — the strip shows
+  // "Recorded HH:MM · NAME updated" so everyone can see the marks are live
+  // and which account last wrote them.
+  const recordedStamp = useMemo(() => {
+    let latest: string | null = null;
+    let by: string | null = null;
+    for (const r of dayQ.data ?? []) {
+      if (r.recordedAt && (!latest || r.recordedAt > latest)) {
+        latest = r.recordedAt;
+        by = r.recordedBy;
+      }
+    }
+    if (!latest) return null;
+    const time = new Intl.DateTimeFormat("en-IN", {
       timeZone: "Asia/Kolkata",
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(new Date(latest));
+    return { time, by };
   }, [dayQ.data]);
 
   function drOf(key: string): RowDraft {
@@ -503,8 +512,10 @@ export default function WorkersScreen() {
             </View>
             {ro ? (
               <Text style={s.infoStrip}>View only — attendance can be changed on the day itself (or by the office).</Text>
-            ) : recordedAtLabel ? (
-              <Text style={s.syncStrip}>Recorded {recordedAtLabel} · syncs automatically</Text>
+            ) : recordedStamp ? (
+              <Text style={s.syncStrip}>
+                Recorded {recordedStamp.time}{recordedStamp.by ? ` · ${recordedStamp.by} updated` : ""}
+              </Text>
             ) : null}
             {(shiftsQ.isError || mapsQ.isError || ratesQ.isError) ? (
               <View style={s.cfgErr}>
