@@ -138,16 +138,21 @@ export default function WorkersScreen() {
 
   // Sync with saved rows: full rebuild when the DATE changes, then a MERGE on
   // every refetch (the day query polls every 30s) — so marks saved on another
-  // device appear here live. Dirty-row protection: a merge never overwrites a
-  // row the operator is editing locally (status flipped, hours changed, or
-  // note typed) — only their own Save writes those.
+  // device appear here live. The merge diffs local rows against the LAST
+  // SERVER BASELINE (srvRef), not against the incoming rows: a row still
+  // matching the baseline is untouched, so remote changes adopt; a row that
+  // diverged from the baseline is a real local edit and is preserved until
+  // the operator saves. Comparing against incoming instead would swallow
+  // every remote change as a "local edit".
   const resetSelRef = useRef<string | null>(null);
+  const srvRef = useRef<Map<string, { status: string; hours: number; note: string }>>(new Map());
   useEffect(() => {
     if (!rosterQ.data || dayQ.data === undefined) return;
     const isReset = resetSelRef.current !== sel;
     const saved = new Map(dayQ.data.map((r) => [`${r.entityType}:${r.entityId}`, r]));
     const tpl = (shiftsQ.data ?? []).find((x) => x.name === shift);
     const base = tpl ? tpl.totalHours : 8;
+    const prevSrv = isReset ? new Map<string, { status: string; hours: number; note: string }>() : srvRef.current;
     setDraft((d) => {
       const hasPrev = !isReset && Object.keys(d).length > 0;
       const next: Record<string, RowDraft> = {};
@@ -167,15 +172,22 @@ export default function WorkersScreen() {
           : { ...ROW_ABSENT };
         const cur = hasPrev ? d[key] : undefined;
         if (cur) {
-          // dirty-row protection: keep the local edit
-          if (cur.status !== incoming.status) { next[key] = cur; continue; }
-          if (cur.status === "present" && cur.hours !== incoming.hours) { next[key] = cur; continue; }
-          if (cur.note && cur.note !== incoming.note) { next[key] = cur; continue; }
+          // dirty = local diverged from what the server last sent us
+          const sb = prevSrv.get(key);
+          const dirty = sb
+            ? cur.status !== sb.status ||
+              (cur.status === "present" && cur.hours !== sb.hours) ||
+              (!!cur.note && cur.note !== sb.note)
+            : cur.status !== "absent" || cur.hours !== 0 || !!cur.note;
+          if (dirty) { next[key] = cur; continue; }
         }
         next[key] = incoming;
       }
       return next;
     });
+    srvRef.current = new Map(
+      dayQ.data.map((r) => [`${r.entityType}:${r.entityId}`, { status: r.status, hours: r.hours, note: "" }]),
+    );
     resetSelRef.current = sel;
   }, [sel, rosterQ.data, dayQ.data, shiftsQ.data, shift]);
 
@@ -320,6 +332,11 @@ export default function WorkersScreen() {
     try {
       const res = await saveAttendanceDay({ dateISO: sel, shiftName: shift, rows });
       Toast.show({ type: "success", text1: `Day saved — ${moneyINR(res.creditedTotal)} credited` });
+      // rebaseline: what we just sent is now server truth — the next poll
+      // diffing against it won't mistake our own save for a local edit
+      srvRef.current = new Map(
+        rows.map((r) => [`${r.entityType}:${r.entityId}`, { status: r.status, hours: r.status === "present" ? r.hours : 0, note: r.note ?? "" }]),
+      );
       void qc.invalidateQueries({ queryKey: qk.attendanceDay(sel) });
       void qc.invalidateQueries({ queryKey: qk.opAttendanceToday() });
       void qc.invalidateQueries({ queryKey: qk.monthAbsences(sel) });

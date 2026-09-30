@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -51,11 +51,17 @@ export function DayRecordPanel({
 
   const selectedShift = shiftTemplates.find((s) => s.id === selectedShiftId);
 
+  // Last-synced server state per entity — the DIRTY BASELINE. A poll adopts
+  // the server's rows only where the local form still matches this baseline
+  // (untouched → remote change wins, e.g. saved from the phone); rows the
+  // user actually edited (diverged from the baseline) are preserved until
+  // they save. Comparing local vs INCOMING instead would swallow every
+  // remote change as a "local edit" — the bug this replaced.
+  const srvRef = useRef<Map<string, { status: string; hours: number; note: string }>>(new Map());
+
   // Day loads on mount, then POLLS every 30s and refetches when the tab
   // regains focus — so marks saved by another device (phone ↔ web) show up
-  // here without a manual refresh. Dirty-row protection: a poll never
-  // overwrites a row this user is actively editing (status flipped locally,
-  // hours changed, or note typed) — only their own Save writes those.
+  // here without a manual refresh.
   useEffect(() => {
     let active = true;
 
@@ -63,6 +69,12 @@ export function DayRecordPanel({
       if (!active) return;
       setExistingRecords(rows);
       setLoaded(true);
+      const baseline = new Map(
+        rows
+          .filter((r) => r.entityId)
+          .map((r) => [r.entityId!, { status: r.status, hours: r.hours, note: r.note ?? "" }]),
+      );
+      const prevBaseline = srvRef.current;
       setWorkers((prev) => {
         const hasPrev = prev.length > 0;
 
@@ -98,14 +110,19 @@ export function DayRecordPanel({
           };
           const cur = hasPrev ? prev.find((w) => w.entityId === u.entityId) : undefined;
           if (cur) {
-            // dirty-row protection: keep the local edit
-            if (cur.present !== next.present) return cur;
-            if (cur.present && cur.hours !== next.hours) return cur;
-            if (cur.note && cur.note !== next.note) return cur;
+            // dirty = local diverged from what the server last sent us
+            const base = prevBaseline.get(u.entityId);
+            const dirty = base
+              ? cur.status !== base.status ||
+                (cur.status === "present" && cur.hours !== base.hours) ||
+                (!!cur.note && cur.note !== base.note)
+              : cur.status !== "absent" || cur.hours !== 0 || !!cur.note;
+            if (dirty) return cur;
           }
           return next;
         });
       });
+      srvRef.current = baseline;
     }
 
     const load = () =>
@@ -213,6 +230,11 @@ export function DayRecordPanel({
       toast.error("Error saving attendance", result.error);
     } else {
       toast.success("Day saved", `${rupeesCompact(result.creditedTotal)} credited`);
+      // rebaseline: what we just sent is now server truth — the next poll
+      // diffing against it won't mistake our own save for a local edit
+      srvRef.current = new Map(
+        workers.map((w) => [w.entityId, { status: w.status, hours: w.status === "present" ? w.hours : 0, note: w.note }]),
+      );
     }
     setSaving(false);
   }
