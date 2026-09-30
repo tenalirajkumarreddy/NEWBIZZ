@@ -211,20 +211,24 @@ export interface AttendanceDayRow {
   status: string;
   hours: number;
   otHours: number;
+  /** attendance.created_at — "recorded at" stamp. */
+  recordedAt: string | null;
 }
 
 /** Attendance rows for one work_date, joined with names via the same FK
- * embeds as useAttendanceToday. Null date disables the query. */
+ * embeds as useAttendanceToday. Null date disables the query. Polls every
+ * 30s so marks saved on another device appear without leaving the screen. */
 export function useAttendanceForDate(dateISO: string | null) {
   const { user } = useSession();
   return useQuery({
     queryKey: qk.attendanceDay(dateISO ?? ""),
     enabled: !!user?.id && !!dateISO,
+    refetchInterval: 30_000,
     queryFn: async (): Promise<AttendanceDayRow[]> => {
       const { data, error } = await supabase
         .from("attendance")
         .select(
-          "id, user_id, worker_id, status, hours, ot_hours, " +
+          "id, user_id, worker_id, status, hours, ot_hours, created_at, " +
             "u:users!attendance_user_id_fkey(full_name), " +
             "w:workers!attendance_worker_id_fkey(full_name)",
         )
@@ -238,6 +242,7 @@ export function useAttendanceForDate(dateISO: string | null) {
         status: r.status as string,
         hours: Number(r.hours ?? 0),
         otHours: Number(r.ot_hours ?? 0),
+        recordedAt: (r.created_at as string) ?? null,
       }));
     },
   });
@@ -347,6 +352,7 @@ export function usePayrollLog(enabled = true) {
   return useQuery({
     queryKey: qk.payrollLog(),
     enabled: !!user?.id && enabled,
+    refetchInterval: 30_000,
     queryFn: async (): Promise<PayrollLogRow[]> => {
       const { data, error } = await supabase
         .from("worker_transactions")

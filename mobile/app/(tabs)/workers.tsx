@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AppState, View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { UserPlus, CalendarDays, Clock, Banknote, HandCoins, ReceiptText } from "lucide-react-native";
@@ -118,7 +118,6 @@ export default function WorkersScreen() {
   const [ym, setYm] = useState(() => ymOf(sel));
   const [monthOpen, setMonthOpen] = useState(false);
   const [draft, setDraft] = useState<Record<string, RowDraft>>({});
-  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
   const [busySave, setBusySave] = useState(false);
 
   const rosterQ = usePayrollPeople();
@@ -137,34 +136,74 @@ export default function WorkersScreen() {
     [shiftsQ.data],
   );
 
-  // Prefill once per selected date: saved rows win (keyed entityType+entityId —
-  // the exact fields useAttendanceForDate returns; it has no note/amount, so
-  // note resets to "" and money is recomputed client-side). Everyone else
-  // defaults to ABSENT — the operator marks only who showed up.
+  // Sync with saved rows: full rebuild when the DATE changes, then a MERGE on
+  // every refetch (the day query polls every 30s) — so marks saved on another
+  // device appear here live. Dirty-row protection: a merge never overwrites a
+  // row the operator is editing locally (status flipped, hours changed, or
+  // note typed) — only their own Save writes those.
+  const resetSelRef = useRef<string | null>(null);
   useEffect(() => {
-    if (prefilledFor === sel) return;
     if (!rosterQ.data || dayQ.data === undefined) return;
+    const isReset = resetSelRef.current !== sel;
     const saved = new Map(dayQ.data.map((r) => [`${r.entityType}:${r.entityId}`, r]));
     const tpl = (shiftsQ.data ?? []).find((x) => x.name === shift);
     const base = tpl ? tpl.totalHours : 8;
-    const next: Record<string, RowDraft> = {};
-    for (const p of rosterQ.data) {
-      const sv = saved.get(`${p.entityType}:${p.entityId}`);
-      // legacy half_day/leave/week_off/holiday rows load as absent — the new
-      // model writes present|absent only
-      const isPresent = sv?.status === "present";
-      next[`${p.entityType}:${p.entityId}`] = sv
-        ? {
-            status: isPresent ? "present" : "absent",
-            simple: true,
-            hours: isPresent ? sv.hours || base : 0,
-            note: "",
-          }
-        : { ...ROW_ABSENT };
-    }
-    setDraft(next);
-    setPrefilledFor(sel);
-  }, [prefilledFor, sel, rosterQ.data, dayQ.data, shiftsQ.data, shift]);
+    setDraft((d) => {
+      const hasPrev = !isReset && Object.keys(d).length > 0;
+      const next: Record<string, RowDraft> = {};
+      for (const p of rosterQ.data) {
+        const key = `${p.entityType}:${p.entityId}`;
+        const sv = saved.get(key);
+        // legacy half_day/leave/week_off/holiday rows load as absent — the new
+        // model writes present|absent only
+        const isPresent = sv?.status === "present";
+        const incoming: RowDraft = sv
+          ? {
+              status: isPresent ? "present" : "absent",
+              simple: true,
+              hours: isPresent ? sv.hours || base : 0,
+              note: "",
+            }
+          : { ...ROW_ABSENT };
+        const cur = hasPrev ? d[key] : undefined;
+        if (cur) {
+          // dirty-row protection: keep the local edit
+          if (cur.status !== incoming.status) { next[key] = cur; continue; }
+          if (cur.status === "present" && cur.hours !== incoming.hours) { next[key] = cur; continue; }
+          if (cur.note && cur.note !== incoming.note) { next[key] = cur; continue; }
+        }
+        next[key] = incoming;
+      }
+      return next;
+    });
+    resetSelRef.current = sel;
+  }, [sel, rosterQ.data, dayQ.data, shiftsQ.data, shift]);
+
+  // Refetch on app foreground — attendance and payroll log can change while
+  // the app is backgrounded (another device saving the same day).
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active") return;
+      void qc.invalidateQueries({ queryKey: qk.attendanceDay(sel) });
+      void qc.invalidateQueries({ queryKey: qk.payrollLog() });
+      void qc.invalidateQueries({ queryKey: qk.workerBalances() });
+      void qc.invalidateQueries({ queryKey: qk.opAttendanceToday() });
+    });
+    return () => sub.remove();
+  }, [qc, sel]);
+
+  // Latest saved-row timestamp for the day — the "recorded at" stamp.
+  const recordedAtLabel = useMemo(() => {
+    const times = (dayQ.data ?? []).map((r) => r.recordedAt).filter(Boolean) as string[];
+    if (times.length === 0) return null;
+    const latest = times.reduce((a, b) => (a > b ? a : b));
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date(latest));
+  }, [dayQ.data]);
 
   function drOf(key: string): RowDraft {
     return draft[key] ?? ROW_ABSENT;
@@ -283,6 +322,7 @@ export default function WorkersScreen() {
       Toast.show({ type: "success", text1: `Day saved — ${moneyINR(res.creditedTotal)} credited` });
       void qc.invalidateQueries({ queryKey: qk.attendanceDay(sel) });
       void qc.invalidateQueries({ queryKey: qk.opAttendanceToday() });
+      void qc.invalidateQueries({ queryKey: qk.monthAbsences(sel) });
     } catch (e) {
       Toast.show({ type: "error", text1: "Could not save day", text2: friendlyError(e) });
     } finally {
@@ -446,6 +486,8 @@ export default function WorkersScreen() {
             </View>
             {ro ? (
               <Text style={s.infoStrip}>View only — attendance can be changed on the day itself (or by the office).</Text>
+            ) : recordedAtLabel ? (
+              <Text style={s.syncStrip}>Recorded {recordedAtLabel} · syncs automatically</Text>
             ) : null}
             {(shiftsQ.isError || mapsQ.isError || ratesQ.isError) ? (
               <View style={s.cfgErr}>
@@ -746,6 +788,12 @@ const useStyles = () => {
     infoStrip: {
       color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
       backgroundColor: t.color.fill, borderWidth: 1, borderColor: t.color.line,
+      borderRadius: tokens.radius.md, paddingHorizontal: tokens.space.md,
+      paddingVertical: tokens.space.sm, textAlign: "center",
+    },
+    syncStrip: {
+      color: t.color.grn, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow,
+      backgroundColor: t.color.grnWash, borderWidth: 1, borderColor: t.color.grn,
       borderRadius: tokens.radius.md, paddingHorizontal: tokens.space.md,
       paddingVertical: tokens.space.sm, textAlign: "center",
     },

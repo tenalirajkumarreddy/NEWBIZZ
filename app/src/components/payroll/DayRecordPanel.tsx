@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -51,55 +51,78 @@ export function DayRecordPanel({
 
   const selectedShift = shiftTemplates.find((s) => s.id === selectedShiftId);
 
+  // Day loads on mount, then POLLS every 30s and refetches when the tab
+  // regains focus — so marks saved by another device (phone ↔ web) show up
+  // here without a manual refresh. Dirty-row protection: a poll never
+  // overwrites a row this user is actively editing (status flipped locally,
+  // hours changed, or note typed) — only their own Save writes those.
   useEffect(() => {
     let active = true;
-    fetchDayAttendanceDetail(date)
-      .then((rows) => {
-        if (!active) return;
-        setExistingRecords(rows);
-        setLoaded(true);
 
-        if (rows.length > 0) {
-          // day already recorded — populate from existing (match on entity id:
-          // worker rows have null userId, so entityId is the shared key)
-          setWorkers(
-            activeUsers.map((u) => {
-              const match = rows.find((r) => (r.entityId ?? r.userId) === u.entityId);
-              // saved legacy half_day/leave rows show as absent in the new
-              // model — resaving rewrites them as a clean present|absent
-              const isPresent = match?.status === "present";
-              return {
-                entityType: u.entityType,
-                entityId: u.entityId,
-                userName: u.fullName,
-                present: isPresent,
-                status: isPresent ? "present" : "absent",
-                hours: isPresent ? match?.hours ?? 0 : 0,
-                shift: isPresent ? match?.shift ?? selectedShift?.name ?? "" : "",
-                note: match?.note ?? "",
-              };
-            }),
-          );
-        } else {
-          // fresh form — default all to absent
-          setWorkers(
-            activeUsers.map((u) => ({
-              entityType: u.entityType,
-              entityId: u.entityId,
-              userName: u.fullName,
-              present: false,
-              status: "absent",
-              hours: selectedShift?.totalHours ?? 8,
-              shift: selectedShift?.name ?? "",
-              note: "",
-            })),
-          );
+    function apply(rows: DayAttendanceDetail[]) {
+      if (!active) return;
+      setExistingRecords(rows);
+      setLoaded(true);
+      setWorkers((prev) => {
+        const hasPrev = prev.length > 0;
+
+        if (rows.length === 0) {
+          // fresh day — seed the absent roster only into an empty form
+          if (hasPrev) return prev;
+          return activeUsers.map((u) => ({
+            entityType: u.entityType,
+            entityId: u.entityId,
+            userName: u.fullName,
+            present: false,
+            status: "absent",
+            hours: selectedShift?.totalHours ?? 8,
+            shift: selectedShift?.name ?? "",
+            note: "",
+          }));
         }
-      })
-      .catch(() => {
-        if (!active) return;
-        toast.error("Couldn't load the day details");
+
+        return activeUsers.map((u) => {
+          const match = rows.find((r) => (r.entityId ?? r.userId) === u.entityId);
+          // saved legacy half_day/leave rows show as absent in the new
+          // model — resaving rewrites them as a clean present|absent
+          const isPresent = match?.status === "present";
+          const next = {
+            entityType: u.entityType,
+            entityId: u.entityId,
+            userName: u.fullName,
+            present: isPresent,
+            status: isPresent ? "present" : "absent",
+            hours: isPresent ? match?.hours ?? 0 : 0,
+            shift: isPresent ? match?.shift ?? selectedShift?.name ?? "" : "",
+            note: match?.note ?? "",
+          };
+          const cur = hasPrev ? prev.find((w) => w.entityId === u.entityId) : undefined;
+          if (cur) {
+            // dirty-row protection: keep the local edit
+            if (cur.present !== next.present) return cur;
+            if (cur.present && cur.hours !== next.hours) return cur;
+            if (cur.note && cur.note !== next.note) return cur;
+          }
+          return next;
+        });
       });
+    }
+
+    const load = () =>
+      fetchDayAttendanceDetail(date)
+        .then(apply)
+        .catch(() => {
+          if (active) toast.error("Couldn't load the day details");
+        });
+
+    void load();
+    const iv = window.setInterval(load, 30_000);
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+
     // paid-leave bookkeeping for the preview: per-USER absent+leave rows
     // earlier this month (the RPC counts exactly these, excluding the day
     // being saved).
@@ -113,6 +136,9 @@ export function DayRecordPanel({
 
     return () => {
       active = false;
+      window.clearInterval(iv);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
     };
   }, [date]);
 
@@ -194,6 +220,20 @@ export function DayRecordPanel({
   const selectedCount = workers.filter((w) => w.status === "present").length;
   const absentCount = workers.length - selectedCount;
 
+  // Latest attendance.created_at across the day's rows — "recorded at HH:MM"
+  // reassures everyone the marks they see are the saved ones.
+  const recordedAtLabel = useMemo(() => {
+    const times = existingRecords.map((r) => r.recordedAt).filter(Boolean) as string[];
+    if (times.length === 0) return null;
+    const latest = times.reduce((a, b) => (a > b ? a : b));
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date(latest));
+  }, [existingRecords]);
+
   // Days in the panel's month — the monthly day-rate denominator.
   const daysInMonth = new Date(
     Number(date.slice(0, 4)),
@@ -232,9 +272,12 @@ export function DayRecordPanel({
   return (
     <Panel
       title={
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-ink">{date}</span>
           {existingRecords.length > 0 && <Badge tone="brand" size="sm">Recorded</Badge>}
+          {recordedAtLabel && (
+            <span className="text-[11px] font-normal text-ink-3">at {recordedAtLabel} · auto-refreshes</span>
+          )}
         </span>
       }
     >
