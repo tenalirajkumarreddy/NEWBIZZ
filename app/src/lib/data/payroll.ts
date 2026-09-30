@@ -616,6 +616,52 @@ export async function getPersonMonthStatement(
   return out;
 }
 
+export interface PayrollLogRow {
+  id: string;
+  date: string;
+  entityName: string;
+  type: string;
+  amount: number;
+  note: string | null;
+}
+
+/** Global payroll log — every attendance credit, payment and advance with
+ * the person's name, newest first. Readable by hr.view holders (the RLS
+ * read_worker_transactions policy), so admin, manager and operators all
+ * see the same log. Capped like the operator view. */
+export async function getPayrollLog(limit = 500): Promise<PayrollLogRow[]> {
+  const supabase = createClient();
+  type RawLog = {
+    id: string;
+    transaction_date: string;
+    type: string;
+    amount: number;
+    note: string | null;
+    u: { full_name: string } | null;
+    w: { full_name: string } | null;
+  };
+  const res = await supabase
+    .from("worker_transactions")
+    .select(
+      "id, transaction_date, type, amount, note, " +
+        "u:users!worker_transactions_user_id_fkey(full_name), " +
+        "w:workers!worker_transactions_worker_id_fkey(full_name)",
+    )
+    .order("transaction_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit)
+    .returns<RawLog[]>();
+  const rows = unwrap(res, [] as RawLog[], "getPayrollLog");
+  return rows.map((r) => ({
+    id: r.id,
+    date: r.transaction_date,
+    entityName: r.u?.full_name ?? r.w?.full_name ?? "—",
+    type: r.type,
+    amount: Number(r.amount),
+    note: r.note,
+  }));
+}
+
 export async function getWorkerLedger(entityId: string): Promise<WorkerLedgerEntry[]> {
   const supabase = createClient();
   const res = await supabase

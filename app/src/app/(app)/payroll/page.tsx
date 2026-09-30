@@ -4,6 +4,7 @@ import { Tabs } from "@/components/payroll/Tabs";
 import { DashboardTab } from "./DashboardTab";
 import { WorkersTab } from "./WorkersTab";
 import { PayrollTab } from "./PayrollTab";
+import { HistoryTab } from "./HistoryTab";
 import { SettingsTab } from "./SettingsTab";
 import type { TabId } from "@/components/payroll/Tabs";
 import { PageContainer, PageHeader } from "@/components/ui";
@@ -26,6 +27,7 @@ export default async function PayrollPage({
       {tab === "dashboard" && <DashboardTab monthParam={monthParam} canManage={canManage} />}
       {tab === "workers" && <WorkersTab canManage={canManage} />}
       {tab === "payroll" && <PayrollTab canManage={canManage} monthParam={monthParam} />}
+      {tab === "history" && <HistoryTab />}
       {tab === "settings" && <SettingsTab canManage={canManage} />}
     </PageContainer>
   );

@@ -54,4 +54,5 @@ export const qk = {
   workerAttendance: (entityType: string, entityId: string, limit: number) =>
     ["opWorkerAttendance", entityType, entityId, limit] as const,
   entityLedger: (entityId: string) => ["opEntityLedger", entityId] as const,
+  payrollLog: () => ["opPayrollLog"] as const,
 };

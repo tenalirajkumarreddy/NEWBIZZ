@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { UserPlus, ChevronRight, CalendarDays, Clock } from "lucide-react-native";
+import { UserPlus, CalendarDays, Clock, Banknote, HandCoins, ReceiptText } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -10,24 +10,22 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonRows } from "@/components/SkeletonRows";
 import { Sheet } from "@/components/Sheet";
-import { PressCard } from "@/components/PressCard";
 import { DropdownSelect } from "@/components/DropdownSelect";
 import { MonthSheet } from "@/components/MonthSheet";
 import { WorkerSheet, balancePillText } from "@/features/workers/WorkerSheet";
 import { useSession } from "@/lib/session";
 import { roleLabel } from "@/lib/claims";
 import { friendlyError } from "@/lib/rpc";
-import { moneyINR, moneyCompact, dateIST, todayIST } from "@/lib/format";
+import { moneyINR, dateIST, todayIST } from "@/lib/format";
 import { qk } from "@/data/keys";
 import {
   useStaff, addWorker,
-  usePayrollRuns, usePayrollLines,
 } from "@/data/operator";
 import {
   useShiftTemplates, usePayMappings, usePayrollPeople, useUserDailyRates,
   useAttendanceForDate, useCalendarDays, saveAttendanceDay,
-  useWorkerBalances, useMonthAbsencesBefore,
-  type PayrollPerson,
+  useWorkerBalances, useMonthAbsencesBefore, usePayrollLog,
+  type PayrollPerson, type PayrollLogRow,
 } from "@/data/payroll";
 import { payForHours, previewUserDay } from "@/lib/opBuilders";
 import { tokens } from "@/theme/tokens";
@@ -44,9 +42,38 @@ const SEG_LABELS: Record<Seg, string> = {
 /** New hours model (0127): two statuses only — the RPC rejects the rest. */
 const OFF_LABEL: Record<string, string> = { absent: "Absent" };
 
-const RUN_TONE: Record<string, "neutral" | "brand" | "grn" | "amb"> = {
-  draft: "neutral", computed: "amb", posted: "brand", paid: "grn",
+interface LogDayGroup {
+  day: string;
+  rows: PayrollLogRow[];
+  credited: number;
+  paid: number;
+}
+
+const LOG_TYPE_TONE: Record<string, "brand" | "grn" | "amb"> = {
+  attendance_pay: "brand",
+  payment: "grn",
+  advance: "amb",
 };
+const LOG_TYPE_LABEL: Record<string, string> = {
+  attendance_pay: "Credited",
+  payment: "Payment",
+  advance: "Advance",
+};
+
+function groupLogByDay(rows: PayrollLogRow[]): LogDayGroup[] {
+  const groups = new Map<string, LogDayGroup>();
+  for (const r of rows) {
+    let g = groups.get(r.dateISO);
+    if (!g) {
+      g = { day: r.dateISO, rows: [], credited: 0, paid: 0 };
+      groups.set(r.dateISO, g);
+    }
+    g.rows.push(r);
+    if (r.type === "attendance_pay") g.credited += r.amount;
+    else g.paid += Math.abs(r.amount);
+  }
+  return [...groups.values()];
+}
 
 interface RowDraft {
   status: string;
@@ -76,7 +103,10 @@ export default function WorkersScreen() {
   const [seg, setSeg] = useState<Seg>("workers");
 
   const staff = useStaff();
-  const runs = usePayrollRuns();
+  // Payroll segment: the whole ledger log (credits + payments + advances),
+  // grouped by date — fetched only while that segment is visible.
+  const log = usePayrollLog(seg === "payroll");
+  const logGroups = useMemo(() => groupLogByDay(log.data ?? []), [log.data]);
 
   // ---- Attendance day state ----
   const [sel, setSel] = useState(todayIST);
@@ -267,8 +297,6 @@ export default function WorkersScreen() {
   const [newAadhar, setNewAadhar] = useState("");
   const [newAddress, setNewAddress] = useState("");
   const [busyAdd, setBusyAdd] = useState(false);
-  const [payrollRunId, setPayrollRunId] = useState<string | null>(null);
-  const lines = usePayrollLines(payrollRunId);
 
   // Signed ledger balances per entity id (positive = WH owes them). Enabled
   // only on the Workers segment — cached for instant return visits.
@@ -280,10 +308,10 @@ export default function WorkersScreen() {
   function invalidateWorkers() {
     void qc.invalidateQueries({ queryKey: qk.opStaff() });
     void qc.invalidateQueries({ queryKey: qk.opAttendanceToday() });
-    void qc.invalidateQueries({ queryKey: qk.opPayrollRuns() });
     void qc.invalidateQueries({ queryKey: qk.payrollPeople() });
     void qc.invalidateQueries({ queryKey: qk.attendanceDay(sel) });
     void qc.invalidateQueries({ queryKey: qk.workerBalances() });
+    void qc.invalidateQueries({ queryKey: qk.payrollLog() });
   }
 
   async function onAddWorker() {
@@ -546,20 +574,54 @@ export default function WorkersScreen() {
             )}
         </>
       ) : (
-        runs.isLoading ? <SkeletonRows rows={4} />
-          : runs.isError ? <EmptyState title="Could not load payroll" message={friendlyError(runs.error)} />
-          : (runs.data ?? []).length === 0 ? <EmptyState title="No payroll runs" message="Payroll runs computed by the office appear here." />
+        // Payroll segment: the ledger log grouped by date — every attendance
+        // credit, payment and advance, newest first, with per-day totals.
+        log.isLoading ? <SkeletonRows rows={5} />
+          : log.isError ? <EmptyState title="Could not load payroll log" message={friendlyError(log.error)} />
+          : logGroups.length === 0 ? <EmptyState icon={Banknote} title="No payroll activity yet" message="Attendance credits and payments appear here as they happen, grouped by day." />
           : (
             <View style={s.list}>
-              {(runs.data ?? []).map((r) => (
-                <PressCard key={r.id} onPress={() => setPayrollRunId(r.id)} style={s.payCard}>
-                  <View style={s.headLine}>
-                    <Text style={s.docNo}>{r.periodMonth}</Text>
-                    <StatusBadge label={r.status} tone={RUN_TONE[r.status] ?? "neutral"} />
+              {logGroups.map((g) => (
+                <View key={g.day} style={s.logGroup}>
+                  <View style={s.logDayRow}>
+                    <Text style={s.logDay}>{dateIST(g.day)}</Text>
+                    {g.credited > 0 ? <Text style={s.logDayCredited}>+{moneyINR(g.credited)} credited</Text> : null}
+                    {g.paid > 0 ? <Text style={s.logDayPaid}>−{moneyINR(g.paid)} paid</Text> : null}
                   </View>
-                  <Text style={s.sub}>{moneyCompact(r.totalGross)} total gross</Text>
-                  <ChevronRight size={14} color={t.color.ink4} style={s.payChevron} />
-                </PressCard>
+                  <View style={s.dayCard}>
+                    {g.rows.map((r) => (
+                      <View key={r.id} style={s.logRow}>
+                        <View style={[s.logIcon, { backgroundColor:
+                          r.type === "attendance_pay" ? t.color.brandWash
+                          : r.type === "payment" ? t.color.grnWash
+                          : t.color.ambWash }]}
+                        >
+                          {r.type === "attendance_pay" ? (
+                            <Banknote size={13} color={t.color.brand} />
+                          ) : r.type === "payment" ? (
+                            <HandCoins size={13} color={t.color.grn} />
+                          ) : (
+                            <ReceiptText size={13} color={t.color.amb} />
+                          )}
+                        </View>
+                        <View style={s.logMain}>
+                          <View style={s.logTopRow}>
+                            <Text style={s.logName} numberOfLines={1}>{r.entityName}</Text>
+                            <StatusBadge label={LOG_TYPE_LABEL[r.type] ?? r.type} tone={LOG_TYPE_TONE[r.type] ?? "brand"} />
+                          </View>
+                          {r.note ? <Text style={s.logNote} numberOfLines={1}>"{r.note}"</Text> : null}
+                        </View>
+                        <Text style={[s.logAmt, { color:
+                          r.type === "attendance_pay" ? t.color.brand
+                          : r.type === "payment" ? t.color.grn
+                          : t.color.amb }]}
+                        >
+                          {r.amount < 0 ? "−" : "+"}{moneyINR(Math.abs(r.amount))}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
               ))}
             </View>
           )
@@ -631,23 +693,6 @@ export default function WorkersScreen() {
           </View>
         </Sheet>
       ) : null}
-
-      <Sheet visible={!!payrollRunId} onClose={() => setPayrollRunId(null)} title="Payroll lines">
-        {payrollRunId ? (
-          <View style={s.sheetBody}>
-            {lines.isLoading ? <Text style={s.ledgerSub}>Loading…</Text>
-              : lines.isError ? <Text style={s.ledgerSub}>{friendlyError(lines.error)}</Text>
-              : (lines.data ?? []).length === 0 ? <Text style={s.ledgerSub}>No lines in this run.</Text>
-              : (lines.data ?? []).map((l) => (
-                <View key={l.id} style={s.payLine}>
-                  <Text style={s.name} numberOfLines={1}>{l.name}</Text>
-                  <Text style={s.lineAmt}>{moneyINR(l.gross)}</Text>
-                  <StatusBadge label={l.paid ? "paid" : "unpaid"} tone={l.paid ? "grn" : "neutral"} />
-                </View>
-              ))}
-          </View>
-        ) : null}
-      </Sheet>
 
       <MonthSheet
         visible={monthOpen}
@@ -742,6 +787,22 @@ const useStyles = () => {
     balGrn: { color: t.color.grn, backgroundColor: t.color.grnWash },
     balMuted: { color: t.color.ink3, backgroundColor: t.color.fill },
     docNo: { color: t.color.ink, fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, fontVariant: ["tabular-nums"] },
+    logGroup: { gap: tokens.space.xs },
+    logDayRow: { flexDirection: "row", alignItems: "baseline", gap: tokens.space.sm, paddingHorizontal: tokens.space.xs },
+    logDay: { color: t.color.ink4, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow, letterSpacing: 0.6, textTransform: "uppercase" },
+    logDayCredited: { color: t.color.brand, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow, fontVariant: ["tabular-nums"] },
+    logDayPaid: { color: t.color.grn, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow, fontVariant: ["tabular-nums"] },
+    logRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.md, minHeight: 52, paddingHorizontal: tokens.space.md, paddingVertical: tokens.space.xs },
+    logIcon: { width: 28, height: 28, borderRadius: tokens.radius.sm, alignItems: "center", justifyContent: "center" },
+    logMain: { flex: 1, minWidth: 0, gap: 2 },
+    logTopRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
+    logName: { flexShrink: 1, color: t.color.ink, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
+    logNote: { color: t.color.ink3, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow, fontStyle: "italic" },
+    logAmt: { fontFamily: tokens.font.monoBold, fontSize: tokens.size.xs, fontVariant: ["tabular-nums"] },
+    dayCard: {
+      backgroundColor: t.color.surface, borderRadius: tokens.radius.lg, borderWidth: 1,
+      borderColor: t.color.line, ...tokens.shadow.card,
+    },
     attCardOff: { opacity: 0.55 },
     attRowTop: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm },
     avatar: { width: 36, height: 36, borderRadius: tokens.radius.full, backgroundColor: t.color.fill },
@@ -783,12 +844,6 @@ const useStyles = () => {
     saveTxt: { color: "#ffffff", fontFamily: tokens.font.sansSemi, fontSize: tokens.size.sm },
     payCard: { padding: tokens.space.md, gap: tokens.space.xs },
     payChevron: { position: "absolute", right: tokens.space.md, bottom: tokens.space.md },
-    payLine: { flexDirection: "row", alignItems: "center", gap: tokens.space.sm, minHeight: 40 },
-    lineAmt: {
-      color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.eyebrow,
-      fontVariant: ["tabular-nums"], minWidth: 84, textAlign: "right",
-    },
-    ledgerSub: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
     sheetBody: { gap: tokens.space.lg, paddingBottom: tokens.space.md },
     section: { gap: tokens.space.xs },
     label: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow, letterSpacing: 0.6 },

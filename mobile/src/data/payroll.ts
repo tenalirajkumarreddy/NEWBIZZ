@@ -328,6 +328,52 @@ export function useWorkerLedger(entityId: string | null) {
   });
 }
 
+export interface PayrollLogRow {
+  id: string;
+  dateISO: string;
+  entityName: string;
+  entityType: "user" | "worker";
+  entityId: string;
+  type: string;
+  amount: number;
+  note: string | null;
+}
+
+/** Whole payroll log, newest first — every attendance credit, payment and
+ * advance with the person's name (FK embeds u/w mirror the attendance-day
+ * pattern). Date-grouping happens in the Workers sheet's Payroll segment. */
+export function usePayrollLog(enabled = true) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.payrollLog(),
+    enabled: !!user?.id && enabled,
+    queryFn: async (): Promise<PayrollLogRow[]> => {
+      const { data, error } = await supabase
+        .from("worker_transactions")
+        .select(
+          "id, transaction_date, created_at, type, amount, note, " +
+            "u:users!worker_transactions_user_id_fkey(full_name), " +
+            "w:workers!worker_transactions_worker_id_fkey(full_name)",
+        )
+        .order("transaction_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        id: r.id as string,
+        dateISO: r.transaction_date as string,
+        entityName:
+          (r.u?.full_name as string) ?? (r.w?.full_name as string) ?? "—",
+        entityType: r.user_id ? ("user" as const) : ("worker" as const),
+        entityId: (r.user_id ?? r.worker_id) as string,
+        type: r.type as string,
+        amount: Number(r.amount ?? 0),
+        note: (r.note as string) ?? null,
+      }));
+    },
+  });
+}
+
 /** Working-day flags for a calendar month (Monday-first grid renders from this). */
 export function useCalendarDays(year: number, month0: number) {
   const { user } = useSession();
