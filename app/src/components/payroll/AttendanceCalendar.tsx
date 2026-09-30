@@ -104,7 +104,7 @@ export function AttendanceCalendar({
                 cell.isSelected
                   ? "bg-brand/10 ring-1 ring-brand"
                   : ""
-              } ${isToday ? "font-bold" : ""}`}
+              } ${isToday && !cell.isSelected ? "font-bold ring-1 ring-brand/50" : ""}`}
             >
               <span className={cell.isSelected ? "text-brand" : "text-ink"}>
                 {cell.day}

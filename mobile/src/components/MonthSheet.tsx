@@ -80,9 +80,9 @@ export function MonthSheet({
                 accessibilityRole="button"
                 accessibilityLabel={`Pick ${iso}`}
                 accessibilityState={{ selected: isSel }}
-                style={[s.cell, isToday && s.cellToday, isSel && s.cellSel]}
+                style={[s.cell, !isSel && isToday && s.cellToday, isSel && s.cellSel]}
               >
-                <Text style={[s.day, isSel && s.daySel]}>{day}</Text>
+                <Text style={[s.day, isSel && s.daySel, !isSel && isToday && s.dayToday]}>{day}</Text>
                 {iso in dots ? (
                   <View style={[s.dot, { backgroundColor: dots[iso] ? t.color.grn : t.color.ink4 }]} />
                 ) : (
@@ -124,6 +124,7 @@ const useStyles = () => {
       fontVariant: ["tabular-nums"],
     },
     daySel: { color: t.color.surface },
+    dayToday: { color: t.color.brand },
     dot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
     dotIdle: { width: 5, height: 5, marginTop: 2 },
   });

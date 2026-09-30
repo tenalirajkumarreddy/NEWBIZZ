@@ -223,31 +223,6 @@ function ExpenseRowItem({ e, onOpen }: { e: MyExpenseRow; onOpen: () => void }) 
   );
 }
 
-/**
- * Compact overview for roles without cash.transfer (operators): no cash
- * KPIs or handover/deposit actions — just the live stock-handover count.
- */
-function StockCustodyStat({ count }: { count: number }) {
-  const { palette: t } = useTheme();
-  const s = useStyles();
-  return (
-    <View style={s.custodyCard}>
-      <View style={[s.custodyIcon, { backgroundColor: t.color.brandWash }]}>
-        <PackagePlus size={16} color={t.color.brand} />
-      </View>
-      <View style={s.custodyMain}>
-        <Text style={s.custodyLabel}>My stock custody</Text>
-        <Text style={s.custodySub} numberOfLines={2}>
-          {count === 0
-            ? "No stock handovers in the last 30 days."
-            : `${count} stock handover${count === 1 ? "" : "s"} in the last 30 days.`}
-        </Text>
-      </View>
-      <Text style={s.custodyCount}>{count}</Text>
-    </View>
-  );
-}
-
 export default function HistoryScreen() {
   const { palette: t } = useTheme();
   const s = useStyles();
@@ -301,11 +276,6 @@ export default function HistoryScreen() {
   );
   const actLoading = activity.isLoading || (canRun && runs.isLoading);
   const actError = activity.isError ? activity.error : canRun && runs.isError ? runs.error : null;
-  const stockCount = useMemo(
-    () => (custody.data ?? []).filter((r) => r.type === "stock").length,
-    [custody.data],
-  );
-
   async function onRespond(id: string, accept: boolean) {
     if (busyId) return;
     setBusyId(id);
@@ -374,17 +344,17 @@ export default function HistoryScreen() {
       <GradientHeader title="History" subtitle={roleLabel(claims)} right={<HeaderRight />} />
 
       <View style={s.body}>
-        {canCash ? (
-          <BalanceOverview
-            salesTotal={kpis.data?.salesTotal ?? 0}
-            collectedTotal={kpis.data?.collectedTotal ?? 0}
-            onHandover={() => openSheet("handover")}
-            onDeposit={() => openSheet("deposit")}
-            onExpense={() => setExpenseOpen(true)}
-          />
-        ) : (
-          <StockCustodyStat count={stockCount} />
-        )}
+        {/* ONE layout for every role — today's cash tiles up top with the
+            Activity/Handovers/Expenses segments below. BalanceOverview gates
+            its own buttons by permission, so operators without cash.transfer
+            see the same card with ₹0 tiles and no dead buttons. */}
+        <BalanceOverview
+          salesTotal={kpis.data?.salesTotal ?? 0}
+          collectedTotal={kpis.data?.collectedTotal ?? 0}
+          onHandover={() => openSheet("handover")}
+          onDeposit={() => openSheet("deposit")}
+          onExpense={() => setExpenseOpen(true)}
+        />
 
         <View style={s.segWrap}>
           <SegmentBtn label="Activity" active={seg === "activity"} onPress={() => setSeg("activity")} />
@@ -793,42 +763,6 @@ const useStyles = () => {
   segBtnActive: { backgroundColor: t.color.surface, ...t.shadow.card },
   segTxt: { color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.xs },
   segTxtActive: { color: t.color.brand },
-  custodyCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: tokens.space.md,
-    backgroundColor: t.color.surface,
-    borderRadius: tokens.radius.lg,
-    borderWidth: 1,
-    borderColor: t.color.line,
-    padding: tokens.space.md,
-    ...t.shadow.card,
-  },
-  custodyIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: tokens.radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  custodyMain: { flex: 1, minWidth: 0 },
-  custodyLabel: {
-    color: t.color.ink,
-    fontFamily: tokens.font.sansSemi,
-    fontSize: tokens.size.sm,
-  },
-  custodySub: {
-    color: t.color.ink3,
-    fontFamily: tokens.font.sans,
-    fontSize: tokens.size.xs,
-    marginTop: 1,
-  },
-  custodyCount: {
-    color: t.color.brand,
-    fontFamily: tokens.font.monoBold,
-    fontSize: tokens.size.lg,
-    fontVariant: ["tabular-nums"],
-  },
   handoverBar: { flexDirection: "row" },
   handoverBtn: {
     flex: 1,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet, TextInput, Image } from "react-native";
 import { useQueryClient, useIsFetching } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { UserPlus, ChevronRight, CalendarDays, Clock, Minus, Plus } from "lucide-react-native";
+import { UserPlus, ChevronRight, CalendarDays, Clock } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { GradientHeader } from "@/components/GradientHeader";
 import { HeaderRight } from "@/components/HeaderRight";
@@ -51,14 +51,13 @@ const RUN_TONE: Record<string, "neutral" | "brand" | "grn" | "amb"> = {
 interface RowDraft {
   status: string;
   hours: number;
-  ot: number;
   note: string;
-  /** true = collapsed row; false = chips/note expanded */
+  /** true = collapsed row; false = note editor expanded */
   simple: boolean;
 }
 
 /** Every row starts ABSENT — the operator marks only who showed up. */
-const ROW_ABSENT: RowDraft = { status: "absent", hours: 0, ot: 0, note: "", simple: true };
+const ROW_ABSENT: RowDraft = { status: "absent", hours: 0, note: "", simple: true };
 
 function isWorked(status: string): boolean {
   return status === "present";
@@ -66,11 +65,6 @@ function isWorked(status: string): boolean {
 
 function ymOf(iso: string) {
   return { year: Number(iso.slice(0, 4)), month0: Number(iso.slice(5, 7)) - 1 };
-}
-
-function cleanNum(v: string): number {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 export default function WorkersScreen() {
@@ -134,7 +128,6 @@ export default function WorkersScreen() {
             status: isPresent ? "present" : "absent",
             simple: true,
             hours: isPresent ? sv.hours || base : 0,
-            ot: isPresent ? sv.otHours || 0 : 0,
             note: "",
           }
         : { ...ROW_ABSENT };
@@ -174,7 +167,7 @@ export default function WorkersScreen() {
             dr.status,
             absQ.data?.[p.entityId] ?? 0,
             dim,
-            dr.ot,
+            0,
           );
     return v > 0 ? v : null;
   }
@@ -198,21 +191,9 @@ export default function WorkersScreen() {
     setDraft((d) => {
       const cur = d[key] ?? ROW_ABSENT;
       if (isWorked(cur.status)) {
-        return { ...d, [key]: { ...cur, status: "absent", hours: 0, ot: 0, simple: true } };
+        return { ...d, [key]: { ...cur, status: "absent", hours: 0, simple: true } };
       }
-      return { ...d, [key]: { ...cur, status: "present", hours: shiftHours(), ot: 0, simple: true } };
-    });
-  }
-
-  /** Chips are gone — the only statuses left are the row toggle's
-   * present|absent. Kept for the (now-unused) status select path. */
-  function onStatus(key: string, value: string) {
-    setDraft((d) => {
-      const cur = d[key] ?? ROW_ABSENT;
-      if (value === "present") {
-        return { ...d, [key]: { ...cur, status: "present", hours: shiftHours(), simple: false } };
-      }
-      return { ...d, [key]: { ...cur, status: "absent", hours: 0, ot: 0, simple: true } };
+      return { ...d, [key]: { ...cur, status: "present", hours: shiftHours(), simple: true } };
     });
   }
 
@@ -258,7 +239,7 @@ export default function WorkersScreen() {
         entityId: p.entityId,
         status: dr.status,
         hours: dr.hours,
-        otHours: dr.ot,
+        otHours: 0,
         note: dr.note.trim() ? dr.note.trim() : null,
       };
     });
@@ -502,31 +483,6 @@ export default function WorkersScreen() {
                         </Pressable>
                         {!dr.simple ? (
                           <View style={s.advBlock}>
-                            <View style={s.chipRow}>
-                              {[{ label: "P", value: "present" }, { label: "A", value: "absent" }].map((c) => {
-                                const active = dr.status === c.value;
-                                const [bg, fg] = active
-                                  ? [t.color.brandWash, t.color.brand]
-                                  : [t.color.surface, t.color.ink3];
-                                return (
-                                  <Pressable
-                                    key={c.value}
-                                    onPress={() => onStatus(key, c.value)}
-                                    disabled={ro}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Mark ${p.fullName} ${c.value}`}
-                                    accessibilityState={{ selected: active }}
-                                    style={({ pressed }) => [
-                                      s.chip,
-                                      { backgroundColor: bg, borderColor: active ? fg : t.color.line },
-                                      (ro || pressed) && { opacity: 0.5 },
-                                    ]}
-                                  >
-                                    <Text style={[s.chipTxt, { color: active ? fg : t.color.ink3 }]}>{c.label}</Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
                             <TextInput
                               style={[s.noteInput, ro && { opacity: 0.6 }]}
                               value={dr.note}
@@ -541,80 +497,22 @@ export default function WorkersScreen() {
                               onPress={() => patch(key, { simple: true })}
                               disabled={ro}
                               accessibilityRole="button"
-                              accessibilityLabel={`Hide extra options for ${p.fullName}`}
+                              accessibilityLabel={`Hide note for ${p.fullName}`}
                               style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
                             >
-                              <Text style={s.advTxt}>Hide extra options</Text>
+                              <Text style={s.advTxt}>Hide note</Text>
                             </Pressable>
                           </View>
                         ) : (
-                          <>
-                            <View style={s.attDetails}>
-                              {p.entityType === "worker" ? (
-                                // Daily lane: the HRS→band table owns pay (OT is
-                                // baked into total hours) — the RPC ignores ot_hours
-                                // for workers, so no OT field here.
-                                <View style={s.hrsField}>
-                                  <Text style={s.fieldLabel}>TOTAL HRS</Text>
-                                  <TextInput
-                                    style={[s.fieldInput, s.hrsInputW, ro && { opacity: 0.6 }]}
-                                    value={String(dr.hours)}
-                                    onChangeText={(v) => patch(key, { hours: cleanNum(v) })}
-                                    editable={!ro}
-                                    keyboardType="decimal-pad"
-                                    accessible
-                                    accessibilityLabel={`${p.fullName} hours worked`}
-                                  />
-                                  <Text style={s.hrsHint}>/ {shiftHours() || 8}h</Text>
-                                </View>
-                              ) : (
-                                // Monthly lane: status drives the day rate and OT is
-                                // credited unconditionally (even leave/holiday OT) —
-                                // hours don't affect pay, so no HRS field.
-                                <View style={s.otField}>
-                                  <Text style={s.fieldLabel}>OT HRS</Text>
-                                  <View style={s.stepRow}>
-                                    <Pressable
-                                      onPress={() => patch(key, { ot: Math.max(0, dr.ot - 1) })}
-                                      disabled={ro}
-                                      accessibilityRole="button"
-                                      accessibilityLabel={`Decrease ${p.fullName} overtime`}
-                                      style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                    >
-                                      <Minus size={14} color={t.color.ink3} />
-                                    </Pressable>
-                                    <TextInput
-                                      style={[s.fieldInput, s.otInputW, ro && { opacity: 0.6 }]}
-                                      value={String(dr.ot)}
-                                      onChangeText={(v) => patch(key, { ot: cleanNum(v) })}
-                                      editable={!ro}
-                                      keyboardType="decimal-pad"
-                                      accessible
-                                      accessibilityLabel={`${p.fullName} overtime hours`}
-                                    />
-                                    <Pressable
-                                      onPress={() => patch(key, { ot: dr.ot + 1 })}
-                                      disabled={ro}
-                                      accessibilityRole="button"
-                                      accessibilityLabel={`Increase ${p.fullName} overtime`}
-                                      style={({ pressed }) => [s.stepBtn, ro && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
-                                    >
-                                      <Plus size={14} color={t.color.ink3} />
-                                    </Pressable>
-                                  </View>
-                                </View>
-                              )}
-                            </View>
-                            <Pressable
-                              onPress={() => patch(key, { simple: false })}
-                              disabled={ro}
-                              accessibilityRole="button"
-                              accessibilityLabel={`More options for ${p.fullName}`}
-                              style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
-                            >
-                              <Text style={s.advTxt}>Hours / OT / note</Text>
-                            </Pressable>
-                          </>
+                          <Pressable
+                            onPress={() => patch(key, { simple: false })}
+                            disabled={ro}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Add a note for ${p.fullName}`}
+                            style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
+                          >
+                            <Text style={[s.advTxt, !dr.note && { color: t.color.ink4 }]}>Note</Text>
+                          </Pressable>
                         )}
                       </View>
                     );
@@ -858,38 +756,11 @@ const useStyles = () => {
       color: t.color.ink3, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow,
     },
     markTagOn: { backgroundColor: t.color.grnWash, borderColor: t.color.grn, color: t.color.grn },
-    attDetails: {
-      flexDirection: "row", gap: tokens.space.md, marginTop: tokens.space.sm,
-      borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.color.line, paddingTop: tokens.space.sm,
-    },
-    hrsField: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
-    otField: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
-    fieldLabel: { color: t.color.ink4, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow, letterSpacing: 0.6, minWidth: 24 },
-    fieldInput: {
-      minHeight: 36, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,
-      backgroundColor: t.color.surface, paddingHorizontal: tokens.space.sm, textAlign: "center",
-      color: t.color.ink, fontFamily: tokens.font.mono, fontSize: tokens.size.sm, fontVariant: ["tabular-nums"],
-    },
-    hrsInputW: { width: 64 },
-    otInputW: { width: 52 },
-    hrsHint: { color: t.color.ink4, fontFamily: tokens.font.sans, fontSize: tokens.size.eyebrow },
     advToggle: { alignItems: "flex-start", paddingVertical: tokens.space.xs },
     advTxt: { color: t.color.brand, fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
     advBlock: {
       gap: tokens.space.sm, marginTop: tokens.space.sm,
       borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.color.line, paddingTop: tokens.space.sm,
-    },
-    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.space.xs },
-    chip: {
-      minHeight: 32, paddingHorizontal: tokens.space.md, borderRadius: tokens.radius.md,
-      borderWidth: 1, alignItems: "center", justifyContent: "center",
-    },
-    chipTxt: { fontFamily: tokens.font.sansSemi, fontSize: tokens.size.eyebrow },
-    stepRow: { flexDirection: "row", alignItems: "center", gap: tokens.space.xs },
-    stepBtn: {
-      width: 32, height: 32, borderRadius: tokens.radius.md, borderWidth: 1,
-      borderColor: t.color.line, backgroundColor: t.color.surface,
-      alignItems: "center", justifyContent: "center",
     },
     noteInput: {
       minHeight: 40, borderWidth: 1, borderColor: t.color.line, borderRadius: tokens.radius.md,

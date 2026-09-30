@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AttendanceCalendar } from "@/components/payroll/AttendanceCalendar";
 import { DayRecordPanel } from "@/components/payroll/DayRecordPanel";
+import { todayIST } from "@/lib/data/fy";
 import type {
   ShiftTemplate,
   PayrollPerson,
@@ -32,20 +33,31 @@ export function DashboardClient({
 }) {
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Today preselected — the panel opens ready to record, not on an empty hint.
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => todayIST());
+
+  /** After a month jump, land on today when (re)entering the current month. */
+  function selectForMonth(y: number, m: number) {
+    const now = todayIST();
+    setSelectedDate(`${now.slice(0, 4)}` === String(y) && `${now.slice(5, 7)}` === String(m).padStart(2, "0") ? now : null);
+  }
 
   function onPrevMonth() {
     const newDate = new Date(year, month - 2, 1);
-    setYear(newDate.getFullYear());
-    setMonth(newDate.getMonth() + 1);
-    setSelectedDate(null);
+    const y = newDate.getFullYear();
+    const m = newDate.getMonth() + 1;
+    setYear(y);
+    setMonth(m);
+    selectForMonth(y, m);
   }
 
   function onNextMonth() {
     const newDate = new Date(year, month, 1);
-    setYear(newDate.getFullYear());
-    setMonth(newDate.getMonth() + 1);
-    setSelectedDate(null);
+    const y = newDate.getFullYear();
+    const m = newDate.getMonth() + 1;
+    setYear(y);
+    setMonth(m);
+    selectForMonth(y, m);
   }
 
   return (

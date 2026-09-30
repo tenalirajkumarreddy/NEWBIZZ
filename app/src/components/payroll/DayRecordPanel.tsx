@@ -44,7 +44,6 @@ export function DayRecordPanel({
       present: boolean;
       status: string;
       hours: number;
-      otHours: number;
       shift: string;
       note: string;
     }[]
@@ -76,7 +75,6 @@ export function DayRecordPanel({
                 present: isPresent,
                 status: isPresent ? "present" : "absent",
                 hours: isPresent ? match?.hours ?? 0 : 0,
-                otHours: isPresent ? match?.otHours ?? 0 : 0,
                 shift: isPresent ? match?.shift ?? selectedShift?.name ?? "" : "",
                 note: match?.note ?? "",
               };
@@ -92,7 +90,6 @@ export function DayRecordPanel({
               present: false,
               status: "absent",
               hours: selectedShift?.totalHours ?? 8,
-              otHours: 0,
               shift: selectedShift?.name ?? "",
               note: "",
             })),
@@ -130,7 +127,7 @@ export function DayRecordPanel({
         if (w.entityId !== entityId) return w;
         if (w.present) {
           // → absent: zero the pay-driving inputs
-          return { ...w, present: false, status: "absent", hours: 0, otHours: 0 };
+          return { ...w, present: false, status: "absent", hours: 0 };
         }
         // → present: hours default to the slot's total, manually editable
         return { ...w, present: true, status: "present", hours: selectedShift?.totalHours ?? 8 };
@@ -146,7 +143,7 @@ export function DayRecordPanel({
         if (value === "present") {
           return { ...w, present: true, status: "present", hours: w.hours || selectedShift?.totalHours || 8 };
         }
-        return { ...w, present: false, status: "absent", hours: 0, otHours: 0 };
+        return { ...w, present: false, status: "absent", hours: 0 };
       }),
     );
   }
@@ -180,7 +177,7 @@ export function DayRecordPanel({
         present: w.status === "present",
         status: w.status === "present" ? "present" : "absent",
         hours: w.status === "present" ? w.hours : 0,
-        otHours: w.status === "present" ? w.otHours : 0,
+        otHours: 0,
         shift: w.status === "present" ? w.shift : null,
         note: w.note || null,
       })),
@@ -224,7 +221,7 @@ export function DayRecordPanel({
         w.status,
         absencesBefore[w.entityId] ?? 0,
         daysInMonth,
-        w.status === "present" ? Number(w.otHours) || 0 : 0,
+        0,
       );
     }
     if (w.status !== "present") return 0;
@@ -279,7 +276,6 @@ export function DayRecordPanel({
                 <TH>Worker</TH>
                 <TH className="w-24">Status</TH>
                 <TH numeric className="w-20">Hours</TH>
-                <TH numeric className="w-20">OT</TH>
                 <TH numeric className="w-24">Amount</TH>
                 <TH className="w-28">Note</TH>
               </TR>
@@ -314,20 +310,6 @@ export function DayRecordPanel({
                         type="number"
                         value={w.hours}
                         onChange={(e) => updateField(w.entityId, "hours", Number(e.target.value))}
-                        disabled={!canManage}
-                        className="h-7 w-16 text-center"
-                        step={0.5}
-                      />
-                    ) : (
-                      <span className="block text-center text-[12px] text-ink-4">—</span>
-                    )}
-                  </TD>
-                  <TD>
-                    {w.status === "present" ? (
-                      <Input
-                        type="number"
-                        value={w.otHours}
-                        onChange={(e) => updateField(w.entityId, "otHours", Number(e.target.value))}
                         disabled={!canManage}
                         className="h-7 w-16 text-center"
                         step={0.5}
