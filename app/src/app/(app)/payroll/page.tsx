@@ -8,6 +8,7 @@ import { HistoryTab } from "./HistoryTab";
 import { SettingsTab } from "./SettingsTab";
 import type { TabId } from "@/components/payroll/Tabs";
 import { PageContainer, PageHeader } from "@/components/ui";
+import { PayrollAutoRefresh } from "./PayrollAutoRefresh";
 
 export default async function PayrollPage({
   searchParams,
@@ -23,6 +24,7 @@ export default async function PayrollPage({
   return (
     <PageContainer width="wide">
       <PageHeader title="Attendance & Payroll" />
+      <PayrollAutoRefresh />
       <Tabs active={tab} />
       {tab === "dashboard" && <DashboardTab monthParam={monthParam} canManage={canManage} />}
       {tab === "workers" && <WorkersTab canManage={canManage} />}
