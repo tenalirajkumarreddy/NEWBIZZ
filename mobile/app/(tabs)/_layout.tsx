@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { useSession } from "@/lib/session";
 import { onGotoTab } from "@/lib/tabBus";
 import { tabsForRole, HOME_TAB } from "@/lib/tabs";
+import { isPortal } from "@/lib/claims";
 import DashOpScreen from "./dash-op";
 import HomeScreen from "./home";
 import RouteScreen from "./route";
@@ -19,6 +20,11 @@ import OrdersScreen from "./orders";
 import InventoryScreen from "./inventory";
 import ProductionScreen from "./production";
 import WorkersScreen from "./workers";
+import CustomerHomeScreen from "./c-home";
+import CustomerInvoicesScreen from "./c-invoices";
+import CustomerOrdersScreen from "./c-orders";
+import CustomerStatementScreen from "./c-statement";
+import CustomerPayScreen from "./c-pay";
 import { useMyCustody } from "@/data/transfers";
 import { useJobCards } from "@/data/production";
 import { useOrders } from "@/data/sales";
@@ -48,28 +54,47 @@ const OPERATOR_SCREENS: Record<string, ComponentType> = {
   history: HistoryScreen,
 };
 
+const CUSTOMER_SCREENS: Record<string, ComponentType> = {
+  "c-home": CustomerHomeScreen,
+  "c-invoices": CustomerInvoicesScreen,
+  "c-orders": CustomerOrdersScreen,
+  "c-statement": CustomerStatementScreen,
+  "c-pay": CustomerPayScreen,
+};
+
 export default function TabsLayout() {
   const s = useStyles();
   const { user, claims } = useSession();
   const router = useRouter();
-  const isOperator = claims.roles.includes("operator");
-  const isAgent = claims.roles.includes("agent");
+  const portal = isPortal(claims);
   const tabs = tabsForRole(claims.roles);
-  const screens = isOperator ? OPERATOR_SCREENS : isAgent ? AGENT_SCREENS : MANAGER_SCREENS;
-  const homeTab = isOperator ? HOME_TAB.operator : isAgent ? HOME_TAB.agent : HOME_TAB.manager;
+  const homeTab = portal
+    ? HOME_TAB.customer
+    : claims.roles.includes("operator")
+      ? HOME_TAB.operator
+      : claims.roles.includes("agent")
+        ? HOME_TAB.agent
+        : HOME_TAB.manager;
+  const screens = portal
+    ? CUSTOMER_SCREENS
+    : claims.roles.includes("operator")
+      ? OPERATOR_SCREENS
+      : claims.roles.includes("agent")
+        ? AGENT_SCREENS
+        : MANAGER_SCREENS;
   const [active, setActive] = useState<string>(homeTab);
   const pushingSell = useRef(false);
 
-  const jobs = useJobCards(isOperator);
-  const ord = useOrders(undefined, isOperator);
-  const cust = useMyCustody(isOperator);
+  const jobs = useJobCards(!portal && claims.roles.includes("operator"));
+  const ord = useOrders(undefined, !portal && claims.roles.includes("operator"));
+  const cust = useMyCustody(!portal && claims.roles.includes("operator"));
   const badgeCounts = useMemo<Record<string, number>>(() => {
-    if (!isOperator) return {} as Record<string, number>;
+    if (portal || !claims.roles.includes("operator")) return {} as Record<string, number>;
     const openJobs = (jobs.data ?? []).filter((j) => j.status === "pending" || j.status === "in_progress").length;
     const approved = (ord.data ?? []).filter((o) => o.status === "approved").length;
     const pending = (cust.data ?? []).filter((c) => c.status === "pending" && c.to_user_id === user?.id).length;
     return { production: openJobs, orders: approved, history: pending };
-  }, [isOperator, jobs.data, ord.data, cust.data, user?.id]);
+  }, [portal, claims.roles, jobs.data, ord.data, cust.data, user?.id]);
 
   useEffect(() => {
     setActive(homeTab);

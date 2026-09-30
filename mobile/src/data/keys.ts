@@ -55,4 +55,12 @@ export const qk = {
     ["opWorkerAttendance", entityType, entityId, limit] as const,
   entityLedger: (entityId: string) => ["opEntityLedger", entityId] as const,
   payrollLog: () => ["opPayrollLog"] as const,
+  portalProfile: () => ["portalProfile"] as const,
+  portalInvoices: (status: string) => ["portalInvoices", status] as const,
+  portalStatement: (limit: number) => ["portalStatement", limit] as const,
+  portalOrders: () => ["portalOrders"] as const,
+  portalStores: () => ["portalStores"] as const,
+  portalCatalog: () => ["portalCatalog"] as const,
+  portalPayIntents: () => ["portalPayIntents"] as const,
+  portalDocuments: () => ["portalDocuments"] as const,
 };

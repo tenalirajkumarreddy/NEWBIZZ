@@ -2,9 +2,12 @@ export interface AppClaims {
   roles: string[];
   perms: string[];
   status: string;
+  /** customer_portal.id when the account is a CUSTOMER PORTAL principal
+   * (zero internal roles; phone matches an active portal contact — 0091). */
+  portalCustomerId: string | null;
 }
 
-const EMPTY_CLAIMS: AppClaims = { roles: [], perms: [], status: "" };
+const EMPTY_CLAIMS: AppClaims = { roles: [], perms: [], status: "", portalCustomerId: null };
 
 /**
  * Parse the custom claims the Custom Access Token Hook (migration 0032)
@@ -19,7 +22,18 @@ export function readClaimsFromMetadata(meta: unknown): AppClaims {
     roles: asStringArray(m.roles),
     perms: asStringArray(m.perms),
     status: typeof m.user_status === "string" ? m.user_status : "",
+    portalCustomerId:
+      typeof m.portal_customer_id === "string" && m.portal_customer_id.length > 0
+        ? m.portal_customer_id
+        : null,
   };
+}
+
+/** A portal principal is an auth account with NO internal roles whose phone
+ * matches an active customer_portal contact (the JWT hook stamps
+ * portal_customer_id — 0091). Internal staff never get the portal UI. */
+export function isPortal(claims: AppClaims): boolean {
+  return claims.roles.length === 0 && claims.portalCustomerId != null;
 }
 
 /**
@@ -65,6 +79,7 @@ export function roleLabel(claims: AppClaims): string {
   if (claims.roles.includes("agent")) return "Field agent";
   if (claims.roles.includes("operator")) return "Plant operator";
   if (claims.roles.includes("admin") || claims.roles.includes("manager")) return "Manager";
+  if (isPortal(claims)) return "Customer";
   return "Staff";
 }
 

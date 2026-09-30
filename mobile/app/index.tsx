@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import { useSession } from "@/lib/session";
-import { isGatedStatus } from "@/lib/claims";
+import { isGatedStatus, isPortal } from "@/lib/claims";
 import { HOME_TAB } from "@/lib/tabs";
 import { tokens } from "@/theme/tokens";
-import { useMemo } from "react";
 import { useTheme } from "@/theme/ThemeContext";
+import { useMemo } from "react";
 
 export default function Gate() {
   const { palette: t } = useTheme();
@@ -24,35 +24,34 @@ export default function Gate() {
   }
   if (!session) return <Redirect href="/login" />;
   if (isGatedStatus(claims.status)) return <Redirect href="/pending" />;
-  const homeTab = claims.roles.includes("operator") ? HOME_TAB.operator : claims.roles.includes("agent") ? HOME_TAB.agent : HOME_TAB.manager;
+  // Portal principals (customers): zero roles + a stamped portal customer id.
+  if (isPortal(claims)) return <Redirect href="/(tabs)/c-home" />;
+  const homeTab = claims.roles.includes("operator")
+    ? HOME_TAB.operator
+    : claims.roles.includes("agent")
+      ? HOME_TAB.agent
+      : HOME_TAB.manager;
   return <Redirect href={`/(tabs)/${homeTab}`} />;
 }
 
 const useStyles = () => {
-  const { palette } = useTheme();
-  return useMemo(() => {
-    const t = palette;
-    return StyleSheet.create({
+  const { palette: t } = useTheme();
+  return useMemo(() => StyleSheet.create({
   splash: {
     flex: 1,
     backgroundColor: t.color.brand,
     alignItems: "center",
     justifyContent: "center",
-    gap: tokens.space.lg,
+    gap: tokens.space.md,
   },
   logo: {
     width: 64,
     height: 64,
-    borderRadius: tokens.radius.lg,
-    backgroundColor: t.color.surface,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
   },
-  logoTxt: {
-    color: t.color.brand,
-    fontFamily: tokens.font.sansBold,
-    fontSize: 32,
-  },
-});
-  }, [palette]);
+  logoTxt: { color: "#ffffff", fontFamily: tokens.font.sansBold, fontSize: 30 },
+}), [t]);
 };

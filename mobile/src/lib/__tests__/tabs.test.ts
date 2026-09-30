@@ -1,4 +1,4 @@
-import { AGENT_TABS, MANAGER_TABS, OPERATOR_TABS, tabsForRole, HOME_TAB } from "../tabs";
+import { AGENT_TABS, MANAGER_TABS, OPERATOR_TABS, CUSTOMER_TABS, tabsForRole, HOME_TAB } from "../tabs";
 
 describe("operator tabs", () => {
   it("has 7 tabs with scan as the single center FAB", () => {
@@ -20,10 +20,15 @@ describe("tabsForRole", () => {
   it("agent wins over manager-only", () => {
     expect(tabsForRole(["agent"])).toBe(AGENT_TABS);
     expect(tabsForRole(["manager"])).toBe(MANAGER_TABS);
-    expect(tabsForRole([])).toBe(MANAGER_TABS);
+  });
+  it("zero roles get the customer portal tabs (portal principals)", () => {
+    expect(tabsForRole([])).toBe(CUSTOMER_TABS);
+    expect(CUSTOMER_TABS.map((t) => t.id)).toEqual(
+      ["c-home", "c-invoices", "c-orders", "c-statement", "c-pay"]);
+    expect(CUSTOMER_TABS.filter((t) => t.center).map((t) => t.id)).toEqual([]);
   });
 });
 
 it("HOME_TAB lands operators on the dashboard", () => {
-  expect(HOME_TAB).toEqual({ operator: "dash-op", agent: "home", manager: "dash" });
+  expect(HOME_TAB).toEqual({ operator: "dash-op", agent: "home", manager: "dash", customer: "c-home" });
 });

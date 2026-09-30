@@ -1,6 +1,6 @@
 import {
   Home, Map, ScanLine, Users, History, LayoutDashboard, ClipboardCheck, Plus, Menu,
-  Store, Boxes, Factory,
+  Store, Boxes, Factory, ReceiptText, Package, Wallet, FileText,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 
@@ -27,6 +27,14 @@ export const MANAGER_TABS: TabDef[] = [
   { id: "more", label: "More", icon: Menu },
 ];
 
+export const CUSTOMER_TABS: TabDef[] = [
+  { id: "c-home", label: "Home", icon: Home },
+  { id: "c-invoices", label: "Invoices", icon: ReceiptText },
+  { id: "c-orders", label: "Orders", icon: Package },
+  { id: "c-statement", label: "Statement", icon: FileText },
+  { id: "c-pay", label: "Pay", icon: Wallet },
+];
+
 export const OPERATOR_TABS: TabDef[] = [
   { id: "dash-op", label: "Dash", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: Store },
@@ -38,9 +46,11 @@ export const OPERATOR_TABS: TabDef[] = [
 ];
 
 export function tabsForRole(roles: string[]): TabDef[] {
+  // Portal principals (customers) have zero internal roles — check first.
+  if (roles.length === 0) return CUSTOMER_TABS;
   if (roles.includes("operator")) return OPERATOR_TABS;
   if (roles.includes("agent")) return AGENT_TABS;
   return MANAGER_TABS;
 }
 
-export const HOME_TAB = { operator: "dash-op", agent: "home", manager: "dash" } as const;
+export const HOME_TAB = { operator: "dash-op", agent: "home", manager: "dash", customer: "c-home" } as const;

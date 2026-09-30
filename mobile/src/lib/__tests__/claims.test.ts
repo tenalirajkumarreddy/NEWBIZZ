@@ -1,4 +1,4 @@
-import { readClaimsFromMetadata, parseAccessToken, can, roleLabel, isGatedStatus } from "../claims";
+import { readClaimsFromMetadata, parseAccessToken, can, roleLabel, isGatedStatus, isPortal } from "../claims";
 
 const b64url = (obj: object) =>
   btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -18,8 +18,18 @@ describe("readClaimsFromMetadata", () => {
     expect(c.status).toBe("active");
   });
   it("yields safe empties for missing/legacy metadata", () => {
-    expect(readClaimsFromMetadata(undefined)).toEqual({ roles: [], perms: [], status: "" });
-    expect(readClaimsFromMetadata({})).toEqual({ roles: [], perms: [], status: "" });
+    expect(readClaimsFromMetadata(undefined)).toEqual({ roles: [], perms: [], status: "", portalCustomerId: null });
+    expect(readClaimsFromMetadata({})).toEqual({ roles: [], perms: [], status: "", portalCustomerId: null });
+  });
+  it("reads the portal customer id when stamped", () => {
+    const c = readClaimsFromMetadata({ roles: [], perms: [], user_status: "active", portal_customer_id: "abc-123" });
+    expect(c.portalCustomerId).toBe("abc-123");
+    expect(isPortal(c)).toBe(true);
+  });
+  it("staff (any role) are never portal principals even with a stamped id", () => {
+    const c = readClaimsFromMetadata({ roles: ["agent"], perms: [], user_status: "active", portal_customer_id: "abc-123" });
+    expect(isPortal(c)).toBe(false);
+    expect(isPortal(readClaimsFromMetadata({}))).toBe(false);
   });
 });
 
@@ -34,9 +44,9 @@ describe("parseAccessToken (JWT path — the real source)", () => {
     expect(parseAccessToken(tokenFor({ provider: "phone" })).roles).toEqual([]);
   });
   it("returns empty claims for malformed input", () => {
-    expect(parseAccessToken(null)).toEqual({ roles: [], perms: [], status: "" });
-    expect(parseAccessToken("not-a-jwt")).toEqual({ roles: [], perms: [], status: "" });
-    expect(parseAccessToken("a.b.c!")).toEqual({ roles: [], perms: [], status: "" });
+    expect(parseAccessToken(null)).toEqual({ roles: [], perms: [], status: "", portalCustomerId: null });
+    expect(parseAccessToken("not-a-jwt")).toEqual({ roles: [], perms: [], status: "", portalCustomerId: null });
+    expect(parseAccessToken("a.b.c!")).toEqual({ roles: [], perms: [], status: "", portalCustomerId: null });
   });
 });
 
