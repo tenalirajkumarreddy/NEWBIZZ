@@ -1,6 +1,6 @@
 import {
   aggregateTodayProduction, remainingOrderLines, buildStockTransferHeader, checkCountPost,
-  payForHours, previewDailyWage, buildMonthGrid, runningBalances,
+  payForHours, previewUserDay, buildMonthGrid, runningBalances,
 } from "../opBuilders";
 
 describe("aggregateTodayProduction", () => {
@@ -98,15 +98,29 @@ describe("payForHours", () => {
   });
 });
 
-describe("previewDailyWage", () => {
-  const p = { monthlySalary: 18000, otRate: 75 };
-  it("salary/30 factor + ot term", () => {
-    expect(previewDailyWage(p, 9, 0, "present")).toBe(600);
-    expect(previewDailyWage(p, 9, 2, "present")).toBe(750);
-    expect(previewDailyWage(p, 9, 0, "half_day")).toBe(300);
-    expect(previewDailyWage(p, 9, 0, "leave")).toBe(0);
-    expect(previewDailyWage(p, 0, 2, "holiday")).toBe(150);
-    expect(previewDailyWage({ monthlySalary: null, otRate: null }, 9, 0, "present")).toBe(0);
+describe("previewUserDay", () => {
+  // 18000/30 = 600/day, OT 75/h
+  const p = { monthlySalary: 18000, dailyRate: null, otRate: 75, payType: "monthly", paidLeaves: 2 };
+  it("monthly day rate = salary/days-in-month + ot", () => {
+    expect(previewUserDay(p, "present", 0, 30, 0)).toBe(600);
+    expect(previewUserDay(p, "present", 0, 30, 2)).toBe(750);
+  });
+  it("absence within paid-leave allowance still accrues the day rate", () => {
+    expect(previewUserDay(p, "absent", 0, 30, 0)).toBe(600);
+    expect(previewUserDay(p, "absent", 1, 30, 0)).toBe(600);
+    expect(previewUserDay(p, "absent", 2, 30, 0)).toBe(0);
+    expect(previewUserDay(p, "absent", 5, 30, 2)).toBe(150);
+  });
+  it("daily-type users get flat daily_rate on present only", () => {
+    const d = { monthlySalary: null, dailyRate: 500, otRate: 60, payType: "daily", paidLeaves: 0 };
+    expect(previewUserDay(d, "present", 0, 30, 0)).toBe(500);
+    expect(previewUserDay(d, "present", 0, 30, 1)).toBe(560);
+    expect(previewUserDay(d, "absent", 0, 30, 0)).toBe(0);
+  });
+  it("missing config previews 0; days-in-month clamps to 28-31", () => {
+    expect(previewUserDay({ monthlySalary: null, dailyRate: null, otRate: null, payType: null, paidLeaves: null }, "present", 0, 30, 0)).toBe(0);
+    expect(previewUserDay({ ...p, monthlySalary: 62000 }, "present", 0, 45, 0)).toBe(2000); // 62000/31
+    expect(previewUserDay({ ...p, monthlySalary: 14000 }, "present", 0, 10, 0)).toBe(500); // 14000/28
   });
 });
 

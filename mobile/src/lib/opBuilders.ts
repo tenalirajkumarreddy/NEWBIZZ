@@ -93,20 +93,40 @@ export function payForHours(mappings: PayMapping[], hours: number): number {
   return 0;
 }
 
-/** User daily wage preview. Mirrors the SQL user branch exactly
- * (round(salary/30,2)×factor + round(ot×otHours,2)); leave is display-0
- * (server's paid-leave branch needs month context). */
-export function previewDailyWage(
-  person: { monthlySalary: number | null; otRate: number | null },
-  hours: number, otHours: number, status: string,
+/** User day preview — mirror of the web's previewUserDay and 0127's
+ * save_attendance_day user-credit expression: monthly day rate =
+ * round(salary/days-in-month, 2), paid on present and on absences within the
+ * paid-leave allowance (usedAbsences counts saved absent rows this month);
+ * daily-type users get their flat daily_rate on present only. OT adds on
+ * ot_hours either way. Pure display helper — the RPC owns money. */
+export function previewUserDay(
+  person: {
+    monthlySalary: number | null;
+    dailyRate: number | null;
+    otRate: number | null;
+    payType: string | null;
+    paidLeaves: number | null;
+  },
+  status: string,
+  usedAbsences: number,
+  daysInMonth: number,
+  otHours: number,
 ): number {
-  const salary = Number(person.monthlySalary ?? 0) || 0;
   const otRate = Number(person.otRate ?? 0) || 0;
-  const h = Number.isFinite(Number(hours)) ? Number(hours) : 0;
   const otH = Number.isFinite(Number(otHours)) ? Number(otHours) : 0;
-  const daily = Math.round((salary / 30.0) * 100) / 100;
-  const factor = status === "present" ? 1.0 : status === "half_day" ? 0.5 : 0.0;
-  return Math.round((daily * factor + Math.round(otRate * otH * 100) / 100) * 100) / 100;
+  const ot = Math.round(otRate * otH * 100) / 100;
+
+  if ((person.payType ?? "monthly") === "daily") {
+    if (status !== "present") return ot;
+    const daily = Math.round((Number(person.dailyRate ?? 0) || 0) * 100) / 100;
+    return Math.round((daily + ot) * 100) / 100;
+  }
+
+  const dim = Math.max(28, Math.min(31, Math.round(Number(daysInMonth) || 30)));
+  const dayRate = Math.round(((Number(person.monthlySalary ?? 0) || 0) / dim) * 100) / 100;
+  const allowed =
+    status === "present" || usedAbsences < Math.max(0, Math.round(Number(person.paidLeaves ?? 0) || 0));
+  return Math.round((allowed ? dayRate : 0) + ot);
 }
 
 /** 6×7 Monday-first grid of ISO date strings for year/month0, null = pad. */

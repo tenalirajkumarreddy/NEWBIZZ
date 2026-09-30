@@ -246,10 +246,13 @@ export async function saveDailyAttendance(
     shiftName = (tpl?.name as string) ?? null;
   }
 
-  const pRows = (rows ?? []).filter((r) => r.present).map((r) => ({
+  // FULL roster — including absent rows — so the RPC can (a) clear stale
+  // marks by replacing per-entity and (b) count absences against the monthly
+  // paid-leave allowance (0127). Null status clears the entity's day.
+  const pRows = (rows ?? []).map((r) => ({
     entity: r.entityType ?? "user",
     id: r.entityId,
-    status: r.status,
+    status: r.status === "present" ? "present" : r.status === "absent" ? "absent" : null,
     hours: Number(r.hours || 0),
     ot_hours: Number(r.otHours || 0),
     note: r.note?.trim() ? r.note.trim() : null,
@@ -418,6 +421,11 @@ export async function markCalendarDay(
 export async function fetchDayAttendanceDetail(date: string) {
   const { getDayAttendanceDetail } = await import("@/lib/data/payroll");
   return getDayAttendanceDetail(date);
+}
+
+export async function fetchMonthAbsencesBefore(date: string) {
+  const { getMonthAbsencesBefore } = await import("@/lib/data/payroll");
+  return getMonthAbsencesBefore(date);
 }
 
 export async function fetchEmployeeProfile(userId: string) {

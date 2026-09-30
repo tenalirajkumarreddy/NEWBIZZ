@@ -23,26 +23,42 @@ export function payForHours(mappings: PayMapping[], hours: number): number {
 }
 
 /**
- * USER daily-wage preview, mirroring 0121 save_attendance_day's user-credit
- * expression exactly: rounded daily rate (round(monthly_salary/30, 2)) ×
- * factor (present 1.0 | half_day 0.5 | else 0.0) + OT on OT-HOURS
- * (round(ot_rate × ot_hours, 2)). The SQL's paid-leave branch
- * for 'leave' (full daily rate within the allowance) needs the month's leave
- * count, which this signature doesn't carry, so 'leave' previews the
- * conservative else-branch (0 daily) — the ledger remains money truth. Pure,
- * UI-preview only.
+ * USER day preview, mirroring 0127 save_attendance_day's user-credit
+ * expression exactly:
+ *   day rate = round(monthlySalary / days-in-month, 2)
+ *   present  → day rate + round(ot_rate × ot_hours, 2)
+ *   absent   → day rate while the paid-leave allowance lasts
+ *              (existing absences < paidLeaves), 0 beyond it — plus OT.
+ * Daily-type users preview their configured dailyRate instead of the salary
+ * split (present only — the SQL credits nothing on an absent day for them).
+ * Pure, UI-preview only — the RPC owns money truth.
  */
-export function previewDailyWage(
-  person: { monthlySalary: number | null; otRate: number | null },
-  hours: number,
-  otHours: number,
+export function previewUserDay(
+  person: {
+    monthlySalary: number | null;
+    dailyRate: number | null;
+    otRate: number | null;
+    payType: string | null;
+    paidLeaves: number | null;
+  },
   status: string,
+  usedAbsences: number,
+  daysInMonth: number,
+  otHours: number,
 ): number {
-  const salary = Number(person.monthlySalary ?? 0) || 0;
   const otRate = Number(person.otRate ?? 0) || 0;
   const otH = Number.isFinite(Number(otHours)) ? Number(otHours) : 0;
-  const daily = Math.round((salary / 30.0) * 100) / 100;
-  const factor = status === "present" ? 1.0 : status === "half_day" ? 0.5 : 0.0;
   const ot = Math.round(otRate * otH * 100) / 100;
-  return Math.round((daily * factor + ot) * 100) / 100;
+
+  if ((person.payType ?? "monthly") === "daily") {
+    if (status !== "present") return ot;
+    const daily = Math.round((Number(person.dailyRate ?? 0) || 0) * 100) / 100;
+    return Math.round((daily + ot) * 100) / 100;
+  }
+
+  const dim = Math.max(28, Math.min(31, Math.round(Number(daysInMonth) || 30)));
+  const dayRate = Math.round(((Number(person.monthlySalary ?? 0) || 0) / dim) * 100) / 100;
+  const allowed =
+    status === "present" || usedAbsences < Math.max(0, Math.round(Number(person.paidLeaves ?? 0) || 0));
+  return Math.round((allowed ? dayRate : 0) + ot);
 }

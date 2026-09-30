@@ -31,11 +31,10 @@ export interface AttendanceSummary {
   userId: string;
   userName: string;
   present: number;
-  halfDay: number;
+  /** present + legacy half_day (half days counted as worked) */
+  worked: number;
+  /** absent + leave + week_off + holiday + half_day — any non-present row */
   absent: number;
-  leave: number;
-  weekOff: number;
-  holiday: number;
   otHours: number;
   pct: number;
 }
@@ -94,10 +93,10 @@ export interface ShiftTemplate {
   totalHours: number;
 }
 
-// PayMapping + payForHours + previewDailyWage live in a client-safe module
+// PayMapping + payForHours + previewUserDay live in a client-safe module
 // (lib/data/* is server-only, yet DayRecordPanel needs the pure preview
 // lookups). Re-exported here so existing server-side imports keep working.
-export { payForHours, previewDailyWage, type PayMapping } from "@/lib/payroll-bands";
+export { payForHours, previewUserDay, type PayMapping } from "@/lib/payroll-bands";
 
 export interface WorkerBalance {
   userId: string;
@@ -220,28 +219,72 @@ export async function listPayConfigs(): Promise<PayConfigRow[]> {
 
 export interface UserDailyRate {
   monthlySalary: number | null;
+  dailyRate: number | null;
   otRate: number | null;
+  payType: "monthly" | "daily";
+  paidLeaves: number;
 }
 
 /**
  * user_pay_config rates keyed by user_id, for the day panel's user-row ₹
- * preview (salary/30 + OT). Null when no config row exists — mirrors the
+ * preview (monthly ⇒ salary ÷ days-in-month + paid-leave allowance; daily ⇒
+ * flat daily_rate; both + OT). Nulls when no config row exists — mirrors the
  * SQL's LEFT-JOIN semantics (missing config ⇒ salary 0 ⇒ credit 0).
  */
 export async function listUserDailyRates(): Promise<Record<string, UserDailyRate>> {
   const supabase = createClient();
   const res = await supabase
     .from("user_pay_config")
-    .select("user_id, monthly_salary, ot_hourly_rate")
-    .returns<{ user_id: string | null; monthly_salary: number; ot_hourly_rate: number }[]>();
+    .select("user_id, pay_type, monthly_salary, daily_rate, ot_hourly_rate, paid_leaves")
+    .returns<{
+      user_id: string | null;
+      pay_type: string | null;
+      monthly_salary: number;
+      daily_rate: number;
+      ot_hourly_rate: number;
+      paid_leaves: number;
+    }[]>();
   const rows = unwrap(res, [], "listUserDailyRates");
   const map: Record<string, UserDailyRate> = {};
   for (const r of rows) {
     if (!r.user_id) continue;
     map[r.user_id] = {
       monthlySalary: Number(r.monthly_salary),
+      dailyRate: Number(r.daily_rate),
       otRate: Number(r.ot_hourly_rate),
+      payType: r.pay_type === "daily" ? "daily" : "monthly",
+      paidLeaves: Number(r.paid_leaves ?? 0),
     };
+  }
+  return map;
+}
+
+/**
+ * Per-USER count of absent+leave attendance rows strictly BEFORE `date`
+ * within that date's calendar month — the paid-leave allowance bookkeeping
+ * the DayRecordPanel preview needs (the RPC evaluates the same set, minus
+ * the day being saved). Keyed by user_id; workers have no allowance lane.
+ */
+export async function getMonthAbsencesBefore(
+  date: string,
+): Promise<Record<string, number>> {
+  const supabase = createClient();
+  const yr = Number(date.slice(0, 4));
+  const mo = Number(date.slice(5, 7));
+  const from = `${yr}-${String(mo).padStart(2, "0")}-01`;
+  const res = await supabase
+    .from("attendance")
+    .select("user_id")
+    .in("status", ["absent", "leave"])
+    .lt("work_date", date)
+    .gte("work_date", from)
+    .not("user_id", "is", null)
+    .returns<{ user_id: string | null }[]>();
+  const rows = unwrap(res, [] as { user_id: string | null }[], "getMonthAbsencesBefore");
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    if (!r.user_id) continue;
+    map[r.user_id] = (map[r.user_id] ?? 0) + 1;
   }
   return map;
 }
@@ -283,16 +326,15 @@ export async function getAttendanceSummary(month: string): Promise<AttendanceSum
   return users.map((u) => {
     const rows = attendance.filter((a) => a.userId === u.id);
     const present = rows.filter((r) => r.status === "present").length;
-    const halfDay = rows.filter((r) => r.status === "half_day").length;
-    const absent = rows.filter((r) => r.status === "absent").length;
-    const leave = rows.filter((r) => r.status === "leave").length;
-    const weekOff = rows.filter((r) => r.status === "week_off").length;
-    const holiday = rows.filter((r) => r.status === "holiday").length;
+    const legacyHalf = rows.filter((r) => r.status === "half_day").length;
+    // any non-present row is an absence — half_day/leave/week_off/holiday
+    // legacy rows all count toward the paid-leave pool in the new model
+    const absent = rows.length - present;
     const otHours = rows.reduce((s, r) => s + r.otHours, 0);
-    const tracked = present + halfDay * 0.5 + absent + leave;
+    const tracked = present + legacyHalf * 0.5 + absent;
     const pct = totalDays > 0 ? Math.round((tracked / totalDays) * 10000) / 100 : 0;
 
-    return { userId: u.id, userName: u.full_name, present, halfDay, absent, leave, weekOff, holiday, otHours, pct };
+    return { userId: u.id, userName: u.full_name, present, worked: present + legacyHalf, absent, otHours, pct };
   });
 }
 
@@ -478,9 +520,8 @@ export interface PersonMonthStatement {
   entityId: string;
   fullName: string;
   daysPresent: number;
-  daysHalfDay: number;
-  daysLeave: number;
-  daysOff: number;
+  /** every non-present row: absent + leave + half_day + week_off + holiday */
+  daysAbsent: number;
   credited: number;
   paid: number;
   balance: number;
@@ -498,7 +539,8 @@ export interface PersonMonthStatement {
  * - paid     = Σ |payment| + |advance| amounts for the month
  * - balance  = get_person_balance (signed ledger balance: positive = owed to
  *   the person, negative = advance-heavy)
- * - daysOff  = week_off + holiday rows (matches compute_payroll's off-day count)
+ * - daysAbsent = every non-present row — legacy half_day/leave/week_off/
+ *   holiday rows count as absences too (0127 hours model)
  */
 export async function getPersonMonthStatement(
   monthFirstDay: string,
@@ -528,15 +570,13 @@ export async function getPersonMonthStatement(
   const att = unwrap(attRes, [] as RawAtt[], "getPersonMonthStatement");
   const ledger = unwrap(ledgerRes, [] as RawLedger[], "getPersonMonthStatement");
 
-  const dayStats = new Map<string, { present: number; halfDay: number; leave: number; off: number }>();
+  const dayStats = new Map<string, { present: number; absent: number }>();
   for (const a of att) {
     const id = a.user_id ?? a.worker_id;
     if (!id) continue;
-    const s = dayStats.get(id) ?? { present: 0, halfDay: 0, leave: 0, off: 0 };
+    const s = dayStats.get(id) ?? { present: 0, absent: 0 };
     if (a.status === "present") s.present += 1;
-    else if (a.status === "half_day") s.halfDay += 1;
-    else if (a.status === "leave") s.leave += 1;
-    else if (a.status === "week_off" || a.status === "holiday") s.off += 1;
+    else s.absent += 1; // absent + legacy leave/half_day/week_off/holiday
     dayStats.set(id, s);
   }
 
@@ -564,9 +604,7 @@ export async function getPersonMonthStatement(
           entityId: p.entityId,
           fullName: p.fullName,
           daysPresent: d?.present ?? 0,
-          daysHalfDay: d?.halfDay ?? 0,
-          daysLeave: d?.leave ?? 0,
-          daysOff: d?.off ?? 0,
+          daysAbsent: d?.absent ?? 0,
           credited: m?.credited ?? 0,
           paid: m?.paid ?? 0,
           balance: Number(data ?? 0),

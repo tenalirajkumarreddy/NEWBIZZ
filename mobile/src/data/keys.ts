@@ -47,6 +47,7 @@ export const qk = {
   payMappings: () => ["opPayMappings"] as const,
   payrollPeople: () => ["opPayrollPeople"] as const,
   dailyRates: () => ["opDailyRates"] as const,
+  monthAbsences: (d: string) => ["opMonthAbsences", d] as const,
   attendanceDay: (d: string) => ["opAttendanceDay", d] as const,
   calendarMonth: (y: number, m: number) => ["opCalendar", y, m] as const,
   workerBalances: () => ["opWorkerBalances"] as const,

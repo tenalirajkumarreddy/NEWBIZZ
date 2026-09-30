@@ -119,8 +119,7 @@ export function PayrollClient({
               <TR>
                 <TH>Person</TH>
                 <TH numeric className="w-12">P</TH>
-                <TH numeric className="w-12">½</TH>
-                <TH numeric className="w-12">L</TH>
+                <TH numeric className="w-12">A</TH>
                 <TH numeric>Credited</TH>
                 <TH numeric>Paid</TH>
                 <TH numeric>Balance</TH>
@@ -132,8 +131,7 @@ export function PayrollClient({
                 <TR key={`${p.entityType}-${p.entityId}`}>
                   <TD className="font-medium text-ink">{p.fullName}</TD>
                   <TD numeric>{p.daysPresent}</TD>
-                  <TD numeric>{p.daysHalfDay}</TD>
-                  <TD numeric>{p.daysLeave}</TD>
+                  <TD numeric>{p.daysAbsent}</TD>
                   <TD numeric>
                     <Money value={p.credited} />
                   </TD>

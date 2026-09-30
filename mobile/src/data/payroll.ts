@@ -132,24 +132,71 @@ export function useWorkerBalances(enabled = true) {
   });
 }
 
-/** Monthly salary + OT rate per user id (typed user_pay_config table). */
+/** Pay-config rates per user id (typed user_pay_config table) — drives the
+ * user-lane day preview: monthly ⇒ salary ÷ days-in-month + paid-leave
+ * allowance; daily ⇒ flat daily_rate; both + OT. */
+export interface UserRateInfo {
+  monthlySalary: number | null;
+  dailyRate: number | null;
+  otRate: number | null;
+  payType: "monthly" | "daily";
+  paidLeaves: number;
+}
+
 export function useUserDailyRates() {
   const { user } = useSession();
   return useQuery({
     queryKey: qk.dailyRates(),
     enabled: !!user?.id,
-    queryFn: async (): Promise<Record<string, { monthlySalary: number | null; otRate: number | null }>> => {
+    queryFn: async (): Promise<Record<string, UserRateInfo>> => {
       const { data, error } = await supabase
         .from("user_pay_config")
-        .select("user_id, monthly_salary, ot_hourly_rate");
+        .select("user_id, pay_type, monthly_salary, daily_rate, ot_hourly_rate, paid_leaves");
       if (error) throw error;
-      const out: Record<string, { monthlySalary: number | null; otRate: number | null }> = {};
+      const out: Record<string, UserRateInfo> = {};
       for (const r of data ?? []) {
         if (!r.user_id) continue;
         out[r.user_id] = {
           monthlySalary: r.monthly_salary ?? null,
+          dailyRate: r.daily_rate ?? null,
           otRate: r.ot_hourly_rate ?? null,
+          payType: r.pay_type === "daily" ? "daily" : "monthly",
+          paidLeaves: Number(r.paid_leaves ?? 0),
         };
+      }
+      return out;
+    },
+  });
+}
+
+/**
+ * Per-USER absent+leave row counts strictly BEFORE `dateISO` within its
+ * calendar month — paid-leave allowance bookkeeping for the user-lane day
+ * preview (save_attendance_day counts the same set, minus the day being
+ * saved). Workers have no allowance lane. Null dateISO disables.
+ */
+export function useMonthAbsencesBefore(dateISO: string | null) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: qk.monthAbsences(dateISO ?? ""),
+    enabled: !!user?.id && !!dateISO,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const yr = Number(dateISO!.slice(0, 4));
+      const mo = Number(dateISO!.slice(5, 7));
+      const first = `${yr}-${String(mo).padStart(2, "0")}-01`;
+      const { data, error } = await supabase
+        .from("attendance")
+        .select("user_id")
+        .in("status", ["absent", "leave"])
+        .lt("work_date", dateISO!)
+        .gte("work_date", first)
+        .not("user_id", "is", null);
+      if (error) throw error;
+      const out: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const uid = (r as { user_id: string | null }).user_id;
+        if (!uid) continue;
+        out[uid] = (out[uid] ?? 0) + 1;
       }
       return out;
     },

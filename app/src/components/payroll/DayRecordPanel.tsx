@@ -8,8 +8,8 @@ import { Input, Select } from "@/components/ui/Field";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { Money } from "@/components/ui/Money";
-import { saveDailyAttendance, markCalendarDay, fetchDayAttendanceDetail } from "@/lib/actions/payroll";
-import { payForHours, previewDailyWage, type PayMapping } from "@/lib/payroll-bands";
+import { saveDailyAttendance, markCalendarDay, fetchDayAttendanceDetail, fetchMonthAbsencesBefore } from "@/lib/actions/payroll";
+import { payForHours, previewUserDay, type PayMapping } from "@/lib/payroll-bands";
 import { rupeesCompact } from "@/lib/format";
 import type { ShiftTemplate, PayrollPerson, DayAttendanceDetail, UserDailyRate } from "@/lib/data/payroll";
 
@@ -31,6 +31,7 @@ export function DayRecordPanel({
   const toast = useToast();
   const [selectedShiftId, setSelectedShiftId] = useState(shiftTemplates[0]?.id ?? "");
   const [existingRecords, setExistingRecords] = useState<DayAttendanceDetail[]>([]);
+  const [absencesBefore, setAbsencesBefore] = useState<Record<string, number>>({});
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -65,15 +66,18 @@ export function DayRecordPanel({
           setWorkers(
             activeUsers.map((u) => {
               const match = rows.find((r) => (r.entityId ?? r.userId) === u.entityId);
+              // saved legacy half_day/leave rows show as absent in the new
+              // model — resaving rewrites them as a clean present|absent
+              const isPresent = match?.status === "present";
               return {
                 entityType: u.entityType,
                 entityId: u.entityId,
                 userName: u.fullName,
-                present: match !== undefined,
-                status: match?.status ?? "absent",
-                hours: match?.hours ?? 0,
-                otHours: match?.otHours ?? 0,
-                shift: match?.shift ?? selectedShift?.name ?? "",
+                present: isPresent,
+                status: isPresent ? "present" : "absent",
+                hours: isPresent ? match?.hours ?? 0 : 0,
+                otHours: isPresent ? match?.otHours ?? 0 : 0,
+                shift: isPresent ? match?.shift ?? selectedShift?.name ?? "" : "",
                 note: match?.note ?? "",
               };
             }),
@@ -99,6 +103,17 @@ export function DayRecordPanel({
         if (!active) return;
         toast.error("Couldn't load the day details");
       });
+    // paid-leave bookkeeping for the preview: per-USER absent+leave rows
+    // earlier this month (the RPC counts exactly these, excluding the day
+    // being saved).
+    fetchMonthAbsencesBefore(date)
+      .then((m) => {
+        if (active) setAbsencesBefore(m);
+      })
+      .catch(() => {
+        if (active) setAbsencesBefore({});
+      });
+
     return () => {
       active = false;
     };
@@ -111,11 +126,28 @@ export function DayRecordPanel({
 
   function togglePresent(entityId: string) {
     setWorkers((prev) =>
-      prev.map((w) =>
-        w.entityId === entityId
-          ? { ...w, present: !w.present, status: w.present ? "absent" : "present" }
-          : w,
-      ),
+      prev.map((w) => {
+        if (w.entityId !== entityId) return w;
+        if (w.present) {
+          // → absent: zero the pay-driving inputs
+          return { ...w, present: false, status: "absent", hours: 0, otHours: 0 };
+        }
+        // → present: hours default to the slot's total, manually editable
+        return { ...w, present: true, status: "present", hours: selectedShift?.totalHours ?? 8 };
+      }),
+    );
+  }
+
+  /** present|absent only — the RPC rejects every other status (0127). */
+  function setStatus(entityId: string, value: string) {
+    setWorkers((prev) =>
+      prev.map((w) => {
+        if (w.entityId !== entityId) return w;
+        if (value === "present") {
+          return { ...w, present: true, status: "present", hours: w.hours || selectedShift?.totalHours || 8 };
+        }
+        return { ...w, present: false, status: "absent", hours: 0, otHours: 0 };
+      }),
     );
   }
 
@@ -136,17 +168,20 @@ export function DayRecordPanel({
       return;
     }
 
+    // FULL ROSTER goes to the RPC — absent rows must be written so the
+    // monthly paid-leave allowance counts them (0127). Status is
+    // present|absent only; absent rows carry 0 hours/OT.
     const result = await saveDailyAttendance(
       date,
       selectedShiftId,
       workers.map((w) => ({
         entityType: w.entityType,
         entityId: w.entityId,
-        present: w.present,
-        status: w.present ? w.status : "absent",
-        hours: w.present ? w.hours : 0,
-        otHours: w.present ? w.otHours : 0,
-        shift: w.present ? w.shift : null,
+        present: w.status === "present",
+        status: w.status === "present" ? "present" : "absent",
+        hours: w.status === "present" ? w.hours : 0,
+        otHours: w.status === "present" ? w.otHours : 0,
+        shift: w.status === "present" ? w.shift : null,
         note: w.note || null,
       })),
     );
@@ -159,21 +194,40 @@ export function DayRecordPanel({
     setSaving(false);
   }
 
-  const selectedCount = workers.filter((w) => w.present).length;
-  const absentCount = workers.filter((w) => !w.present).length;
+  const selectedCount = workers.filter((w) => w.status === "present").length;
+  const absentCount = workers.length - selectedCount;
 
-  // per-entity daily-wage preview: workers use pay_mappings bands, users use
-  // their salary/30 + OT daily rate (missing config ⇒ 0, like the SQL)
+  // Days in the panel's month — the monthly day-rate denominator.
+  const daysInMonth = new Date(
+    Number(date.slice(0, 4)),
+    Number(date.slice(5, 7)),
+    0,
+  ).getDate();
+  // Paid-leave allowance bookkeeping for the preview: absences ALREADY SAVED
+  // this month (before today), consumed oldest-first. Reordered rows re-derive
+  // the same credit — the RPC owns money truth; this is a hint only.
+
+  // per-entity preview: workers use pay_mappings bands (worked hours only);
+  // users get the day rate (salary ÷ days-in-month), paid on present and on
+  // absences within the paid-leave allowance, + OT. Missing config ⇒ 0.
   const rowPreview = (w: (typeof workers)[number]) => {
-    if (!w.present || (w.status !== "present" && w.status !== "half_day")) return 0;
     if (w.entityType === "user") {
-      return previewDailyWage(
-        userRates[w.entityId] ?? { monthlySalary: null, otRate: null },
-        Number(w.hours) || 0,
-        Number(w.otHours) || 0,
+      const r = userRates[w.entityId];
+      return previewUserDay(
+        {
+          monthlySalary: r?.monthlySalary ?? null,
+          dailyRate: r?.dailyRate ?? null,
+          otRate: r?.otRate ?? null,
+          payType: r?.payType ?? null,
+          paidLeaves: r?.paidLeaves ?? null,
+        },
         w.status,
+        absencesBefore[w.entityId] ?? 0,
+        daysInMonth,
+        w.status === "present" ? Number(w.otHours) || 0 : 0,
       );
     }
+    if (w.status !== "present") return 0;
     return payForHours(payMappings, Number(w.hours) || 0);
   };
   const creditedPreview = workers.reduce((s, w) => s + rowPreview(w), 0);
@@ -232,11 +286,11 @@ export function DayRecordPanel({
             </THead>
             <TBody>
               {workers.map((w) => (
-                <TR key={w.entityId} className={w.present ? "" : "opacity-40"}>
+                <TR key={w.entityId} className={w.status === "present" ? "" : "opacity-40"}>
                   <TD>
                     <input
                       type="checkbox"
-                      checked={w.present}
+                      checked={w.status === "present"}
                       onChange={() => togglePresent(w.entityId)}
                       disabled={!canManage}
                       className="h-4 w-4 rounded border-line text-brand focus:ring-brand/30"
@@ -244,25 +298,18 @@ export function DayRecordPanel({
                   </TD>
                   <TD className="font-medium text-ink">{w.userName}</TD>
                   <TD>
-                    {w.present ? (
-                      <select
-                        value={w.status}
-                        onChange={(e) => updateField(w.entityId, "status", e.target.value)}
-                        disabled={!canManage}
-                        className="h-7 rounded-md border border-line px-2 text-[11px] text-ink"
-                      >
-                        <option value="present">Present</option>
-                        <option value="half_day">Half Day</option>
-                        <option value="leave">Leave</option>
-                        <option value="holiday">Holiday</option>
-                        <option value="week_off">Week Off</option>
-                      </select>
-                    ) : (
-                      <span className="text-[12px] text-ink-4">Absent</span>
-                    )}
+                    <select
+                      value={w.status}
+                      onChange={(e) => setStatus(w.entityId, e.target.value)}
+                      disabled={!canManage}
+                      className="h-7 rounded-md border border-line px-2 text-[11px] text-ink"
+                    >
+                      <option value="present">Present</option>
+                      <option value="absent">Absent</option>
+                    </select>
                   </TD>
                   <TD>
-                    {w.present ? (
+                    {w.status === "present" ? (
                       <Input
                         type="number"
                         value={w.hours}
@@ -276,7 +323,7 @@ export function DayRecordPanel({
                     )}
                   </TD>
                   <TD>
-                    {w.present ? (
+                    {w.status === "present" ? (
                       <Input
                         type="number"
                         value={w.otHours}
@@ -290,7 +337,7 @@ export function DayRecordPanel({
                     )}
                   </TD>
                   <TD numeric>
-                    {w.present && (w.status === "present" || w.status === "half_day") ? (
+                    {rowPreview(w) > 0 ? (
                       <Money value={rowPreview(w)} />
                     ) : (
                       <span className="block text-right text-[12px] text-ink-4">—</span>

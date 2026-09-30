@@ -26,10 +26,10 @@ import {
 import {
   useShiftTemplates, usePayMappings, usePayrollPeople, useUserDailyRates,
   useAttendanceForDate, useCalendarDays, saveAttendanceDay,
-  useWorkerBalances,
+  useWorkerBalances, useMonthAbsencesBefore,
   type PayrollPerson,
 } from "@/data/payroll";
-import { payForHours, previewDailyWage } from "@/lib/opBuilders";
+import { payForHours, previewUserDay } from "@/lib/opBuilders";
 import { tokens } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeContext";
 
@@ -41,22 +41,8 @@ const SEG_LABELS: Record<Seg, string> = {
   payroll: "Payroll",
 };
 
-const ATT_CHIPS: { label: string; value: string }[] = [
-  { label: "P", value: "present" },
-  { label: "A", value: "absent" },
-  { label: "½", value: "half_day" },
-  { label: "L", value: "leave" },
-  { label: "H", value: "holiday" },
-  { label: "W", value: "week_off" },
-];
-
-/** Non-worked statuses: no band/₹ credit, hours zeroed. */
-const OFF_LIKE = new Set(["absent", "leave", "holiday", "week_off"]);
-
-/** Human labels for non-worked statuses shown on the row toggle. */
-const OFF_LABEL: Record<string, string> = {
-  absent: "Absent", leave: "Leave", holiday: "Holiday", week_off: "Week off",
-};
+/** New hours model (0127): two statuses only — the RPC rejects the rest. */
+const OFF_LABEL: Record<string, string> = { absent: "Absent" };
 
 const RUN_TONE: Record<string, "neutral" | "brand" | "grn" | "amb"> = {
   draft: "neutral", computed: "amb", posted: "brand", paid: "grn",
@@ -75,7 +61,7 @@ interface RowDraft {
 const ROW_ABSENT: RowDraft = { status: "absent", hours: 0, ot: 0, note: "", simple: true };
 
 function isWorked(status: string): boolean {
-  return status === "present" || status === "half_day";
+  return status === "present";
 }
 
 function ymOf(iso: string) {
@@ -116,6 +102,7 @@ export default function WorkersScreen() {
   const mapsQ = usePayMappings();
   const ratesQ = useUserDailyRates();
   const dayQ = useAttendanceForDate(sel);
+  const absQ = useMonthAbsencesBefore(sel);
   const dotsQ = useCalendarDays(ym.year, ym.month0);
 
   const shiftOptions = useMemo(
@@ -139,12 +126,15 @@ export default function WorkersScreen() {
     const next: Record<string, RowDraft> = {};
     for (const p of rosterQ.data) {
       const sv = saved.get(`${p.entityType}:${p.entityId}`);
+      // legacy half_day/leave/week_off/holiday rows load as absent — the new
+      // model writes present|absent only
+      const isPresent = sv?.status === "present";
       next[`${p.entityType}:${p.entityId}`] = sv
         ? {
-            status: sv.status,
+            status: isPresent ? "present" : "absent",
             simple: true,
-            hours: OFF_LIKE.has(sv.status) ? 0 : sv.hours || base,
-            ot: sv.otHours || 0,
+            hours: isPresent ? sv.hours || base : 0,
+            ot: isPresent ? sv.otHours || 0 : 0,
             note: "",
           }
         : { ...ROW_ABSENT };
@@ -161,18 +151,32 @@ export default function WorkersScreen() {
     setDraft((d) => ({ ...d, [key]: { ...(d[key] ?? ROW_ABSENT), ...p } }));
   }
 
-  /** Live ₹ preview, lane-aware: daily workers follow the hours→band table;
-   * monthly staff follow status (present ×1, half-day ×0.5) + OT — hours
-   * don't drive their pay. Leave hides the pill (paid-leave allowance needs
-   * month context the server owns). */
+  /** Live ₹ preview, lane-aware: daily workers follow the hours→band table
+   * (present rows only); users get the day rate — salary ÷ days-in-month —
+   * on present AND on absences within their paid-leave allowance, + OT.
+   * Absences beyond the allowance (and 0-amount rows) hide the pill. */
   function pillFor(p: PayrollPerson, dr: RowDraft): number | null {
-    if (!isWorked(dr.status)) return null;
-    if (p.entityType === "worker") return payForHours(mapsQ.data ?? [], dr.hours);
-    const r = ratesQ.data?.[p.entityId];
-    return previewDailyWage(
-      { monthlySalary: r?.monthlySalary ?? null, otRate: r?.otRate ?? null },
-      dr.hours, dr.ot, dr.status,
-    );
+    const r = ratesQ.data?.[p.entityId] ?? null;
+    const dim = new Date(Number(sel.slice(0, 4)), Number(sel.slice(5, 7)), 0).getDate();
+    const v =
+      p.entityType === "worker"
+        ? isWorked(dr.status)
+          ? payForHours(mapsQ.data ?? [], dr.hours)
+          : 0
+        : previewUserDay(
+            {
+              monthlySalary: r?.monthlySalary ?? null,
+              dailyRate: r?.dailyRate ?? null,
+              otRate: r?.otRate ?? null,
+              payType: r?.payType ?? null,
+              paidLeaves: r?.paidLeaves ?? null,
+            },
+            dr.status,
+            absQ.data?.[p.entityId] ?? 0,
+            dim,
+            dr.ot,
+          );
+    return v > 0 ? v : null;
   }
 
   function onShiftPick(name: string) {
@@ -182,10 +186,8 @@ export default function WorkersScreen() {
     setDraft((d) => {
       const next = { ...d };
       for (const k of Object.keys(next)) {
+        // present rows default to the slot's hours (still manually editable)
         if (next[k].status === "present") next[k] = { ...next[k], hours: tpl.totalHours };
-        else if (next[k].status === "half_day") {
-          next[k] = { ...next[k], hours: Math.max(1, Math.round(tpl.totalHours / 2)) };
-        }
       }
       return next;
     });
@@ -202,18 +204,15 @@ export default function WorkersScreen() {
     });
   }
 
+  /** Chips are gone — the only statuses left are the row toggle's
+   * present|absent. Kept for the (now-unused) status select path. */
   function onStatus(key: string, value: string) {
     setDraft((d) => {
       const cur = d[key] ?? ROW_ABSENT;
-      if (value === "absent") {
-        return { ...d, [key]: { ...cur, status: "absent", hours: 0, ot: 0, simple: true } };
+      if (value === "present") {
+        return { ...d, [key]: { ...cur, status: "present", hours: shiftHours(), simple: false } };
       }
-      if (value === "half_day") {
-        const half = Math.max(1, Math.round(shiftHours() / 2));
-        return { ...d, [key]: { ...cur, status: "half_day", hours: half } };
-      }
-      // leave / holiday / week_off: non-worked, hours zeroed, row collapses
-      return { ...d, [key]: { ...cur, status: value, hours: 0, ot: 0, simple: true } };
+      return { ...d, [key]: { ...cur, status: "absent", hours: 0, ot: 0, simple: true } };
     });
   }
 
@@ -232,7 +231,6 @@ export default function WorkersScreen() {
   }
 
   let presentN = 0;
-  let halfN = 0;
   let absentN = 0;
   let markedN = 0;
   let dayTotal = 0;
@@ -240,8 +238,7 @@ export default function WorkersScreen() {
     const dr = drOf(`${p.entityType}:${p.entityId}`);
     if (dr.status === "absent") { absentN++; continue; }
     markedN++;
-    if (dr.status === "present") presentN++;
-    if (dr.status === "half_day") halfN++;
+    presentN++;
     dayTotal += pillFor(p, dr) ?? 0;
   }
   // Saving with 0 marked rows is still meaningful — it clears previously
@@ -252,18 +249,20 @@ export default function WorkersScreen() {
 
   async function onSaveDay() {
     if (!isToday || busySave) return;
-    const rows = (rosterQ.data ?? [])
-      .map((p) => ({ p, dr: drOf(`${p.entityType}:${p.entityId}`) }))
-      .filter(({ dr }) => dr.status !== "absent")
-      .map(({ p, dr }) => ({
+    // FULL roster — absent rows included — so the RPC can count absences
+    // against each monthly user's paid-leave allowance (0127).
+    const rows = (rosterQ.data ?? []).map((p) => {
+      const dr = drOf(`${p.entityType}:${p.entityId}`);
+      return {
         entityType: p.entityType,
         entityId: p.entityId,
         status: dr.status,
         hours: dr.hours,
         otHours: dr.ot,
         note: dr.note.trim() ? dr.note.trim() : null,
-      }));
-    if (rows.length === 0 && (dayQ.data?.length ?? 0) === 0) {
+      };
+    });
+    if (rows.every((r) => r.status === "absent") && (dayQ.data?.length ?? 0) === 0) {
       Toast.show({ type: "error", text1: "Nothing to save", text2: "Mark at least one person present." });
       return;
     }
@@ -504,15 +503,11 @@ export default function WorkersScreen() {
                         {!dr.simple ? (
                           <View style={s.advBlock}>
                             <View style={s.chipRow}>
-                              {ATT_CHIPS.filter((c) => c.value !== "present" && c.value !== "absent").map((c) => {
+                              {[{ label: "P", value: "present" }, { label: "A", value: "absent" }].map((c) => {
                                 const active = dr.status === c.value;
-                                const tone = c.value === "half_day" ? "amb" as const : c.value === "leave" ? "red" as const : "ghost" as const;
-                                const colors: Record<string, [string, string]> = {
-                                  amb: [t.color.ambWash, t.color.amb],
-                                  red: [t.color.redWash, t.color.red],
-                                  ghost: [t.color.fill, t.color.ink3],
-                                };
-                                const [bg, fg] = active ? colors[tone] : [t.color.surface, t.color.ink3];
+                                const [bg, fg] = active
+                                  ? [t.color.brandWash, t.color.brand]
+                                  : [t.color.surface, t.color.ink3];
                                 return (
                                   <Pressable
                                     key={c.value}
@@ -617,7 +612,7 @@ export default function WorkersScreen() {
                               accessibilityLabel={`More options for ${p.fullName}`}
                               style={({ pressed }) => [s.advToggle, (ro || pressed) && { opacity: 0.7 }]}
                             >
-                              <Text style={s.advTxt}>Half day / leave / note</Text>
+                              <Text style={s.advTxt}>Hours / OT / note</Text>
                             </Pressable>
                           </>
                         )}
@@ -629,9 +624,6 @@ export default function WorkersScreen() {
                   <View style={s.footSummary}>
                     <Text style={s.footLabel}>Present</Text>
                     <Text style={s.footVal}>{presentN}</Text>
-                    <Text style={s.footSep}>·</Text>
-                    <Text style={s.footLabel}>Half</Text>
-                    <Text style={s.footVal}>{halfN}</Text>
                     <Text style={s.footSep}>·</Text>
                     <Text style={s.footLabel}>Absent</Text>
                     <Text style={s.footVal}>{absentN}</Text>
