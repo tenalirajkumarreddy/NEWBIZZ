@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AttendanceCalendar } from "@/components/payroll/AttendanceCalendar";
 import { DayRecordPanel } from "@/components/payroll/DayRecordPanel";
-import { todayIST } from "@/lib/data/fy";
+import { todayIST } from "@/lib/constants";
 import type {
   ShiftTemplate,
   PayrollPerson,
