@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { runIntanglesPoll } from "@/lib/intangles/poller";
 
+// Guarded by CRON_SECRET. Fails closed: an unset secret must not leave the
+// poller (and its vendor credentials) publicly invocable.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
-  if (expected && auth !== `Bearer ${expected}`) {
+  if (!expected || auth !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

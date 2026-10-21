@@ -4,11 +4,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 // Guarded cron endpoint for the daily integrity sweep. It runs the read-only
 // reconciliation_checks() and answers 503 when any book disagrees, so a plain
 // uptime monitor (or a Vercel cron) turns drift into an alert instead of the
-// next audit. Guarded by CRON_SECRET like the other cron routes.
+// next audit. Guarded by CRON_SECRET like the other cron routes, and fails
+// closed: the drift report names the books that disagree, so an unset secret
+// must not publish it.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
-  if (expected && auth !== `Bearer ${expected}`) {
+  if (!expected || auth !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

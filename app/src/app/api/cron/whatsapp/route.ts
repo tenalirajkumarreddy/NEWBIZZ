@@ -3,11 +3,12 @@ import { drainWhatsappNotifications } from "@/lib/whatsapp/worker";
 
 // Guarded cron endpoint for the WhatsApp dispatch worker. Same CRON_SECRET
 // bearer pattern as /api/cron/notifications. In dry-run mode it only logs
-// what WOULD be sent and marks rows processed.
+// what WOULD be sent and marks rows processed. Fails closed on a missing
+// secret.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
-  if (expected && auth !== `Bearer ${expected}`) {
+  if (!expected || auth !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

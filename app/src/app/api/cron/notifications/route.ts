@@ -5,10 +5,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 // stale handovers, EMIs due). pg_cron runs the same scan inside the DB; this
 // route is the portable fallback (Vercel cron / external scheduler) and a
 // manual "run now" trigger. Guarded by CRON_SECRET like the intangles poller.
+// Fails closed: an unset secret refuses every caller rather than opening the
+// sweep to the internet.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
-  if (expected && auth !== `Bearer ${expected}`) {
+  if (!expected || auth !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
