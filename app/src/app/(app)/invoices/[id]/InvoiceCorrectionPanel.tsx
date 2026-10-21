@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Panel, Card } from "@/components/ui/Card";
+import { Panel } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
@@ -14,7 +14,10 @@ import { voidInvoice, convertInvoiceType } from "@/lib/actions/sales";
 //   • Void            — cancel the document outright (issued in error)
 //   • Convert type    — void it and re-issue the SAME lines as the opposite
 //                       kind (tax invoice ↔ cash memo), recomputing GST/ledger
-// Both refuse a doc with receipts allocated; un-allocate first. Never renumbers.
+// Voiding a paid document is now allowed: the allocated receipts are released
+// to the customer's advance (2100) instead of blocking the correction. Convert
+// still needs an unpaid document, because re-issuing would leave the money
+// stranded on account. Never renumbers.
 export function InvoiceCorrectionPanel({
   invoiceId,
   invoiceNo,
@@ -69,6 +72,10 @@ export function InvoiceCorrectionPanel({
         toast.success("Invoice voided", `${invoiceNo} was reversed and marked void.`);
         reset();
         router.refresh();
+      } else if (res.pending) {
+        toast.warning("Sent for approval", res.error);
+        reset();
+        router.refresh();
       } else {
         toast.error("Could not void", res.error);
       }
@@ -92,26 +99,21 @@ export function InvoiceCorrectionPanel({
     });
   }
 
-  if (locked) {
-    return (
-      <Card className="p-3.5">
-        <p className="text-[12px] text-ink-4">
-          This {isOfficial ? "tax invoice" : "cash memo"} has payments allocated, so it
-          can&apos;t be voided or converted. Un-allocate the receipts first, or record a
-          sales return instead.
-        </p>
-      </Card>
-    );
-  }
-
   if (!mode) {
     return (
       <div className="flex flex-wrap items-center justify-end gap-2">
         <span className="mr-auto text-[11px] text-ink-4">
-          Wrong document type or issued by mistake? Fix it here — the reversal is
-          audit-safe and restocks the goods.
+          {locked
+            ? `${amountPaid.toFixed(2)} is allocated to this document. Voiding releases it to the customer's advance; re-issuing needs it unapplied first.`
+            : "Wrong document type or issued by mistake? Fix it here — the reversal is audit-safe and restocks the goods."}
         </span>
-        <Button variant="secondary" size="sm" onClick={() => setMode("convert")}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setMode("convert")}
+          disabled={locked}
+          title={locked ? "Un-allocate the receipts before re-issuing" : undefined}
+        >
           Re-issue as {oppositeLabel}
         </Button>
         <Button variant="danger" size="sm" onClick={() => setMode("void")}>
@@ -132,8 +134,9 @@ export function InvoiceCorrectionPanel({
             <>
               Voiding <span className="font-mono font-semibold">{invoiceNo}</span> reverses
               its journal entry and COGS, returns the sold goods to stock, and reverses the
-              customer ledger. The document is kept but marked <strong>void</strong> — it is
-              never deleted or renumbered.
+              customer ledger. Any payments already received are released to the customer&apos;s{" "}
+              advance, so they stay usable instead of trapping the document. The invoice is kept
+              but marked <strong>void</strong> — it is never deleted or renumbered.
             </>
           ) : (
             <>

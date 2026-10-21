@@ -82,6 +82,7 @@ export const NAV: NavGroup[] = [
       { id: "loans", label: "Loans & EMI", href: "/loans", perm: "accounting.manage" },
       { id: "gst", label: "GST Reports", href: "/gst", perm: "report.gst" },
       { id: "trialbalance", label: "Trial Balance", href: "/trial-balance", perm: "report.trial_balance" },
+      { id: "reconciliation", label: "Integrity Checks", href: "/reconciliation", perm: "report.trial_balance" },
       { id: "reports", label: "P&L / Balance Sheet", href: "/reports", perm: "report.pnl" },
       { id: "bank", label: "Bank Reconciliation", href: "/bank", perm: "bank.reconcile" },
       { id: "documents", label: "Documents", href: "/documents" },
@@ -102,6 +103,7 @@ export const NAV: NavGroup[] = [
     items: [
       { id: "users", label: "Users & Access", href: "/admin/users", roles: ["manager"] },
       { id: "audit", label: "Audit Log", href: "/admin/audit", perm: "audit.view" },
+      { id: "approvals", label: "Approvals", href: "/admin/approvals", perm: "reversal.approve", badgeKey: "approvalsPending" },
       { id: "releases", label: "Release Center", href: "/admin/releases", perm: "release.manage" },
       { id: "licenses", label: "Licence Register", href: "/admin/licenses", perm: "license.view", badgeKey: "licensesDue" },
       { id: "settings", label: "Company Settings", href: "/admin/settings", perm: "settings.manage" },

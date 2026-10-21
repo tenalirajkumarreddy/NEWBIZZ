@@ -9,6 +9,7 @@ import { dateIST, qty, percent } from "@/lib/format";
 import { OrderRowActions } from "../OrderRowActions";
 import { FulfilOrderAction } from "./FulfilOrderAction";
 import { RaiseChallanAction } from "./RaiseChallanAction";
+import { RaiseInvoiceAction } from "./RaiseInvoiceAction";
 import type { OrderLine } from "@/lib/data/sales";
 
 export default async function OrderDetailPage({
@@ -65,7 +66,7 @@ export default async function OrderDetailPage({
             )}
             {canCancel && <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />}
             {order.status === "fulfilled" && (
-              <OrderRowActions orderId={order.id} orderNo={order.order_no} status={order.status} />
+              <RaiseInvoiceAction orderId={order.id} orderNo={order.order_no} />
             )}
             {order.status === "invoiced" && (
               <span className="text-[12px] font-medium text-grn">Invoiced</span>

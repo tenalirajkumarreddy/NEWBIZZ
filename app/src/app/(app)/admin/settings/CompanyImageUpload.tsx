@@ -7,9 +7,10 @@ import { useToast } from "@/components/ui/Toast";
 import { setCompanyImage } from "@/lib/actions/settings";
 
 // CompanyImageUpload — click-to-upload for the invoice-print branding images
-// (logo, signature, payment QR). Uploads the picked file to the public
-// `party-images` bucket under company/, then records its public URL on
-// company_settings via setCompanyImage. Follows the ImageUpload avatar pattern.
+// (logo, signature, payment QR). Uploads the picked file to the private
+// `company-assets` bucket under company/, then records its object path on
+// company_settings via setCompanyImage. The server signs the path when the
+// settings/print pages read the company row. Follows the ImageUpload pattern.
 export function CompanyImageUpload({
   target,
   imageUrl,
@@ -42,16 +43,15 @@ export function CompanyImageUpload({
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
       const path = `company/${target}-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
-        .from("party-images")
+        .from("company-assets")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) {
         toast.error("Upload failed", upErr.message);
         setBusy(false);
         return;
       }
-      const { data: pub } = supabase.storage.from("party-images").getPublicUrl(path);
       startTransition(async () => {
-        const res = await setCompanyImage(target, pub.publicUrl);
+        const res = await setCompanyImage(target, path);
         setBusy(false);
         if (res.ok) {
           toast.success("Image updated", label);

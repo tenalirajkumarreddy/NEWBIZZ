@@ -30,7 +30,10 @@ export default async function PrintCreditNotePage({
   // Token-authed reads bypass RLS deliberately — the share token IS the
   // authorization (HMAC-bound to this document, expiry-checked).
   const db = token ? createServiceClient() : undefined;
-  const [cn, company] = await Promise.all([getCreditNote(params.id, db), getCompany()]);
+  const [cn, company] = await Promise.all([
+    getCreditNote(params.id, db),
+    getCompany(db),
+  ]);
   if (!cn) notFound();
 
   // A credit note with returned lines is a sales return; other reasons are

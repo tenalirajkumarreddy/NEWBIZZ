@@ -109,10 +109,10 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
 }
 
 /**
- * Delete a document: remove its metadata row (RLS denies non-owner /
- * non-accounting) then best-effort remove the object from the bucket.
- * Deleting the object first would bypass the owner RLS, so we delete the row
- * first and treat object cleanup as best-effort.
+ * Delete a document. Remove the object first while the metadata row still
+ * exists, because storage RLS resolves owner/manager access through that row.
+ * Then remove the metadata row. If object removal fails, keep the row so the
+ * user can retry instead of leaving an untracked file behind.
  */
 export async function deleteDocument(id: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient();
@@ -123,13 +123,13 @@ export async function deleteDocument(id: string): Promise<{ ok: boolean; error?:
     .maybeSingle();
   const row = rowRes.data;
 
+  if (row?.storage_bucket && row?.storage_path) {
+    const clean = await supabase.storage.from(row.storage_bucket).remove([row.storage_path]);
+    if (clean.error) return { ok: false, error: clean.error.message };
+  }
+
   const { error } = await (supabase as any).from("documents").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
-
-  if (row && row.storage_bucket && row.storage_path) {
-    const clean = await supabase.storage.from(row.storage_bucket).remove([row.storage_path]);
-    if (clean.error) console.error("[documents:delete] object cleanup", clean.error.message);
-  }
 
   revalidatePath("/documents");
   return { ok: true };

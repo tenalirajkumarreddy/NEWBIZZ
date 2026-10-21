@@ -68,7 +68,10 @@ export default async function PrintInvoicePage({
   // has no session to evaluate and would null the fetch. Session paths keep
   // the RLS-scoped cookie client.
   const db = token ? createServiceClient() : undefined;
-  const [inv, company] = await Promise.all([getInvoice(params.id, db), getCompany()]);
+  const [inv, company] = await Promise.all([
+    getInvoice(params.id, db),
+    getCompany(db),
+  ]);
   if (!inv) notFound();
 
   const docQr = await docQrSvg("inv", inv.id, 44);

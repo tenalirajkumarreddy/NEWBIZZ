@@ -23,7 +23,9 @@ import type { CustomerCreditInfo, LedgerSummary } from "@/lib/data/sales";
 
 export type ActionResult<T = unknown> =
   | ({ ok: true } & T)
-  | { ok: false; error: string };
+  // `pending` marks an action that was queued for a second approver instead of
+  // being executed — the reversal thresholds, not a failure of the attempt.
+  | { ok: false; error: string; pending?: true };
 
 // Turn a PostgREST/RPC error into a short, user-facing sentence. The RPCs
 // raise clear `place_order: ...` style messages; we surface those directly.
@@ -253,6 +255,23 @@ export async function voidInvoice(
     p_invoice: invoiceId,
     ...(reason?.trim() ? { p_reason: reason.trim() } : {}),
   });
+
+  // RY001 = the invoice is at or above the invoice_void threshold: file it for
+  // a second approver instead of pretending it voided.
+  if (res.error?.code === "RY001") {
+    const filed = await supabase.rpc("request_reversal", {
+      p_kind: "invoice_void",
+      p_target: invoiceId,
+      ...(reason?.trim() ? { p_reason: reason.trim() } : {}),
+    });
+    if (filed.error) return fail("voidInvoice", filed.error.message);
+    revalidatePath("/admin/approvals");
+    return {
+      ok: false,
+      pending: true,
+      error: "Filed for approval — a second approver must confirm this void under Approvals.",
+    };
+  }
 
   if (res.error) return fail("voidInvoice", res.error.message);
 

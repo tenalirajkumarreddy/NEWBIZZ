@@ -103,6 +103,50 @@ export async function reconcilePaymentIntent(
   return { ok: true, receiptId: res.data };
 }
 
+/**
+ * Void a posted receipt — a bounced cheque, a duplicate entry or a collection
+ * recorded against the wrong customer. The RPC reverses the cash journal,
+ * releases every allocation (the invoices reopen) and writes the reversing
+ * customer-ledger row, so the reversal is audit-safe and never deletes money.
+ */
+export async function voidReceipt(
+  receiptId: string,
+  reason?: string,
+): Promise<ActionResult> {
+  if (!receiptId) return { ok: false, error: "Receipt missing." };
+
+  const supabase = createClient();
+  const res = await supabase.rpc("void_receipt", {
+    p_receipt: receiptId,
+    ...(reason?.trim() ? { p_reason: reason.trim() } : {}),
+  });
+
+  // RY001 = at or above the receipt_void threshold: queue it for a second
+  // approver rather than reporting a void that did not happen.
+  if (res.error?.code === "RY001") {
+    const filed = await supabase.rpc("request_reversal", {
+      p_kind: "receipt_void",
+      p_target: receiptId,
+      ...(reason?.trim() ? { p_reason: reason.trim() } : {}),
+    });
+    if (filed.error) return fail("voidReceipt", filed.error.message);
+    revalidatePath("/admin/approvals");
+    return {
+      ok: false,
+      pending: true,
+      error: "Filed for approval — a second approver must confirm this void under Approvals.",
+    };
+  }
+
+  if (res.error) return fail("voidReceipt", res.error?.message);
+
+  revalidatePath("/receipts");
+  revalidatePath("/invoices");
+  revalidatePath("/customers");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 /** Void a customer's pending "I paid" suggestion (no ledger impact). */
 export async function voidPaymentIntent(
   intentId: string,

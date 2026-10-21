@@ -5370,6 +5370,87 @@ export type Database = {
           },
         ]
       }
+      reversal_policy: {
+        Row: {
+          enabled: boolean
+          kind: string
+          threshold_amount: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          kind: string
+          threshold_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          kind?: string
+          threshold_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reversal_requests: {
+        Row: {
+          amount: number
+          applied_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          kind: string
+          reason: string | null
+          requested_at: string
+          requested_by: string | null
+          status: string
+          target_id: string
+        }
+        Insert: {
+          amount: number
+          applied_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          kind: string
+          reason?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          target_id: string
+        }
+        Update: {
+          amount?: number
+          applied_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          kind?: string
+          reason?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reversal_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reversal_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routes: {
         Row: {
           created_at: string
@@ -7652,6 +7733,16 @@ export type Database = {
       }
       approve_expense: { Args: { p_id: string }; Returns: string }
       approve_order: { Args: { p_order_id: string }; Returns: string }
+      ar_drift_by_customer: {
+        Args: { p_limit?: number }
+        Returns: {
+          customer_id: string
+          customer: string
+          gl_balance: number
+          subledger: number
+          difference: number
+        }[]
+      }
       archive_notifications: { Args: { p_ids?: string[] }; Returns: number }
       assert_identity_integrity: {
         Args: never
@@ -8265,6 +8356,46 @@ export type Database = {
         }
         Returns: string
       }
+      approve_reversal: {
+        Args: { p_note?: string; p_request: string }
+        Returns: string
+      }
+      reject_reversal: {
+        Args: { p_note?: string; p_request: string }
+        Returns: undefined
+      }
+      request_reversal: {
+        Args: { p_kind: string; p_reason?: string; p_target: string }
+        Returns: string
+      }
+      reversal_queue: {
+        Args: { p_status?: string }
+        Returns: {
+          amount: number
+          customer: string | null
+          decision_note: string | null
+          doc_no: string | null
+          id: string
+          kind: string
+          reason: string | null
+          requested_at: string
+          requested_by: string | null
+          requested_by_name: string | null
+          status: string
+          target_id: string
+        }[]
+      }
+      reconciliation_checks: {
+        Args: never
+        Returns: {
+          check_name: string
+          expected: number
+          actual: number
+          difference: number
+          status: string
+          detail: string
+        }[]
+      }
       refresh_read_models: { Args: never; Returns: undefined }
       register_cheque: { Args: { p_header: Json }; Returns: string }
       reject_expense: {
@@ -8427,6 +8558,10 @@ export type Database = {
       void_payment_intent: {
         Args: { p_intent_id: string; p_reason?: string }
         Returns: undefined
+      }
+      void_receipt: {
+        Args: { p_reason?: string; p_receipt: string }
+        Returns: string
       }
       whatsapp_customer_owner: {
         Args: { p_customer_id: string; p_store_id: string }

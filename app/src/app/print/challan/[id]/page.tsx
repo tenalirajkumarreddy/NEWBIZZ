@@ -31,7 +31,10 @@ export default async function PrintChallanPage({
   // Token-authed reads bypass RLS deliberately — the share token IS the
   // authorization (HMAC-bound to this document, expiry-checked).
   const db = token ? createServiceClient() : undefined;
-  const [challan, company] = await Promise.all([getChallan(params.id, db), getCompany()]);
+  const [challan, company] = await Promise.all([
+    getChallan(params.id, db),
+    getCompany(db),
+  ]);
   if (!challan) notFound();
 
   return (

@@ -15,19 +15,29 @@ export type NavBadges = {
   openOrders: number;
   licensesDue: number;
   whatsappUnread: number;
+  approvalsPending: number;
 };
 
 export async function getNavBadges(claims: AppClaims): Promise<NavBadges> {
   const supabase = createClient();
 
-  const [unread, openOrders, licensesDue, whatsappUnread] = await Promise.all([
+  const [unread, openOrders, licensesDue, whatsappUnread, approvalsPending] = await Promise.all([
     getUnreadCount(),
     can(claims, "invoice.view") ? countOpenOrders(supabase) : 0,
     can(claims, "license.view") ? (await getLicensesDue()).length : 0,
     can(claims, "customer.manage") ? getWhatsappUnreadCount() : 0,
+    can(claims, "reversal.approve") ? countPendingApprovals(supabase) : 0,
   ]);
 
-  return { unread, openOrders, licensesDue, whatsappUnread };
+  return { unread, openOrders, licensesDue, whatsappUnread, approvalsPending };
+}
+
+async function countPendingApprovals(supabase: ReturnType<typeof createClient>): Promise<number> {
+  const res = await supabase
+    .from("reversal_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  return res.error ? 0 : res.count ?? 0;
 }
 
 async function countOpenOrders(supabase: ReturnType<typeof createClient>): Promise<number> {

@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Money } from "@/components/ui/Money";
-import { Input, Select } from "@/components/ui/Field";
+import { Input, Select, Textarea } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { dateIST, count as fmtCount, titleCase } from "@/lib/format";
+import { voidReceipt } from "@/lib/actions/collections";
 import type { ReceiptListRow } from "@/lib/data/collections";
 
 const DEPOSIT_LABEL: Record<string, string> = {
@@ -20,6 +24,33 @@ const DEPOSIT_LABEL: Record<string, string> = {
 export function ReceiptsTable({ receipts }: { receipts: ReceiptListRow[] }) {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState("");
+  const [voiding, setVoiding] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [pending, startTransition] = useTransition();
+  const toast = useToast();
+  const router = useRouter();
+
+  // A voided receipt keeps its row (never deleted) — the journal is reversed,
+  // the allocations are released and the invoices reopen. This is the only
+  // way to reverse a bounced cheque or a duplicate collection.
+  function onVoid(receipt: ReceiptListRow) {
+    startTransition(async () => {
+      const res = await voidReceipt(receipt.id, reason.trim() || undefined);
+      if (res.ok) {
+        toast.success("Receipt voided", `${receipt.receipt_no} was reversed and its invoices reopened.`);
+        setVoiding(null);
+        setReason("");
+        router.refresh();
+      } else if (res.pending) {
+        toast.warning("Sent for approval", res.error);
+        setVoiding(null);
+        setReason("");
+        router.refresh();
+      } else {
+        toast.error("Could not void receipt", res.error);
+      }
+    });
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -81,15 +112,22 @@ export function ReceiptsTable({ receipts }: { receipts: ReceiptListRow[] }) {
               <TH numeric>Amount</TH>
               <TH numeric>Allocated</TH>
               <TH numeric>On account</TH>
+              <TH>{}</TH>
             </TR>
           </THead>
           <TBody>
             {filtered.map((r) => {
               const onAccount = r.amount - r.allocatedAmount;
               return (
+                <>
                 <TR key={r.id} interactive>
                   <TD className="font-mono text-[12px] font-semibold text-brand">
                     {r.receipt_no}
+                    {r.status === "void" && (
+                      <span className="ml-2 rounded-sm bg-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-4">
+                        void
+                      </span>
+                    )}
                   </TD>
                   <TD>{dateIST(r.receipt_date)}</TD>
                   <TD>
@@ -119,7 +157,61 @@ export function ReceiptsTable({ receipts }: { receipts: ReceiptListRow[] }) {
                       <span className="text-ink-4">—</span>
                     )}
                   </TD>
+                  <TD numeric>
+                    {r.status === "posted" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setVoiding(voiding === r.id ? null : r.id);
+                          setReason("");
+                        }}
+                      >
+                        Void
+                      </Button>
+                    )}
+                  </TD>
                 </TR>
+                {voiding === r.id && (
+                  <TR key={`${r.id}-void`}>
+                    <TD colSpan={11}>
+                      <div className="flex flex-col gap-2 py-1">
+                        <p className="text-[12px] text-ink-2">
+                          Voiding <span className="font-mono font-semibold">{r.receipt_no}</span>{" "}
+                          (<Money value={r.amount} />) reverses the cash journal, releases{" "}
+                          <Money value={r.allocatedAmount} /> of allocations — those invoices become{" "}
+                          due again — and writes a reversing customer-ledger row. The receipt is kept
+                          and marked void; nothing is deleted.
+                        </p>
+                        <Textarea
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                          rows={2}
+                          placeholder="Reason (optional) — e.g. cheque bounced, duplicate entry"
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setVoiding(null)}
+                            disabled={pending}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => onVoid(r)}
+                            loading={pending}
+                          >
+                            Confirm void
+                          </Button>
+                        </div>
+                      </div>
+                    </TD>
+                  </TR>
+                )}
+                </>
               );
             })}
           </TBody>

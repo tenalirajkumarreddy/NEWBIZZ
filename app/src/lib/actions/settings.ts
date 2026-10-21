@@ -95,8 +95,8 @@ export async function updateCompany(data: {
 // =====================================================================
 
 /** Sets or clears company_settings.logo_url / signature_url / qr_image_url. The
- *  file itself is uploaded client-side to the public `party-images` bucket under
- *  company/ (same policy family as avatars); this records the public URL. */
+ *  file itself is uploaded client-side to the private `company-assets` bucket
+ *  under company/; this records the object path. getCompany() signs it. */
 export async function setCompanyImage(
   target: "logo" | "signature" | "qr",
   url: string | null,

@@ -87,8 +87,26 @@ export interface CompanyRow {
   featureFlags: Record<string, any>;
 }
 
-export async function getCompany(): Promise<CompanyRow | null> {
-  const supabase = createClient();
+/**
+ * Company assets live in the private `company-assets` bucket and are stored as
+ * object paths. Older rows may still contain a public `party-images` URL; keep
+ * returning that URL as-is until the asset is re-uploaded, so existing prints
+ * do not break during the migration.
+ */
+async function signedCompanyAsset(supabase: any, path: string | null): Promise<string | null> {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const { data, error } = await supabase.storage
+    .from("company-assets")
+    .createSignedUrl(path, 60 * 60 * 24);
+  if (error) return null;
+  return data?.signedUrl ?? null;
+}
+
+export async function getCompany(db?: any): Promise<CompanyRow | null> {
+  // Print pages that are authorized by a share token have no session, so they
+  // pass their service client; company_settings is staff-only under RLS.
+  const supabase = db ?? createClient();
   const row = unwrap(
     await (supabase as any)
       .from("company_settings")
@@ -99,6 +117,11 @@ export async function getCompany(): Promise<CompanyRow | null> {
     "getCompany",
   );
   if (!row) return null;
+  const [logoUrl, signatureUrl, qrImageUrl] = await Promise.all([
+    signedCompanyAsset(supabase, row.logo_url ?? null),
+    signedCompanyAsset(supabase, row.signature_url ?? null),
+    signedCompanyAsset(supabase, row.qr_image_url ?? null),
+  ]);
   return {
     id: row.id,
     legalName: row.legal_name,
@@ -115,9 +138,9 @@ export async function getCompany(): Promise<CompanyRow | null> {
     bankIfsc: row.bank_ifsc ?? null,
     bankBranch: row.bank_branch ?? null,
     upiId: row.upi_id ?? null,
-    logoUrl: row.logo_url ?? null,
-    signatureUrl: row.signature_url ?? null,
-    qrImageUrl: row.qr_image_url ?? null,
+    logoUrl,
+    signatureUrl,
+    qrImageUrl,
     contactPhone: row.contact_phone ?? null,
     contactEmail: row.contact_email ?? null,
     fyStartMonth: row.fy_start_month,
