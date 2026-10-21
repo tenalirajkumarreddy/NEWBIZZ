@@ -1241,3 +1241,52 @@ function bodies that differ from production (`next_number` and
 once no deployed client calls it — and the still-unexplained 329-vs-328 policy
 delta. Separately, `0114`'s webhook URL hardcodes the NEWBIZZ project ref, so any
 other project built from this repo would post its notifications back to NEWBIZZ.
+### Function drift, measured (2026-10-21)
+
+The "19 bodies differ" figure above was measured on raw `prosrc`, so it counted
+comments and indentation. Comparing again after normalising — comments removed,
+bare `null;` removed, whitespace removed — a rebuild of the chain was diffed
+against production function by function.
+
+What was found:
+
+- **The function set is identical.** 247 public functions on both sides, same
+  signatures. An earlier apparent gap of 36 was pgcrypto: it installs into
+  `public` on a stock cluster and into `extensions` on Supabase, so a rebuild
+  lists `gen_random_uuid`, `pgp_*`, `digest`, `hmac` and friends as public
+  functions. Filtering on `pg_depend.deptype = 'e'` removes exactly those and
+  nothing else.
+- **11 of the 13 functions named as drifting are byte-identical** once comments
+  are stripped, including `post_invoice`, `post_invoice_from_order`,
+  `post_supplier_bill`, `post_reconciliation_adjustment`,
+  `post_scheme_credit_note`, `previous_customer_balance`, `post_delivery`,
+  `record_receipt`, `void_receipt`, `create_challan` and `to_e164_storage`.
+- **`next_number` and `next_entity_code` differ only in how an empty exception
+  handler is written** — `null;` in production, a comment in the repository.
+  Identical behaviour.
+- What genuinely remains is small and not yet enumerated: two functions in the
+  `s` group (`search_customers`, `stock_qty_for_portal`) and a handful in `a`,
+  `c`, `p` and `r`. These are the ones worth a real decision, and they are now
+  cheap to list.
+
+Rather than bisect by hand again, the check is committed:
+
+- [`checks/function_manifest.sql`](../../app/supabase/checks/function_manifest.sql)
+  emits one stable line per function — signature, SECURITY DEFINER flag,
+  volatility, pinned `search_path`, and a hash of the normalised body — so two
+  databases can be compared with `diff`.
+- [`checks/function_drift.sh`](../../app/supabase/checks/function_drift.sh)
+  runs it against two URLs and exits 1 on any difference.
+
+```bash
+bash app/supabase/checks/function_drift.sh "$REBUILT_URL" "$PRODUCTION_URL"
+```
+
+Verified locally against a replay of the chain: identical database → exit 0,
+247 functions on both sides; one function redefined in a clone → exit 1 naming
+it, and the line also caught the security-attribute change (`definer=` and
+`config=`) that a body-only comparison would have missed.
+
+Running it against the live project is the step that has not been done — the
+build agent has no direct psql path to production, only an API that returns
+query results.
