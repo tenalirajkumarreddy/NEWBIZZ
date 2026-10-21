@@ -49,7 +49,9 @@ begin
     jsonb_build_array(jsonb_build_object('item_id', v_item::text, 'qty', 10)));
   raise notice 'OK  order placed %', v_order;
 
-  v_inv := post_invoice_from_order(v_order, '2026-04-10');
+  -- 0064/0133 signature: (order, lines jsonb | null = use the order's lines,
+  -- is_official, date). Passing the date second is a jsonb cast failure.
+  v_inv := post_invoice_from_order(v_order, null, true, '2026-04-10');
   select grand_total, taxable_amount, cgst_amount, sgst_amount
     into v_grand, v_taxable, v_cgst, v_sgst from invoices where id = v_inv;
   -- taxable = 10*108 = 1080 ; GST18% intra = 97.2 CGST + 97.2 SGST ; grand=1274.4 -> round 1274

@@ -41,6 +41,26 @@ create trigger customer_portal_touch before update on public.customer_portal
 
 create index customer_portal_status_idx on public.customer_portal (status) where status = 'active';
 
+-- True when the current caller is a portal principal (not an internal user).
+-- SECURITY DEFINER so it can read auth.users from inside RLS policies (the
+-- `authenticated` role cannot query the auth schema directly).
+create or replace function public.is_portal_principal()
+returns boolean
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select exists (
+    select 1 from customer_portal cp
+      join auth.users a on a.phone = cp.contact_phone
+     where a.id = (nullif(current_setting('request.jwt.claim.sub', true),'')::uuid)
+       and cp.status = 'active'
+  )
+$$;
+comment on function public.is_portal_principal is
+  'True when the current JWT (sub) belongs to an active portal customer.';
+
 alter table public.customer_portal enable row level security;
 -- RLS is read-only; writes only via definer RPCs. Internal staff may read portal
 -- status; a portal principal must never see the portal registry.
@@ -69,26 +89,6 @@ as $$
 $$;
 comment on function public.portal_customer_id is
   'Resolve the caller to a customer ONLY if they match an ACTIVE portal row by phone. NULL otherwise.';
-
--- True when the current caller is a portal principal (not an internal user).
--- SECURITY DEFINER so it can read auth.users from inside RLS policies (the
--- `authenticated` role cannot query the auth schema directly).
-create or replace function public.is_portal_principal()
-returns boolean
-language sql
-stable
-security definer
-set search_path to 'public'
-as $$
-  select exists (
-    select 1 from customer_portal cp
-      join auth.users a on a.phone = cp.contact_phone
-     where a.id = (nullif(current_setting('request.jwt.claim.sub', true),'')::uuid)
-       and cp.status = 'active'
-  )
-$$;
-comment on function public.is_portal_principal is
-  'True when the current JWT (sub) belongs to an active portal customer.';
 
 -- Normalize a phone to E.164 digits WITHOUT '+' (matches auth.users.phone and
 -- lib/auth/phone.ts toE164Digits).
@@ -295,25 +295,6 @@ $$;
 
 -- (e) catalog for order building (id, sku, name, default price, qty on hand).
 --     Uses the caller's effective price list via their primary store.
-create or replace function public.portal_catalog()
-returns table (
-  id uuid, sku text, name text, gst_rate numeric(5,2),
-  default_price numeric(14,2), qty_on_hand numeric(14,3)
-)
-language sql
-security definer
-set search_path to 'public'
-stable
-as $$
-  select i.id, i.sku, i.name, coalesce(i.gst_rate,0),
-         public.effective_price(i.id, public.resolve_price_list_for_portal(), 1),
-         public.stock_qty_for_portal(i.id)
-    from items i
-   where i.status = 'active'
-   order by i.name
-$$;
-
--- price-list + stock helpers scoped to the portal customer's primary store
 create or replace function public.resolve_price_list_for_portal()
 returns uuid
 language sql
@@ -342,6 +323,26 @@ as $$
 $$;
 comment on function public.stock_qty_for_portal is
   'Total on-hand across branches for an item (portal catalog display only).';
+
+create or replace function public.portal_catalog()
+returns table (
+  id uuid, sku text, name text, gst_rate numeric(5,2),
+  default_price numeric(14,2), qty_on_hand numeric(14,3)
+)
+language sql
+security definer
+set search_path to 'public'
+stable
+as $$
+  select i.id, i.sku, i.name, coalesce(i.gst_rate,0),
+         public.effective_price(i.id, public.resolve_price_list_for_portal(), 1),
+         public.stock_qty_for_portal(i.id)
+    from items i
+   where i.status = 'active'
+   order by i.name
+$$;
+
+-- price-list + stock helpers scoped to the portal customer's primary store
 
 -- (f) submit a "payment intention" — a pending suggestion the staff reconciles.
 create or replace function public.portal_submit_pay_intent(
@@ -629,9 +630,9 @@ stable
 set search_path = public
 as $$
     select
-      c.id, c.code, c.name, c.gstin, c.phone,
-      c.image_url, c.credit_limit, c.credit_days, c.status,
-      store_count, outstanding, primary_store_kind
+      x.id, x.code, x.name, x.gstin, x.phone,
+      x.image_url, x.credit_limit, x.credit_days, x.status,
+      x.store_count, x.outstanding, x.primary_store_kind
     from (
       with ranked_stores as (
         select customer_id, kind,

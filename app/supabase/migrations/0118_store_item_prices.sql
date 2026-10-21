@@ -4,7 +4,7 @@
 -- -> customer -> store kind -> default -> base). Qty-tiered.
 -- =====================================================================
 create or replace function public.store_item_prices(p_store uuid, p_items uuid[], p_qty numeric default 1)
-returns table (item_id uuid, unit_price numeric)
+returns table (item_id uuid, name text, unit_price numeric)
 language sql
 stable
 set search_path to 'public'

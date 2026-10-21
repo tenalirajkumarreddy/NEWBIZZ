@@ -126,60 +126,60 @@ do $$ begin
   -- employee_profiles
   if not exists (select 1 from pg_policies where tablename='employee_profiles' and policyname='hr.view can read employee_profiles') then
     create policy "hr.view can read employee_profiles" on employee_profiles for select using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id in ('hr.view','hr.manage'))
+      public.has_permission('hr.view') or public.has_permission('hr.manage')
     );
   end if;
   if not exists (select 1 from pg_policies where tablename='employee_profiles' and policyname='hr.manage can write employee_profiles') then
     create policy "hr.manage can write employee_profiles" on employee_profiles for all using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id = 'hr.manage')
+      public.has_permission('hr.manage')
     );
   end if;
 
   -- shift_templates
   if not exists (select 1 from pg_policies where tablename='shift_templates' and policyname='hr.view can read shift_templates') then
     create policy "hr.view can read shift_templates" on shift_templates for select using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id in ('hr.view','hr.manage'))
+      public.has_permission('hr.view') or public.has_permission('hr.manage')
     );
   end if;
   if not exists (select 1 from pg_policies where tablename='shift_templates' and policyname='hr.manage can write shift_templates') then
     create policy "hr.manage can write shift_templates" on shift_templates for all using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id = 'hr.manage')
+      public.has_permission('hr.manage')
     );
   end if;
 
   -- pay_mappings
   if not exists (select 1 from pg_policies where tablename='pay_mappings' and policyname='hr.view can read pay_mappings') then
     create policy "hr.view can read pay_mappings" on pay_mappings for select using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id in ('hr.view','hr.manage'))
+      public.has_permission('hr.view') or public.has_permission('hr.manage')
     );
   end if;
   if not exists (select 1 from pg_policies where tablename='pay_mappings' and policyname='hr.manage can write pay_mappings') then
     create policy "hr.manage can write pay_mappings" on pay_mappings for all using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id = 'hr.manage')
+      public.has_permission('hr.manage')
     );
   end if;
 
   -- worker_transactions
   if not exists (select 1 from pg_policies where tablename='worker_transactions' and policyname='hr.view can read worker_transactions') then
     create policy "hr.view can read worker_transactions" on worker_transactions for select using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id in ('hr.view','hr.manage'))
+      public.has_permission('hr.view') or public.has_permission('hr.manage')
     );
   end if;
   if not exists (select 1 from pg_policies where tablename='worker_transactions' and policyname='hr.manage can write worker_transactions') then
     create policy "hr.manage can write worker_transactions" on worker_transactions for all using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id = 'hr.manage')
+      public.has_permission('hr.manage')
     );
   end if;
 
   -- calendar_days
   if not exists (select 1 from pg_policies where tablename='calendar_days' and policyname='hr.view can read calendar_days') then
     create policy "hr.view can read calendar_days" on calendar_days for select using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id in ('hr.view','hr.manage'))
+      public.has_permission('hr.view') or public.has_permission('hr.manage')
     );
   end if;
   if not exists (select 1 from pg_policies where tablename='calendar_days' and policyname='hr.manage can write calendar_days') then
     create policy "hr.manage can write calendar_days" on calendar_days for all using (
-      exists (select 1 from user_roles where user_id = auth.uid() and role_id = 'hr.manage')
+      public.has_permission('hr.manage')
     );
   end if;
 end $$;

@@ -61,7 +61,7 @@ begin
   select count(*) into n_je
     from journal_entries je
     join journal_lines jl on jl.entry_id = je.id
-   where je.source='receipt' and je.source_id = rcpt::text;
+   where je.source='receipt' and je.source_id = rcpt;   -- source_id is uuid
   if n_je < 2 then
     raise exception 'FAIL 1d: receipt journal has % lines (expected balanced Dr/Cr)', n_je;
   end if;

@@ -41,7 +41,7 @@ create index if not exists fre_vehicle_idx on fuel_refill_events (vehicle_id, de
 create index if not exists fre_status_idx on fuel_refill_events (status) where status = 'pending';
 
 comment on table fuel_refill_events is 'Auto-detected fuel refill or leak events from Intangles telemetry.';
-comment on column fuel_refill_events.event_type   is "'refill' = fuel increase, 'leak' = sudden drop with ignition off.";
+comment on column fuel_refill_events.event_type   is '''refill'' = fuel increase, ''leak'' = sudden drop with ignition off.';
 comment on column fuel_refill_events.fraud_alert   is 'Set when admin-reported litres deviate from estimated by more than fraud_tolerance_pct.';
 
 -- -----------------------------------------------------------------------
@@ -50,7 +50,7 @@ comment on column fuel_refill_events.fraud_alert   is 'Set when admin-reported l
 alter table trips
   add column if not exists category text check (category in ('ignition', 'warehouse'));
 
-comment on column trips.category is "'ignition' = engine on/off trip, 'warehouse' = warehouse departure/return trip.";
+comment on column trips.category is '''ignition'' = engine on/off trip, ''warehouse'' = warehouse departure/return trip.';
 
 -- -----------------------------------------------------------------------
 -- 4. RLS
