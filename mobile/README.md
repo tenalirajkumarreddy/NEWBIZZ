@@ -43,6 +43,27 @@ remove that override, and do not downgrade the SDK cmake package below
 5. Never commit `*.keystore`/`*.jks` or real passwords
    (`mobile/.gitignore` guards `*.jks`; the keystore lives outside the repo).
 
+## Automated release (GitHub Actions)
+
+`.github/workflows/android-release.yml` publishes a signed APK **and** AAB
+whenever a `mobile-v*` tag is pushed. The workflow file must already be on the
+tagged commit.
+
+1. Bump `expo.version` and `expo.android.versionCode` in `app.json`.
+2. If native config/plugins changed, run
+   `npx expo prebuild -p android --no-install` and re-apply the release signing
+   block in `android/app/build.gradle` (prebuild wipes it). Commit the native
+   changes. The workflow deliberately does **not** run prebuild.
+3. Commit, then tag and push:
+   `git tag mobile-v1.2.10 && git push origin mobile-v1.2.10`.
+4. The workflow typechecks, checks that the tag matches both `app.json` and
+   `android/app/build.gradle`, builds with the release keystore, verifies the
+   APK is not debug-signed, and creates a GitHub release with the APK, AAB and
+   `SHA256SUMS.txt`.
+
+Configure the signing/project secrets once — see
+[`keystore/README.md#github-actions-release`](keystore/README.md#github-actions-release).
+
 ## Env
 
 `mobile/.env.local` holds `EXPO_PUBLIC_SUPABASE_URL` +

@@ -139,6 +139,9 @@ export function CollectForm({
         collected_by: user?.id,
         store_id: storeId,
         receipt_date: todayIST(),
+        // Idempotency: a retry of this submission returns the original
+        // receipt instead of posting a second one.
+        client_request_id: `collect-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
       };
       if (reference.trim()) header.reference = reference.trim();
       if (notes.trim()) header.notes = notes.trim();

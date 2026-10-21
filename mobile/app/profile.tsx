@@ -103,7 +103,9 @@ export default function ProfileScreen() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.from("users").update({ full_name: v, updated_at: new Date().toISOString() }).eq("id", uid);
+      // updated_at is maintained by the users_touch trigger; the client only
+      // has column-level grants on the profile fields it actually owns.
+      const { error } = await supabase.from("users").update({ full_name: v }).eq("id", uid);
       if (error) throw error;
       await supabase.auth.updateUser({ data: { full_name: v } }).catch(() => {});
       await qc.invalidateQueries({ queryKey: ["profile", uid] });

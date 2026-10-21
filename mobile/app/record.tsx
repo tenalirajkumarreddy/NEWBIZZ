@@ -306,6 +306,9 @@ export default function RecordScreen() {
     }
 
     setSubmitting(true);
+    // One id for the whole submit: a retried receipt returns the original
+    // instead of double-posting, even if the first call timed out.
+    const requestId = `sale-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
     try {
       const invoiceId = await postInvoice(
         {
@@ -349,6 +352,7 @@ export default function RecordScreen() {
               deposit_account: "2140",
               collected_by: user?.id,
               store_id: storeId,
+              client_request_id: `${requestId}-cash`,
               notes: "Collected on sale",
             },
             [{ invoice_id: invoiceId, amount: cashNum }],
@@ -369,6 +373,7 @@ export default function RecordScreen() {
               deposit_account: "2140",
               collected_by: user?.id,
               store_id: storeId,
+              client_request_id: `${requestId}-upi`,
               notes: "Collected on sale",
             },
             [{ invoice_id: invoiceId, amount: upiNum }],

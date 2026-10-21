@@ -46,6 +46,62 @@ so everyday builds still succeed.
 storage). Losing the keystore means losing the ability to update the app on
 devices that installed a previous release.
 
+## GitHub Actions release
+
+The release workflow reads these repository secrets
+(Settings → Secrets and variables → Actions → Secrets):
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | Base64 of `newbizz-release.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore store password |
+| `ANDROID_KEY_ALIAS` | `newbizz` |
+| `ANDROID_KEY_PASSWORD` | Key password |
+| `ANDROID_CERT_SHA256` | Optional. Expected signing certificate SHA-256; the release fails if it does not match. Recommended. |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Publishable anon key used at bundle time |
+| `GOOGLE_SERVICES_JSON_BASE64` | Optional FCM `google-services.json`, Base64 encoded |
+
+Repository variables (Settings → Secrets and variables → Actions → Variables):
+
+| Variable | Default |
+| --- | --- |
+| `EXPO_PUBLIC_SUPABASE_URL` | `https://wmpxwpubfxpexybqnynz.supabase.co` |
+| `EXPO_PUBLIC_WEB_URL` | `https://aquaprime-app.vercel.app` |
+
+Encode the keystore without printing it:
+
+```bash
+# macOS / Linux
+base64 < ~/.newbizz/newbizz-release.keystore | tr -d '\n' > /tmp/newbizz.keystore.b64
+gh secret set ANDROID_KEYSTORE_BASE64 < /tmp/newbizz.keystore.b64
+rm /tmp/newbizz.keystore.b64
+```
+
+```powershell
+# Windows PowerShell
+$b64 = [Convert]::ToBase64String(
+  [IO.File]::ReadAllBytes("$env:USERPROFILE\.newbizz\newbizz-release.keystore")
+)
+gh secret set ANDROID_KEYSTORE_BASE64 --body $b64
+```
+
+Read the certificate fingerprint from a signed build:
+
+```bash
+apksigner verify --print-certs mobile/android/app/build/outputs/apk/release/app-release.apk
+```
+
+Copy the `Signer #1 certificate SHA-256 digest` value (colons are fine) into
+`ANDROID_CERT_SHA256`.
+
+For FCM, encode `mobile/google-services.json` the same way and store it as
+`GOOGLE_SERVICES_JSON_BASE64`. If it is absent, the build still succeeds but
+push notifications are not configured.
+
+The workflow decodes the keystore into `$RUNNER_TEMP`, validates the alias and
+store password with `keytool`, builds with `-P` Gradle properties, and never
+prints a secret value.
+
 ## Build a signed release APK
 
 ```
