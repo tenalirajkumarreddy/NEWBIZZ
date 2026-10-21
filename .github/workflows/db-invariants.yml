@@ -1,0 +1,59 @@
+name: DB invariants
+
+# Nightly reconciliation of AR GL, the invoice/delivery subledger, the
+# customer ledger, receipt allocations and stock value. Read-only, so it is
+# safe to point at the live project; it fails (and GitHub notifies) when two
+# books of the same money disagree.
+#
+# This is the portable fallback. The primary alarm is the in-app route
+# /api/cron/integrity, scheduled daily in app/vercel.json: it calls the same
+# reconciliation_checks() over PostgREST with the deployed service-role key and
+# answers 503 on drift, so it needs no database password in CI.
+#
+# Configure with a repository secret STAGING_DATABASE_URL — any Postgres
+# connection string the runner can reach (staging clone or a read replica).
+# Without the secret the job skips with a notice rather than failing.
+
+on:
+  schedule:
+    - cron: "15 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: db-invariants
+  cancel-in-progress: false
+
+jobs:
+  invariants:
+    name: Reconciliation checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for a database URL
+        id: gate
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Invariants skipped::STAGING_DATABASE_URL is not configured."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install psql
+        if: steps.gate.outputs.available == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Run reconciliation checks
+        if: steps.gate.outputs.available == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f app/supabase/checks/invariants.sql

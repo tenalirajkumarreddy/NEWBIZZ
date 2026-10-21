@@ -6,3 +6,9 @@
 # local agent/dev artifacts
 /.freebuff/
 /.next-dev.log
+
+# Captured browser traffic can contain live session tokens
+*.har
+
+# Supabase CLI local link metadata
+supabase/.temp/

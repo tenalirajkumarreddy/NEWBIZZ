@@ -41,3 +41,37 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Rebuilds the database from app/supabase/migrations on a throwaway Postgres
+  # and runs every committed test. This is the only gate on the schema: the
+  # chain is applied by hand, so a migration that fails, duplicates an object,
+  # or drops a policy silently would otherwise only surface in production.
+  db:
+    name: Migrations · replay chain
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: replay
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure psql
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Replay the chain and run every test
+        working-directory: app/supabase
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/replay
+        run: bash replay.sh
